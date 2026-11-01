@@ -35,7 +35,7 @@ final class Engine
     /** @var callable(Store, string): array */
     private $prober;
 
-    public function __construct(private Store $store, private Outbox $outbox, ?callable $prober = null)
+    public function __construct(private Store $store, private Outbox $outbox, ?callable $prober = null, private ?Coordinator $coordinator = null)
     {
         $this->contacts = new Contacts($store);
         $this->prober = $prober ?? [Probe::class, 'run'];
@@ -111,6 +111,14 @@ final class Engine
                 return ['Install not finished. The run was recorded.'];
             }
 
+            // News from peers comes first: never ask or fire on a cycle a peer has already closed.
+            if ($this->federated()) {
+                foreach ($this->applyRemote() as $line) {
+                    $did[] = $line;
+                }
+                $state = $this->state();
+            }
+
             $this->housekeeping($state, $config, $now, $did);
 
             if ($state['paused_until'] !== null && $now >= $state['paused_until']) {
@@ -139,11 +147,23 @@ final class Engine
             if ($now < $state['next_due_at']) {
                 return;
             }
+            if ($this->federated()) {
+                $key = (int) $state['next_due_at'];
+                $peer = $this->coordinator->peerDid($key, 'checkin');
+                if ($peer !== null) {
+                    $this->adoptCycle($state, $peer, $did);
+                    return;
+                }
+                if (!$this->coordinator->mayAct($key, 'checkin', $key, $now)) {
+                    return;
+                }
+            }
             $this->startCycle($state, $config, $now, $did);
             return;
         }
 
         $plan = self::plan($state['cycle'], null);
+        $key = (int) ($state['cycle']['due_at'] ?? 0);
 
         switch ($state['cycle']['stage']) {
             case 'checkin':
@@ -151,25 +171,58 @@ final class Engine
                     $n = $i + 1;
                     $step = $plan['reminder' . $n];
                     if (!$step['done']) {
-                        if ($now >= $step['at']) {
+                        $peer = $this->peerDid($key, 'reminder' . $n);
+                        if ($peer !== null) {
+                            $state['cycle']['reminders'][] = $peer;
+                            $state['cycle']['steps']['reminder' . $n] = $peer;
+                            $this->saveState($state);
+                            $did[] = "Reminder {$n} was already sent by another node.";
+                        } elseif ($now >= $step['at'] && $this->may($key, 'reminder' . $n, $step['at'], $now)) {
                             $this->remindOwner($state, $config, $n, $did);
                         }
                         return;
                     }
                 }
-                if ($now >= $plan['verify']['at']) {
+                $verifyAt = $plan['verify']['at'] + $this->extraDelay('verify', $now);
+                $peer = $this->peerDid($key, 'verify');
+                if ($peer !== null) {
+                    $state['cycle']['stage'] = 'verify';
+                    $state['cycle']['verify'] = [
+                        'asked_at' => $peer,
+                        'reached' => false,
+                        'reminded_at' => null,
+                        'tokens' => [],
+                        'response' => null,
+                        'responded_at' => null,
+                    ];
+                    $state['cycle']['steps']['verify'] = $peer;
+                    $this->saveState($state);
+                    $did[] = 'The next of kin was already asked by another node.';
+                } elseif ($now >= $verifyAt && $this->may($key, 'verify', $verifyAt, $now)) {
                     $this->askNextOfKin($state, $config, $now, $did);
                 }
                 return;
 
             case 'verify':
                 if (!$plan['nok_reminder']['done']) {
-                    if ($now >= $plan['nok_reminder']['at']) {
+                    $peer = $this->peerDid($key, 'nok_reminder');
+                    if ($peer !== null) {
+                        $state['cycle']['verify']['reminded_at'] = $peer;
+                        $state['cycle']['steps']['nok_reminder'] = $peer;
+                        $this->saveState($state);
+                        $did[] = 'The next of kin was already reminded by another node.';
+                    } elseif ($now >= $plan['nok_reminder']['at'] && $this->may($key, 'nok_reminder', $plan['nok_reminder']['at'], $now)) {
                         $this->remindNextOfKin($state, $config, $now, $did);
                     }
                     return;
                 }
-                if ($now >= $plan['fire']['at']) {
+                $fireAt = $plan['fire']['at'] + $this->extraDelay('fire', $now);
+                $peer = $this->peerDid($key, 'fire');
+                if ($peer !== null) {
+                    $reason = (string) ($this->coordinator->peerCycle($key)['fired_reason'] ?? 'timeout');
+                    $this->adoptFire($state, $peer, $reason, $did);
+                    $this->deliverFired($state, $config, $did);
+                } elseif ($now >= $fireAt && $this->may($key, 'fire', $fireAt, $now)) {
                     $this->fire($state, $config, 'timeout', $did);
                 }
                 return;
@@ -208,6 +261,7 @@ final class Engine
             'fired_reason' => null,
             'notified' => [],
             'owner_told_fired_at' => null,
+            'steps' => ['checkin' => $now],
         ];
         $this->saveState($state);
         $this->store->log('cycle.started', 'Weekly check-in email sent.');
@@ -232,6 +286,7 @@ final class Engine
         }
         $state['cycle']['tokens'][] = $record;
         $state['cycle']['reminders'][] = Clock::now();
+        $state['cycle']['steps']['reminder' . $number] = Clock::now();
         $this->saveState($state);
         $this->store->log('cycle.reminder', "Reminder {$number} sent to the owner.");
         $did[] = "Sent reminder {$number} to the owner.";
@@ -277,6 +332,7 @@ final class Engine
             'response' => null,
             'responded_at' => null,
         ];
+        $state['cycle']['steps']['verify'] = $now;
         $this->saveState($state);
         $this->store->log('cycle.verify', $reached
             ? 'No check-in after 72 hours. The next of kin has been asked.'
@@ -304,6 +360,7 @@ final class Engine
         }
         // Best effort: a next of kin who cannot be emailed must not hold the switch up for ever.
         $state['cycle']['verify']['reminded_at'] = $now;
+        $state['cycle']['steps']['nok_reminder'] = $now;
         $this->saveState($state);
         $this->store->log('cycle.verify_reminder', 'The next of kin was reminded.');
         $did[] = 'Reminded the next of kin.';
@@ -315,6 +372,7 @@ final class Engine
         $state['cycle']['stage'] = 'fired';
         $state['cycle']['fired_at'] = Clock::now();
         $state['cycle']['fired_reason'] = $reason;
+        $state['cycle']['steps']['fire'] = $state['cycle']['fired_at'];
         $this->saveState($state);
         $this->store->log('cycle.fired', $reason === 'nok_wrong'
             ? 'The next of kin answered "Something\'s wrong". The switch has fired.'
@@ -331,6 +389,22 @@ final class Engine
         foreach ($this->contacts->confirmed() as $contact) {
             if (isset($state['cycle']['notified'][$contact['id']])) {
                 continue;
+            }
+            if ($this->federated()) {
+                $key = (int) ($state['cycle']['due_at'] ?? 0);
+                $step = 'deliver:' . $contact['id'];
+                $peer = $this->coordinator->peerDid($key, $step);
+                if ($peer !== null) {
+                    $state['cycle']['notified'][$contact['id']] = $peer;
+                    $state['cycle']['peer_told'][] = (string) $contact['id'];
+                    $state['cycle']['steps'][$step] = $peer;
+                    $this->saveState($state);
+                    $did[] = "{$contact['name']} was already sent their message by another node.";
+                    continue;
+                }
+                if (!$this->coordinator->mayAct($key, $step, (int) ($state['cycle']['fired_at'] ?? 0), Clock::now())) {
+                    continue;
+                }
             }
             $vars = Messages::vars($config, $state, $all, $contact);
             $fired = Messages::fired($config, $contact, $vars);
@@ -349,6 +423,8 @@ final class Engine
             }
             if ($sent) {
                 $state['cycle']['notified'][$contact['id']] = Clock::now();
+                $state['cycle']['steps']['deliver:' . $contact['id']] = Clock::now();
+                $state['cycle']['own_notified'] = true;
                 $this->saveState($state);
                 $this->store->log('cycle.notified', "{$contact['role_label']} ({$contact['name']}) was sent their message.");
                 $did[] = "Sent {$contact['name']} their message.";
@@ -357,7 +433,9 @@ final class Engine
             }
         }
 
-        if ($state['cycle']['owner_told_fired_at'] === null && $state['cycle']['notified'] !== []) {
+        // A node that only adopted deliveries leaves the owner notice to the node that sent them.
+        $ownerNoticeMine = !$this->federated() || !empty($state['cycle']['own_notified']);
+        if ($state['cycle']['owner_told_fired_at'] === null && $state['cycle']['notified'] !== [] && $ownerNoticeMine) {
             [$token, $record] = Tokens::issue(Schedule::ALL_CLEAR_TOKEN_TTL);
             $names = [];
             foreach ($all as $contact) {
@@ -396,7 +474,9 @@ final class Engine
             }
         }
         foreach (array_keys($cycle['notified'] ?? []) as $id) {
-            $toTell[$id] = true;
+            if (!in_array((string) $id, (array) ($cycle['peer_told'] ?? []), true)) {
+                $toTell[$id] = true;
+            }
         }
 
         $state['cycle'] = null;
@@ -616,6 +696,40 @@ final class Engine
         });
     }
 
+    /**
+     * Record a check-in made on another node, stamped with when it happened there.
+     * Returns null when it is older than the check-in already held.
+     *
+     * @return array{stage: ?string, told: string[], next_due_at: ?int, armed: bool, paused_until: ?int}|null
+     */
+    public function checkInFromPeer(int $at, string $via): ?array
+    {
+        return $this->store->locked(function () use ($at, $via): ?array {
+            $config = $this->config();
+            $state = $this->state();
+            if ($state['last_checkin_at'] !== null && $at < (int) $state['last_checkin_at']) {
+                return null;
+            }
+            $stage = $state['cycle']['stage'] ?? null;
+            $told = $this->closeCycle($state, $config);
+            $state['last_checkin_at'] = $at;
+            $state['last_checkin_via'] = $via;
+            if ($state['armed']) {
+                $state['next_due_at'] = $this->nextSlot($config, max($at, (int) $state['paused_until']));
+            }
+            $this->saveState($state);
+            $this->store->log('checkin', 'Checked in by ' . $via . '.'
+                . ($told ? ' False-alarm notices sent to ' . implode(', ', $told) . '.' : ''));
+            return [
+                'stage' => $stage,
+                'told' => $told,
+                'next_due_at' => $state['next_due_at'],
+                'armed' => (bool) $state['armed'],
+                'paused_until' => $state['paused_until'],
+            ];
+        });
+    }
+
     /** Is this emailed check-in link still usable? Looking never counts as a check-in. */
     public function checkinTokenIsLive(string $token): bool
     {
@@ -710,6 +824,7 @@ final class Engine
 
             // "All fine": this cycle ends and nobody else is contacted.
             $nok = $this->contacts->nok();
+            $this->rememberVouched($state, $now);
             $state['cycle'] = null;
             $state['next_due_at'] = $this->nextSlot($config, $now);
             $this->saveState($state);
@@ -955,6 +1070,16 @@ final class Engine
             $out[] = ['key' => 'scheduler', 'level' => 'bad', 'text' => 'The scheduler last ran ' . relative($state['last_tick_at']) . '. While it is stopped, the switch cannot send anything.'];
         }
 
+        if ($this->federated() && $this->coordinator->isolated($now)) {
+            $heard = 0;
+            foreach ((array) $this->store->read('peers') as $peer) {
+                $heard = max($heard, (int) (is_array($peer) ? ($peer['seen_at'] ?? 0) : 0));
+            }
+            $out[] = ['key' => 'peers', 'level' => 'bad', 'text' => 'This node has not heard from any other node '
+                . ($heard > 0 ? 'for ' . duration($now - $heard) : 'yet')
+                . '. Serious steps are delayed while it is cut off.'];
+        }
+
         if (!empty($mail['last_send_error'])) {
             $error = $mail['last_send_error'];
             $out[] = ['key' => 'mail', 'level' => 'bad', 'text' => 'The last email could not be sent (' . relative((int) $error['at']) . '): ' . $error['error']];
@@ -1126,6 +1251,246 @@ final class Engine
         }
         $out['When the switch fires'] = Messages::fired($config, $contact, $vars);
         return $out;
+    }
+
+    // ------------------------------------------------------------------
+    // Federation
+    // ------------------------------------------------------------------
+
+    /** Seconds two nodes' clocks may differ before a check-in is read as older than the cycle. */
+    private const CLOCK_SKEW = 600;
+
+    private function federated(): bool
+    {
+        return $this->coordinator !== null && Cluster::enabled($this->store);
+    }
+
+    /** The time a peer did $step in cycle $key, or null (always null without federation). */
+    private function peerDid(int $key, string $step): ?int
+    {
+        return $this->federated() ? $this->coordinator->peerDid($key, $step) : null;
+    }
+
+    /** May this node send $step now? Always yes without federation. */
+    private function may(int $key, string $step, int $due, int $now): bool
+    {
+        return !$this->federated() || $this->coordinator->mayAct($key, $step, $due, $now);
+    }
+
+    private function extraDelay(string $step, int $now): int
+    {
+        return $this->federated() ? $this->coordinator->extraDelay($step, $now) : 0;
+    }
+
+    /** Start the local cycle a peer already started, without emailing the owner. */
+    private function adoptCycle(array &$state, int $at, array &$did): void
+    {
+        $state['cycle'] = [
+            'id' => gmdate('Ymd-His', $at),
+            'due_at' => $state['next_due_at'],
+            'started_at' => $at,
+            'stage' => 'checkin',
+            'tokens' => [],
+            'reminders' => [],
+            'verify' => null,
+            'fired_at' => null,
+            'fired_reason' => null,
+            'notified' => [],
+            'owner_told_fired_at' => null,
+            'steps' => ['checkin' => $at],
+        ];
+        $this->saveState($state);
+        $this->store->log('cycle.started', 'The weekly check-in email was sent by another node.');
+        $did[] = 'Joined the cycle another node started.';
+    }
+
+    private function adoptFire(array &$state, int $at, string $reason, array &$did): void
+    {
+        $state['cycle']['stage'] = 'fired';
+        $state['cycle']['fired_at'] = $at;
+        $state['cycle']['fired_reason'] = $reason;
+        $state['cycle']['steps']['fire'] = $at;
+        $this->saveState($state);
+        $this->store->log('cycle.fired', 'Another node fired the switch.');
+        $did[] = 'The switch fired (another node).';
+    }
+
+    /** @return array<string,int> the steps a cycle has taken, by name */
+    private function cycleSteps(array $c): array
+    {
+        $steps = [];
+        if (isset($c['started_at'])) {
+            $steps['checkin'] = (int) $c['started_at'];
+        }
+        foreach ((array) ($c['reminders'] ?? []) as $i => $t) {
+            $steps['reminder' . ($i + 1)] = (int) $t;
+        }
+        if (isset($c['verify']['asked_at'])) {
+            $steps['verify'] = (int) $c['verify']['asked_at'];
+        }
+        if (isset($c['verify']['reminded_at'])) {
+            $steps['nok_reminder'] = (int) $c['verify']['reminded_at'];
+        }
+        if (isset($c['fired_at'])) {
+            $steps['fire'] = (int) $c['fired_at'];
+        }
+        foreach ((array) ($c['notified'] ?? []) as $id => $t) {
+            $steps['deliver:' . $id] = (int) $t;
+        }
+        return array_map('intval', (array) ($c['steps'] ?? []) + $steps);
+    }
+
+    private function rememberVouched(array &$state, int $at): void
+    {
+        if (!is_array($state['cycle'])) {
+            return;
+        }
+        $state['last_vouched'] = [
+            'key' => (int) ($state['cycle']['due_at'] ?? 0),
+            'at' => $at,
+            'steps' => $this->cycleSteps($state['cycle']),
+        ];
+    }
+
+    /** This node's state as peers see it. */
+    public function nodeState(string $nodeId): array
+    {
+        $state = $this->state();
+        $cycle = null;
+        if (is_array($state['cycle'])) {
+            $c = $state['cycle'];
+            $steps = $this->cycleSteps($c);
+            $answer = $c['verify']['response'] ?? null;
+            $cycle = [
+                'key' => (int) ($c['due_at'] ?? 0),
+                'stage' => (string) $c['stage'],
+                'steps' => $steps,
+                'fired_at' => $c['fired_at'] ?? null,
+                'fired_reason' => $c['fired_reason'] ?? null,
+                'nok' => $answer === null ? null : ['answer' => $answer, 'at' => (int) ($c['verify']['responded_at'] ?? 0)],
+            ];
+        }
+        return [
+            'node' => $nodeId,
+            'at' => Clock::now(),
+            'last_checkin_at' => $state['last_checkin_at'],
+            'last_checkin_via' => $state['last_checkin_via'],
+            'armed' => (bool) $state['armed'],
+            'released' => $this->released(),
+            'cycle' => $cycle,
+            // "All fine" ends a cycle, so a peer that missed it would fire. The answer stays visible until replaced.
+            'vouched' => is_array($state['last_vouched'] ?? null)
+                ? ['key' => (int) $state['last_vouched']['key'], 'at' => (int) $state['last_vouched']['at'],
+                    'steps' => array_map('intval', (array) $state['last_vouched']['steps'])]
+                : null,
+        ];
+    }
+
+    /**
+     * Take in what peers have done: a check-in, a firing, a next-of-kin answer.
+     * Safe to call repeatedly; a second call changes nothing.
+     *
+     * @return string[] what changed, for logs
+     */
+    public function applyRemote(): array
+    {
+        if (!$this->federated()) {
+            return [];
+        }
+        return $this->store->locked(function (): array {
+            $config = $this->config();
+            $state = $this->state();
+            $did = [];
+            if (empty($config['installed_at']) || !$state['armed']) {
+                return [];
+            }
+
+            $latest = $this->coordinator->latestPeerCheckin();
+            if (
+                $latest !== null
+                && ($state['last_checkin_at'] === null || $latest['at'] > $state['last_checkin_at'])
+                && ($state['cycle'] === null || $latest['at'] >= (int) $state['cycle']['started_at'] - self::CLOCK_SKEW)
+            ) {
+                $told = $this->closeCycle($state, $config);
+                $state['last_checkin_at'] = $latest['at'];
+                $state['last_checkin_via'] = 'another node (' . $latest['via'] . ')';
+                $state['next_due_at'] = $this->nextSlot($config, max($latest['at'], (int) $state['paused_until']));
+                $this->saveState($state);
+                $this->store->log('checkin', 'Checked in by another node (' . $latest['via'] . ').'
+                    . ($told ? ' False-alarm notices sent to ' . implode(', ', $told) . '.' : ''));
+                $did[] = 'A check-in on another node ended the cycle.';
+            }
+
+            if ($state['cycle'] !== null && $state['paused_until'] === null) {
+                $key = (int) ($state['cycle']['due_at'] ?? 0);
+                $pc = $this->coordinator->peerCycle($key);
+
+                if ($pc !== null && $pc['stage'] === 'fired' && is_int($pc['fired_at']) && $state['cycle']['stage'] !== 'fired') {
+                    $this->adoptFire($state, $pc['fired_at'], (string) ($pc['fired_reason'] ?? 'timeout'), $did);
+                    foreach ($pc['steps'] as $name => $t) {
+                        if (str_starts_with((string) $name, 'deliver:')) {
+                            $id = substr((string) $name, 8);
+                            $state['cycle']['notified'][$id] ??= (int) $t;
+                            $state['cycle']['steps'][(string) $name] ??= (int) $t;
+                            if (!in_array($id, (array) ($state['cycle']['peer_told'] ?? []), true)) {
+                                $state['cycle']['peer_told'][] = $id;
+                            }
+                        }
+                    }
+                    $this->saveState($state);
+                }
+
+                $nok = $pc['nok'] ?? null;
+                if (is_array($nok) && in_array($nok['answer'] ?? null, ['fine', 'wrong'], true)) {
+                    if ($this->applyPeerNok($state, $config, (string) $nok['answer'], (int) ($nok['at'] ?? Clock::now()), 'another node', true)) {
+                        $did[] = 'The next of kin answered on another node: ' . $nok['answer'] . '.';
+                    }
+                }
+            }
+            return $did;
+        });
+    }
+
+    /** A next-of-kin answer reported by a peer. Ignored unless the cycle is waiting for one. */
+    public function recordNokAnswer(string $answer, int $at, string $via): void
+    {
+        if ($answer !== 'fine' && $answer !== 'wrong') {
+            return;
+        }
+        $this->store->locked(function () use ($answer, $at, $via): void {
+            $config = $this->config();
+            $state = $this->state();
+            $this->applyPeerNok($state, $config, $answer, $at, $via);
+        });
+    }
+
+    private function applyPeerNok(array &$state, array $config, string $answer, int $at, string $via, bool $sameCycle = false): bool
+    {
+        $cycle = $state['cycle'];
+        if ($cycle === null || ($cycle['verify']['response'] ?? null) !== null) {
+            return false;
+        }
+        // An answer matched to this very cycle by its key also ends it while this node still lags before verify:
+        // the kin was asked by a peer, so "all fine" must not wait for this node to catch up.
+        $lagging = $sameCycle && $answer === 'fine' && $cycle['stage'] === 'checkin';
+        if ($cycle['stage'] !== 'verify' && !$lagging) {
+            return false;
+        }
+        $state['cycle']['verify'] ??= ['asked_at' => $at, 'reached' => false, 'reminded_at' => null, 'tokens' => [], 'response' => null, 'responded_at' => null];
+        $state['cycle']['verify']['response'] = $answer;
+        $state['cycle']['verify']['responded_at'] = $at;
+        $state['cycle']['verify']['tokens'] = [];
+        if ($answer === 'wrong') {
+            $did = [];
+            $this->fire($state, $config, 'nok_wrong', $did);
+            return true;
+        }
+        $this->rememberVouched($state, $at);
+        $state['cycle'] = null;
+        $state['next_due_at'] = $this->nextSlot($config, $at);
+        $this->saveState($state);
+        $this->store->log('cycle.vouched', 'The next of kin answered "All fine" (' . $via . '). Nobody else was contacted.');
+        return true;
     }
 
     // ------------------------------------------------------------------

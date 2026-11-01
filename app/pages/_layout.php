@@ -13,7 +13,7 @@ if (!isset($content)) {
 
 $admin = Web::$layout === 'admin';
 $current = Web::get('p', 'switch');
-$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'settings' => 'Settings', 'history' => 'History'];
+$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'nodes' => 'Nodes', 'settings' => 'Settings', 'history' => 'History'];
 $navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
 $current = $navFor[$current] ?? $current;
 
@@ -32,6 +32,19 @@ if ($admin) {
         $faults = array_values(array_filter(engine()->warnings(), static fn (array $w): bool => $w['level'] === 'bad'));
     } catch (\Throwable) {
         $faults = [];
+    }
+}
+
+// A secondary node mirrors the primary; say so on every admin page.
+$mirrors = null;
+if ($admin) {
+    try {
+        $self = Node::publicIdentity(store());
+        if ($self !== null && Cluster::enabled(store()) && !Cluster::isPrimary(store(), $self['id'])) {
+            $mirrors = (string) (Cluster::find(store(), (string) Cluster::read(store())['primary'])['name'] ?? 'the primary');
+        }
+    } catch (\Throwable) {
+        $mirrors = null;
     }
 }
 ?>
@@ -61,6 +74,9 @@ if ($admin) {
 <?php foreach (Web::flashes() as [$type, $message]): ?>
   <div class="notice notice-<?= e($type) ?>" role="status"><p><?= e($message) ?></p></div>
 <?php endforeach ?>
+<?php if ($mirrors !== null): ?>
+  <div class="notice notice-warn" role="status"><p>This node mirrors <?= e($mirrors) ?>. Change settings there; check-ins here count everywhere.</p></div>
+<?php endif ?>
 <?php if ($faults): ?>
   <div class="notice notice-bad" role="alert">
     <ul>

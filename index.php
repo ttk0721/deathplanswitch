@@ -25,5 +25,5 @@ if ($page === '' && !empty(store()->read('config')['installed_at']) && !Web::sig
     Web::page('public');
 }
 
-$pages = ['switch', 'login', 'contacts', 'contact', 'review', 'settings', 'history', 'vault', 'public'];
+$pages = ['switch', 'login', 'contacts', 'contact', 'review', 'settings', 'history', 'vault', 'nodes', 'public'];
 Web::page(in_array($page, $pages, true) ? $page : 'switch');

@@ -22,6 +22,7 @@ use DPS\SmtpTransport;
 use DPS\Store;
 
 const TICK_TIMEOUT = 300;
+const SYNC_TIMEOUT = 280;
 
 /** Seconds between runs: bad values fall back to 900, anything under 60 becomes 60. */
 function tickInterval(): int
@@ -29,22 +30,23 @@ function tickInterval(): int
     return Scheduler::parseInterval(getenv('DPS_TICK_INTERVAL'));
 }
 
-/** Run cron.php; kill it after TICK_TIMEOUT seconds. @return array{0:int,1:string} */
-function runTick(): array
+/** Run a PHP script in a child process; kill it after $timeout seconds. @return array{0:int,1:string} */
+function runChild(string $script, array $args, int $timeout): array
 {
+    $name = basename($script);
     $process = @proc_open(
-        [PHP_BINARY, DPS_ROOT . '/cron.php', '--verbose'],
+        array_merge([PHP_BINARY, $script], $args),
         [1 => ['pipe', 'w'], 2 => ['pipe', 'w']],
         $pipes
     );
     if (!is_resource($process)) {
-        return [1, 'Could not start cron.php.'];
+        return [1, "Could not start {$name}."];
     }
     foreach ($pipes as $pipe) {
         stream_set_blocking($pipe, false);
     }
     $output = '';
-    $deadline = time() + TICK_TIMEOUT;
+    $deadline = time() + $timeout;
     $timedOut = false;
     $code = -1;
     while (true) {
@@ -70,9 +72,34 @@ function runTick(): array
     }
     proc_close($process);
     if ($timedOut) {
-        return [1, $output . 'cron.php was killed after ' . TICK_TIMEOUT . " seconds.\n"];
+        return [1, $output . "{$name} was killed after {$timeout} seconds.\n"];
     }
     return [$code, $output];
+}
+
+/** Whether this node is in a cluster of two or more. Never throws. */
+function inCluster(): bool
+{
+    try {
+        return DPS\Cluster::enabled(new Store(DPS_DATA));
+    } catch (Throwable) {
+        return false;
+    }
+}
+
+/** Run cron.php, after one sync with the other nodes when in a cluster. @return array{0:int,1:string} */
+function runTick(): array
+{
+    if (inCluster()) {
+        try {
+            [$code, $out] = runChild(DPS_ROOT . '/cli/sync.php', [], SYNC_TIMEOUT);
+            $lines = array_values(array_filter(explode("\n", trim($out))));
+            echo gmdate('Y-m-d H:i:s') . ' sync exit=' . $code . ($lines ? ' ' . $lines[array_key_last($lines)] : '') . "\n";
+        } catch (Throwable $e) {
+            echo gmdate('Y-m-d H:i:s') . ' sync failed (' . $e->getMessage() . ")\n";
+        }
+    }
+    return runChild(DPS_ROOT . '/cron.php', ['--verbose'], TICK_TIMEOUT);
 }
 
 /** Health of the switch; a fresh install has nothing to report yet. */
@@ -82,7 +109,15 @@ function checkHealth(): array
     if (empty($store->read('config')['installed_at'])) {
         return ['ok' => true, 'problems' => []];
     }
-    return (new Engine($store, new Outbox($store, new SmtpTransport())))->health();
+    // On a federated node the engine carries a Coordinator, so health() reports a cut-off node itself.
+    $coordinator = null;
+    try {
+        $id = DPS\Node::publicIdentity($store)['id'] ?? null;
+        $coordinator = $id !== null ? new DPS\Coordinator($store, $id) : null;
+    } catch (Throwable) {
+    }
+    $health = (new Engine($store, new Outbox($store, new SmtpTransport()), null, $coordinator))->health();
+    return $health;
 }
 
 /** POST the text to the heartbeat URL. True on 2xx; never throws. */

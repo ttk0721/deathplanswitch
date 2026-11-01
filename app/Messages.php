@@ -35,33 +35,30 @@ final class Messages
     /** @return array{subject: string, body: string} */
     public static function defaults(string $kind): array
     {
+        $sep = "\n\n";
         return match ($kind) {
             'nok' => [
-                'subject' => '{owner_name} has stopped checking in: what happens now',
-                'body' => "{owner_name} set up Death Plan Switch so that the right people would be told if they became unavailable. "
-                    . "They have not checked in for {days} days, so the people they chose have now been sent their instructions.\n\n"
-                    . "Those people are:\n{contacts_list}\n\n"
-                    . "The documents that give you authority to act are kept here: [write here: where the authority documents are kept, and who to call]",
+                'subject' => t('{owner_name} has stopped checking in: what happens now'),
+                'body' => t('{owner_name} set up Death Plan Switch so that the right people would be told if they became unavailable. They have not checked in for {days} days, so the people they chose have now been sent their instructions.')
+                    . $sep . t('Those people are:') . "\n{contacts_list}"
+                    . $sep . t('The documents that give you authority to act are kept here: [write here: where the authority documents are kept, and who to call]'),
             ],
             'technical' => [
-                'subject' => '{owner_name} has stopped checking in: please read',
-                'body' => "{owner_name} set up Death Plan Switch so that you would be told if they became unavailable. That has now happened.\n\n"
-                    . "They asked you to look after their clients' websites. The instructions and access details are here: "
-                    . "[write here: where the handover document is, how to obtain its password, and what clients need first]\n\n"
-                    . "Next of kin: {nok_details}",
+                'subject' => t('{owner_name} has stopped checking in: please read'),
+                'body' => t('{owner_name} set up Death Plan Switch so that you would be told if they became unavailable. That has now happened.')
+                    . $sep . t('They asked you to look after their clients\' websites. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what clients need first]')
+                    . $sep . t('Next of kin:') . ' {nok_details}',
             ],
             'legal' => [
-                'subject' => 'Death Plan Switch has fired for {owner_name}',
-                'body' => "{owner_name} listed you as their legal contact in Death Plan Switch. The switch has fired because they have not "
-                    . "checked in and their next of kin has not confirmed they are well.\n\n"
-                    . "Next of kin: {nok_details}\nTechnical contact: {technical_details}",
+                'subject' => t('Death Plan Switch has fired for {owner_name}'),
+                'body' => t('{owner_name} listed you as their legal contact in Death Plan Switch. The switch has fired because they have not checked in and their next of kin has not confirmed they are well.')
+                    . $sep . t('Next of kin:') . " {nok_details}\n" . t('Technical contact:') . ' {technical_details}',
             ],
             default => [
-                'subject' => '{owner_name} has stopped checking in',
-                'body' => "{owner_name} listed you as a contact in Death Plan Switch, so that you would be told if they became unavailable. "
-                    . "That has now happened: they have not checked in for {days} days.\n\n"
-                    . "[write here: what this person needs to know or do]\n\n"
-                    . "Next of kin: {nok_details}",
+                'subject' => t('{owner_name} has stopped checking in'),
+                'body' => t('{owner_name} listed you as a contact in Death Plan Switch, so that you would be told if they became unavailable. That has now happened: they have not checked in for {days} days.')
+                    . $sep . t('[write here: what this person needs to know or do]')
+                    . $sep . t('Next of kin:') . ' {nok_details}',
             ],
         };
     }
@@ -70,8 +67,8 @@ final class Messages
     public static function verifyDefault(): array
     {
         return [
-            'subject' => 'Is {owner_name} all right?',
-            'body' => "{owner_name} hasn't checked in with Death Plan Switch for {days} days. You're listed as their next of kin. Is everything all right?",
+            'subject' => t('Is {owner_name} all right?'),
+            'body' => t('{owner_name} hasn\'t checked in with Death Plan Switch for {days} days. You\'re listed as their next of kin. Is everything all right?'),
         ];
     }
 
@@ -119,10 +116,10 @@ final class Messages
             '{owner_name}' => (string) ($config['owner_name'] ?? ''),
             '{your_name}' => (string) ($recipient['name'] ?? ''),
             '{days}' => (string) $days,
-            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), 'l j F Y') : 'an unknown date',
+            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), t('l j F Y')) : t('an unknown date'),
             '{nok_details}' => Contacts::details($nok),
             '{technical_details}' => Contacts::details($technical),
-            '{contacts_list}' => $others ? implode("\n", $others) : '(nobody else is listed)',
+            '{contacts_list}' => $others ? implode("\n", $others) : t('(nobody else is listed)'),
         ];
     }
 
@@ -130,16 +127,16 @@ final class Messages
 
     public static function testCode(string $code): Email
     {
-        return (new Email('Death Plan Switch: your confirmation code is ' . $code))
-            ->p('Your Death Plan Switch can send email. To confirm this address reaches you, enter this code on the page you have open:')
+        return (new Email(t('Death Plan Switch: your confirmation code is {code}', ['code' => $code])))
+            ->p(t('Your Death Plan Switch can send email. To confirm this address reaches you, enter this code on the page you have open:'))
             ->p($code)
-            ->note('The code works for 30 minutes. If you did not ask for it, you can ignore this email.');
+            ->note(t('The code works for 30 minutes. If you did not ask for it, you can ignore this email.'));
     }
 
     public static function smtpTest(): Email
     {
-        return (new Email('Death Plan Switch: mail settings test'))
-            ->p('This is a test from your Death Plan Switch. If you are reading it, the new mail settings work and have been saved.');
+        return (new Email(t('Death Plan Switch: mail settings test')))
+            ->p(t('This is a test from your Death Plan Switch. If you are reading it, the new mail settings work and have been saved.'));
     }
 
     /**
@@ -151,112 +148,117 @@ final class Messages
     public static function checkin(array $config, string $url, int $number, int $verifyAt, ?array $nok, array $warnings): Email
     {
         $tz = (string) ($config['timezone'] ?? 'UTC');
-        $who = $nok['name'] ?? 'your next of kin';
-        $deadline = when($verifyAt, $tz, 'l j F \a\t g:ia');
+        $who = $nok['name'] ?? t('your next of kin');
+        $deadline = self::at($verifyAt, $tz);
+        $vars = ['deadline' => $deadline, 'who' => $who];
 
         if ($number === 0) {
             // The date keeps each week's email distinct, so mail apps do not fold it into last week's.
-            $email = (new Email('Check in with Death Plan Switch: ' . when(Clock::now(), $tz, 'l j F')))
-                ->p('This is your weekly check-in. Open the page and press the button to confirm you are here.')
-                ->link('Open the check-in page', $url)
-                ->p("Opening the page is not enough: press the button. If you have not checked in by {$deadline}, {$who} will be asked whether everything is all right.");
+            $email = (new Email(t('Check in with Death Plan Switch: {date}', ['date' => when(Clock::now(), $tz, t('l j F'))])))
+                ->p(t('This is your weekly check-in. Open the page and press the button to confirm you are here.'))
+                ->link(t('Open the check-in page'), $url)
+                ->p(t('Opening the page is not enough: press the button. If you have not checked in by {deadline}, {who} will be asked whether everything is all right.', $vars));
         } elseif ($number === 1) {
-            $email = (new Email('Reminder: check in with Death Plan Switch'))
-                ->p('You have not checked in this week. Open the page and press the button to confirm you are here.')
-                ->link('Open the check-in page', $url)
-                ->p("If you have not checked in by {$deadline}, {$who} will be asked whether everything is all right.");
+            $email = (new Email(t('Reminder: check in with Death Plan Switch')))
+                ->p(t('You have not checked in this week. Open the page and press the button to confirm you are here.'))
+                ->link(t('Open the check-in page'), $url)
+                ->p(t('If you have not checked in by {deadline}, {who} will be asked whether everything is all right.', $vars));
         } else {
-            $email = (new Email('Last reminder: check in with Death Plan Switch'))
-                ->p("This is the last reminder. If you have not checked in by {$deadline}, {$who} will be asked whether everything is all right.")
-                ->link('Open the check-in page', $url);
+            $email = (new Email(t('Last reminder: check in with Death Plan Switch')))
+                ->p(t('This is the last reminder. If you have not checked in by {deadline}, {who} will be asked whether everything is all right.', $vars))
+                ->link(t('Open the check-in page'), $url);
         }
 
-        $status = 'Your switch is armed.';
+        $status = t('Your switch is armed.');
         if ($warnings) {
-            $status .= ' ' . (count($warnings) === 1 ? 'One thing needs' : count($warnings) . ' things need')
-                . " your attention:\n- " . implode("\n- ", $warnings);
+            $status .= ' ' . (count($warnings) === 1
+                    ? t('One thing needs your attention:')
+                    : t('{count} things need your attention:', ['count' => count($warnings)]))
+                . "\n- " . implode("\n- ", $warnings);
         }
-        return $email->note($status . "\nIf this weekly email ever stops arriving, your switch has stopped working. Check your server.");
+        return $email->note($status . "\n" . t('If this weekly email ever stops arriving, your switch has stopped working. Check your server.'));
     }
 
     public static function ownerVerifyStarted(array $config, string $url, ?array $nok, int $fireAt): Email
     {
-        $who = $nok['name'] ?? 'Your next of kin';
-        $deadline = when($fireAt, (string) ($config['timezone'] ?? 'UTC'), 'l j F \a\t g:ia');
-        return (new Email('Death Plan Switch has asked your next of kin if you are all right'))
-            ->p("You did not check in, so {$who} has now been asked whether everything is all right.")
-            ->p('You can still check in. If you do, they will be told it was a false alarm.')
-            ->link('Open the check-in page', $url)
-            ->p("If neither of you confirms you are well by {$deadline}, your other contacts will receive their messages.");
+        $who = $nok['name'] ?? t('Your next of kin');
+        $deadline = self::at($fireAt, (string) ($config['timezone'] ?? 'UTC'));
+        return (new Email(t('Death Plan Switch has asked your next of kin if you are all right')))
+            ->p(t('You did not check in, so {who} has now been asked whether everything is all right.', ['who' => $who]))
+            ->p(t('You can still check in. If you do, they will be told it was a false alarm.'))
+            ->link(t('Open the check-in page'), $url)
+            ->p(t('If neither of you confirms you are well by {deadline}, your other contacts will receive their messages.', ['deadline' => $deadline]));
     }
 
     /** @param string[] $names who has been written to */
     public static function ownerFired(string $url, array $names): Email
     {
-        return (new Email('Death Plan Switch has fired'))
-            ->p('Your switch has fired. Messages have been sent to: ' . implode(', ', $names) . '.')
-            ->p('If you are reading this, press the button on this page. Everyone who was contacted will be told it was a false alarm.')
-            ->link('Tell them I am here', $url);
+        return (new Email(t('Death Plan Switch has fired')))
+            ->p(t('Your switch has fired. Messages have been sent to: {names}.', ['names' => implode(', ', $names)]))
+            ->p(t('If you are reading this, press the button on this page. Everyone who was contacted will be told it was a false alarm.'))
+            ->link(t('Tell them I am here'), $url);
     }
 
     public static function ownerArmed(array $config, int $firstEmailAt): Email
     {
-        $first = when($firstEmailAt, (string) ($config['timezone'] ?? 'UTC'), 'l j F \a\t g:ia');
-        return (new Email('Your Death Plan Switch is armed'))
-            ->p("Your switch is armed. The first check-in email arrives on {$first}, and one follows at the same time every week.")
-            ->p('Each email links to a page with a button. Pressing the button is the check-in.')
-            ->p('If you miss one: you get reminders for 72 hours, then your next of kin is asked whether everything is all right, and 72 hours after that your other contacts receive their messages.')
-            ->note('If the weekly email ever stops arriving, your switch has stopped working. Check your server.');
+        $first = self::at($firstEmailAt, (string) ($config['timezone'] ?? 'UTC'));
+        return (new Email(t('Your Death Plan Switch is armed')))
+            ->p(t('Your switch is armed. The first check-in email arrives on {first}, and one follows at the same time every week.', ['first' => $first]))
+            ->p(t('Each email links to a page with a button. Pressing the button is the check-in.'))
+            ->p(t('If you miss one: you get reminders for 72 hours, then your next of kin is asked whether everything is all right, and 72 hours after that your other contacts receive their messages.'))
+            ->note(t('If the weekly email ever stops arriving, your switch has stopped working. Check your server.'));
     }
 
     public static function ownerDisarmed(string $reason): Email
     {
-        return (new Email('Your Death Plan Switch is no longer armed'))
-            ->p('Your switch has been disarmed. ' . $reason)
-            ->p('While it is disarmed, no check-in emails are sent and nobody will be contacted. Sign in to arm it again.');
+        return (new Email(t('Your Death Plan Switch is no longer armed')))
+            ->p(t('Your switch has been disarmed.') . ' ' . $reason)
+            ->p(t('While it is disarmed, no check-in emails are sent and nobody will be contacted. Sign in to arm it again.'));
     }
 
     public static function ownerPauseEnded(array $config, int $nextAt): Email
     {
-        $next = when($nextAt, (string) ($config['timezone'] ?? 'UTC'), 'l j F \a\t g:ia');
-        return (new Email('Your Death Plan Switch is active again'))
-            ->p("The pause has ended and your switch is armed. Your next check-in email arrives on {$next}.");
+        $next = self::at($nextAt, (string) ($config['timezone'] ?? 'UTC'));
+        return (new Email(t('Your Death Plan Switch is active again')))
+            ->p(t('The pause has ended and your switch is armed. Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
     public static function ownerVouched(array $config, ?array $nok, int $nextAt): Email
     {
-        $who = $nok['name'] ?? 'Your next of kin';
-        $next = when($nextAt, (string) ($config['timezone'] ?? 'UTC'), 'l j F \a\t g:ia');
-        return (new Email("{$who} confirmed you are all right"))
-            ->p("You missed this week's check-in, so {$who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.")
-            ->p("Your next check-in email arrives on {$next}.");
+        $who = $nok['name'] ?? t('Your next of kin');
+        $next = self::at($nextAt, (string) ($config['timezone'] ?? 'UTC'));
+        return (new Email(t('{who} confirmed you are all right', ['who' => $who])))
+            ->p(t('You missed this week\'s check-in, so {who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.', ['who' => $who]))
+            ->p(t('Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
     public static function ownerContactAnswered(array $contact, bool $accepted, string $extra = ''): Email
     {
         $name = $contact['name'] ?: $contact['email'];
         $role = Contacts::role($contact);
+        $vars = ['name' => $name, 'role' => $role];
+        $tail = $extra !== '' ? ' ' . $extra : '';
         if ($accepted) {
-            return (new Email("{$name} has confirmed as your {$role}"))
-                ->p("{$name} confirmed their email address and their role as your {$role}." . ($extra !== '' ? ' ' . $extra : ''));
+            return (new Email(t('{name} has confirmed as your {role}', $vars)))
+                ->p(t('{name} confirmed their email address and their role as your {role}.', $vars) . $tail);
         }
-        return (new Email("{$name} has declined to be your {$role}"))
-            ->p("{$name} declined, and will not be contacted by your switch. Sign in to choose someone else." . ($extra !== '' ? ' ' . $extra : ''));
+        return (new Email(t('{name} has declined to be your {role}', $vars)))
+            ->p(t('{name} declined, and will not be contacted by your switch. Sign in to choose someone else.', $vars) . $tail);
     }
 
     public static function ownerAnnualReview(string $url): Email
     {
-        return (new Email('Death Plan Switch: your yearly review is due'))
-            ->p('Once a year, check that each of your contacts still has what they need: the right document, the right password, the right phone number.')
-            ->link('Sign in to review your contacts', $url);
+        return (new Email(t('Death Plan Switch: your yearly review is due')))
+            ->p(t('Once a year, check that each of your contacts still has what they need: the right document, the right password, the right phone number.'))
+            ->link(t('Sign in to review your contacts'), $url);
     }
 
     public static function ownerDataExposed(string $url): Email
     {
-        return (new Email('Death Plan Switch: your data folder can be read from the web'))
-            ->p('A routine check found that files in the data folder of your Death Plan Switch can be opened in a browser. Those files hold your contacts and their messages.')
-            ->p('This usually happens after a server move or a web server change. The README explains how to block access. Fix it as soon as you can.')
-            ->link('Sign in', $url);
+        return (new Email(t('Death Plan Switch: your data folder can be read from the web')))
+            ->p(t('A routine check found that files in the data folder of your Death Plan Switch can be opened in a browser. Those files hold your contacts and their messages.'))
+            ->p(t('This usually happens after a server move or a web server change. The README explains how to block access. Fix it as soon as you can.'))
+            ->link(t('Sign in'), $url);
     }
 
     // -------------------------------------------------------------- contacts
@@ -265,39 +267,41 @@ final class Messages
     {
         $owner = (string) $config['owner_name'];
         $role = Contacts::role($contact);
+        $vars = ['owner' => $owner, 'role' => $role];
 
         if ($purpose === 'reconfirm') {
-            $email = (new Email("Still happy to be {$owner}'s {$role}?"))
-                ->p("About a year ago you agreed to be {$owner}'s {$role} in Death Plan Switch. Please confirm that this email address still reaches you and that you are still willing.");
+            $email = (new Email(t('Still happy to be {owner}\'s {role}?', $vars)))
+                ->p(t('About a year ago you agreed to be {owner}\'s {role} in Death Plan Switch. Please confirm that this email address still reaches you and that you are still willing.', $vars));
         } else {
-            $email = (new Email("{$owner} has listed you as their {$role}"))
-                ->p("{$owner} uses Death Plan Switch, a small app on their own server. Every week it asks {$owner} to check in. If they stop, it emails the people they have chosen. They have listed you as their {$role}.");
+            $email = (new Email(t('{owner} has listed you as their {role}', $vars)))
+                ->p(t('{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen. They have listed you as their {role}.', $vars));
         }
 
         if ($contact['kind'] === 'nok') {
-            $email->p("What this means for you: if {$owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.");
+            $email->p(t('What this means for you: if {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.', $vars));
         } else {
-            $email->p("What this means for you: if {$owner} stops checking in and their next of kin cannot confirm they are well, you would get one email from this address telling you what {$owner} needs you to do.");
+            $email->p(t('What this means for you: if {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email from this address telling you what {owner} needs you to do.', $vars));
         }
 
         return $email
-            ->link('Open the confirmation page', $url)
-            ->p("To make sure a future message is not mistaken for spam, add this email address to your contacts. If you have questions, reply to this email and it will reach {$owner}.")
-            ->note('This link works for 30 days. If you do nothing, you will not be contacted again unless ' . $owner . ' sends a new request.');
+            ->link(t('Open the confirmation page'), $url)
+            ->p(t('To make sure a future message is not mistaken for spam, add this email address to your contacts. If you have questions, reply to this email and it will reach {owner}.', $vars))
+            ->note(t('This link works for 30 days. If you do nothing, you will not be contacted again unless {owner} sends a new request.', $vars));
     }
 
     public static function nokVerify(array $config, array $contact, array $vars, string $fineUrl, string $wrongUrl, int $fireAt, bool $reminder): Email
     {
         $owner = (string) $config['owner_name'];
         $message = $contact['verify_message'] ?? self::verifyDefault();
-        $deadline = when($fireAt, (string) ($config['timezone'] ?? 'UTC'), 'l j F \a\t g:ia')
+        $deadline = self::at($fireAt, (string) ($config['timezone'] ?? 'UTC'))
             . ' (' . self::zoneLabel((string) ($config['timezone'] ?? 'UTC')) . ')';
 
-        $email = (new Email(($reminder ? 'Reminder: ' : '') . self::fill((string) $message['subject'], $vars)))
+        $subject = self::fill((string) $message['subject'], $vars);
+        $email = (new Email($reminder ? t('Reminder: {subject}', ['subject' => $subject]) : $subject))
             ->prose(self::fill((string) $message['body'], $vars))
-            ->link('All fine', $fineUrl)
-            ->link("Something's wrong", $wrongUrl)
-            ->p("Each link opens a page where you confirm your answer. If neither you nor {$owner} answers by {$deadline}, the other people {$owner} chose will be sent their instructions.");
+            ->link(t('All fine'), $fineUrl)
+            ->link(t('Something\'s wrong'), $wrongUrl)
+            ->p(t('Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.', ['owner' => $owner, 'deadline' => $deadline]));
 
         return $email->note(self::footer($config, $vars));
     }
@@ -313,26 +317,33 @@ final class Messages
     public static function vaultInvite(array $config, string $url): Email
     {
         $owner = (string) $config['owner_name'];
-        return (new Email("{$owner} asks you to set a password for their vault"))
-            ->p("{$owner} left some things for you in a private vault. You can set a password of your own, so you do not have to rely on the code card you were given.")
-            ->p('You will need the code on that card once, to set the password.')
-            ->link('Set your password', $url)
-            ->note('This link works once, within 30 days.');
+        return (new Email(t('{owner} asks you to set a password for their vault', ['owner' => $owner])))
+            ->p(t('{owner} left some things for you in a private vault. You can set a password of your own, so you do not have to rely on the code card you were given.', ['owner' => $owner]))
+            ->p(t('You will need the code on that card once, to set the password.'))
+            ->link(t('Set your password'), $url)
+            ->note(t('This link works once, within 30 days.'));
     }
 
     public static function allClear(array $config): Email
     {
         $owner = (string) $config['owner_name'];
-        return (new Email("False alarm: {$owner} has checked in"))
-            ->p("{$owner} has checked in with Death Plan Switch. The earlier message was a false alarm, and you do not need to do anything.")
-            ->p("{$owner} will be in touch. You can reply to this email to reach them.");
+        return (new Email(t('False alarm: {owner} has checked in', ['owner' => $owner])))
+            ->p(t('{owner} has checked in with Death Plan Switch. The earlier message was a false alarm, and you do not need to do anything.', ['owner' => $owner]))
+            ->p(t('{owner} will be in touch. You can reply to this email to reach them.', ['owner' => $owner]));
     }
 
     private static function footer(array $config, array $vars): string
     {
-        $owner = (string) $config['owner_name'];
-        return "Death Plan Switch is software {$owner} runs on their own server. It sent this automatically because {$owner} "
-            . "last checked in on {$vars['{last_checkin_date}']} and has not answered its emails since. It cannot know why.";
+        return t('Death Plan Switch is software {owner} runs on their own server. It sent this automatically because {owner} last checked in on {date} and has not answered its emails since. It cannot know why.', [
+            'owner' => (string) $config['owner_name'],
+            'date' => $vars['{last_checkin_date}'],
+        ]);
+    }
+
+    /** A date and time for the owner's emails. Polish uses numbers, so no English day or month names appear. */
+    private static function at(int $ts, string $tz): string
+    {
+        return when($ts, $tz, t('l j F \a\t g:ia'));
     }
 
     private static function zoneLabel(string $tz): string

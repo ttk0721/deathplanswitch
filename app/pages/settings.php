@@ -21,7 +21,7 @@ if (Web::posted()) {
             $dow = (int) Web::post('slot_dow', '1');
             $hour = (int) Web::post('slot_hour', '9');
             if ($name === '' || !Setup::validTimezone($tz) || $dow < 1 || $dow > 7 || $hour < 0 || $hour > 23) {
-                Web::flash('Enter your name, and choose a timezone, a day and an hour.', 'bad');
+                Web::flash(t('Enter your name, and choose a timezone, a day and an hour.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $engine, $name, $tz, $dow, $hour): void {
@@ -41,7 +41,21 @@ if (Web::posted()) {
                     $store->log('settings.slot', 'The weekly check-in time was changed to ' . Schedule::DAYS[$dow] . ' at ' . hourLabel($hour) . " ({$tz}).");
                 }
             });
-            Web::flash('Saved.');
+            Web::flash(t('Saved.'));
+            break;
+
+        case 'language_save':
+            $language = Web::post('language');
+            if ($language !== 'pl' && $language !== 'en') {
+                Web::flash(t('Choose Polski or English.'), 'bad');
+                break;
+            }
+            $store->locked(static function () use ($store, $language): void {
+                $config = $store->read('config');
+                $config['language'] = $language;
+                $store->write('config', $config);
+            });
+            Web::flash(t('Saved.'));
             break;
 
         case 'email_start':
@@ -49,26 +63,26 @@ if (Web::posted()) {
             $address = strtolower(Web::post('address'));
             $other = strtolower((string) ($config[$which === 'backup_email' ? 'owner_email' : 'backup_email'] ?? ''));
             if (!Web::validEmail($address)) {
-                Web::flash('Enter a valid email address.', 'bad');
+                Web::flash(t('Enter a valid email address.'), 'bad');
             } elseif ($address === $other) {
-                Web::flash('Your two addresses have to be different, ideally with different providers.', 'bad');
+                Web::flash(t('Your two addresses have to be different, ideally with different providers.'), 'bad');
             } elseif (Setup::startEmailCode($store, $outbox, $which, $address)) {
-                Web::flash("A code has been emailed to {$address}. Enter it below to confirm the address.");
+                Web::flash(t('A code has been emailed to {address}. Enter it below to confirm the address.', ['address' => $address]));
             } else {
-                Web::flash("The code could not be sent to {$address}. Check the address and the mail settings.", 'bad');
+                Web::flash(t('The code could not be sent to {address}. Check the address and the mail settings.', ['address' => $address]), 'bad');
             }
             break;
 
         case 'email_finish':
             $old = (string) $config['owner_email'];
             $result = Setup::finishEmailCode($store, Web::post('code'));
-            Web::flash($result === true ? 'Address confirmed and saved.' : $result, $result === true ? 'ok' : 'bad');
+            Web::flash($result === true ? t('Address confirmed and saved.') : $result, $result === true ? 'ok' : 'bad');
             $now = (string) $store->read('config')['owner_email'];
             if ($result === true && $now !== $old) {
                 // Tell the old address, in case the change was not made by the owner.
-                $outbox->send($old, (new Email('Your Death Plan Switch now emails a different address'))
-                    ->p("The main address for your Death Plan Switch was changed to {$now}. Check-in emails will no longer come to this address.")
-                    ->p('If you did not make this change, sign in and change it back, then change your password.'));
+                $outbox->send($old, (new Email(t('Your Death Plan Switch now emails a different address')))
+                    ->p(t('The main address for your Death Plan Switch was changed to {address}. Check-in emails will no longer come to this address.', ['address' => $now]))
+                    ->p(t('If you did not make this change, sign in and change it back, then change your password.')));
             }
             break;
 
@@ -80,7 +94,7 @@ if (Web::posted()) {
         case 'backup_remove':
             $config['backup_email'] = '';
             $store->write('config', $config);
-            Web::flash('Backup address removed. Reminders now go to your main address only.', 'warn');
+            Web::flash(t('Backup address removed. Reminders now go to your main address only.'), 'warn');
             break;
 
         case 'smtp':
@@ -91,21 +105,21 @@ if (Web::posted()) {
             }
             // Prove the new settings work before they replace the ones the switch depends on.
             if (!$outbox->send((string) $config['owner_email'], Messages::smtpTest(), 'owner', $smtp)) {
-                $error = $store->read('mail')['last_send_error']['error'] ?? 'unknown error';
-                Web::flash('Not saved: a test email could not be sent with those settings. The mail server said: ' . $error, 'bad');
+                $error = $store->read('mail')['last_send_error']['error'] ?? t('unknown error');
+                Web::flash(t('Not saved: a test email could not be sent with those settings. The mail server said: {error}', ['error' => $error]), 'bad');
                 break;
             }
             $config['smtp'] = $smtp;
             $store->write('config', $config);
-            $store->log('settings.smtp', 'Mail settings were changed.');
-            Web::flash('Saved. A test email has been sent to ' . $config['owner_email'] . '.');
+            $store->log('settings.smtp', t('Mail settings were changed.'));
+            Web::flash(t('Saved. A test email has been sent to {address}.', ['address' => $config['owner_email']]));
             break;
 
         case 'landing_save':
             $title = trim(Web::post('landing_title'));
             $text = trim(str_replace("\r\n", "\n", Web::post('landing_text')));
             if (mb_strlen($title) > 80 || mb_strlen($text) > 2000) {
-                Web::flash('The title can be up to 80 characters and the text up to 2000.', 'bad');
+                Web::flash(t('The title can be up to 80 characters and the text up to 2000.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $title, $text): void {
@@ -113,28 +127,28 @@ if (Web::posted()) {
                 $config['landing'] = ['title' => $title, 'text' => $text];
                 $store->write('config', $config);
             });
-            Web::flash('Saved. This is what visitors see at the front of this install.');
+            Web::flash(t('Saved. This is what visitors see at the front of this install.'));
             break;
 
         case 'baseurl':
             $url = rtrim(Web::post('base_url'), '/');
             if (!preg_match('~^https?://[^\s/]+(/[^\s]*)?$~i', $url)) {
-                Web::flash('Enter the full address of this install, starting with https://', 'bad');
+                Web::flash(t('Enter the full address of this install, starting with https://'), 'bad');
                 break;
             }
             $config['base_url'] = $url;
             $store->write('config', $config);
-            Web::flash('Saved. Links in emails will use this address.');
+            Web::flash(t('Saved. Links in emails will use this address.'));
             break;
 
         case 'probe':
             $result = Setup::probe($store, $engine, (string) $config['base_url']);
             if ($result['result'] === 'protected' || $result['result'] === 'outside') {
-                Web::flash('Checked: the data folder cannot be read from the web.');
+                Web::flash(t('Checked: the data folder cannot be read from the web.'));
             } elseif ($result['result'] === 'exposed') {
-                Web::flash('Files in the data folder can be opened in a browser. See "Protecting the data folder" in the README.', 'bad');
+                Web::flash(t('Files in the data folder can be opened in a browser. See "Protecting the data folder" in the README.'), 'bad');
             } else {
-                Web::flash('The server could not request its own address, so it could not check. Use the browser check below instead.', 'warn');
+                Web::flash(t('The server could not request its own address, so it could not check. Use the browser check below instead.'), 'warn');
             }
             break;
 
@@ -143,10 +157,10 @@ if (Web::posted()) {
             if ($found === 'protected' || $found === 'exposed') {
                 Setup::recordBrowserProbe($store, $engine, $found);
                 Web::flash($found === 'protected'
-                    ? 'Checked from your browser: the data folder cannot be read from the web.'
-                    : 'Your browser was able to open a file in the data folder. See "Protecting the data folder" in the README.', $found === 'protected' ? 'ok' : 'bad');
+                    ? t('Checked from your browser: the data folder cannot be read from the web.')
+                    : t('Your browser was able to open a file in the data folder. See "Protecting the data folder" in the README.'), $found === 'protected' ? 'ok' : 'bad');
             } else {
-                Web::flash('Your browser could not complete the check.', 'warn');
+                Web::flash(t('Your browser could not complete the check.'), 'warn');
             }
             break;
 
@@ -154,13 +168,13 @@ if (Web::posted()) {
             $config['tick_key'] = bin2hex(random_bytes(20));
             $config['health_key'] = bin2hex(random_bytes(20));
             $store->write('config', $config);
-            Web::flash('New addresses made. The old ones no longer work: update anything that used them.', 'warn');
+            Web::flash(t('New addresses made. The old ones no longer work: update anything that used them.'), 'warn');
             break;
 
         case 'channel_add':
             $channel = Channels::fromPost();
             if ($channel === null) {
-                Web::flash('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id, ntfy://topic or serwersms://user:pass@48600100200, or a webhook that starts with https://. For a plain web address, choose Webhook.', 'bad');
+                Web::flash(t('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id, ntfy://topic or serwersms://user:pass@48600100200, or a webhook that starts with https://. For a plain web address, choose Webhook.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $channel): void {
@@ -169,7 +183,7 @@ if (Web::posted()) {
                 $config['channels'][] = $channel;
                 $store->write('config', $config);
             });
-            Web::flash('Channel added. Use Test to check that it works.');
+            Web::flash(t('Channel added. Use Test to check that it works.'));
             break;
 
         case 'channel_remove':
@@ -182,7 +196,7 @@ if (Web::posted()) {
                 ));
                 $store->write('config', $config);
             });
-            Web::flash('Channel removed.', 'warn');
+            Web::flash(t('Channel removed.'), 'warn');
             break;
 
         case 'channel_test':
@@ -194,14 +208,14 @@ if (Web::posted()) {
                 }
             }
             if ($found === null) {
-                Web::flash('That channel no longer exists.', 'warn');
+                Web::flash(t('That channel no longer exists.'), 'warn');
                 break;
             }
             try {
-                (new HttpNotifier(appriseUrl()))->notify($found, new Notice('Test from Death Plan Switch', 'If you can read this, this channel works.', null), 'test');
-                Web::flash('Test sent to ' . ($found['label'] ?? 'the channel') . '.');
+                (new HttpNotifier(appriseUrl()))->notify($found, new Notice(t('Test from Death Plan Switch'), t('If you can read this, this channel works.'), null), 'test');
+                Web::flash(t('Test sent to {channel}.', ['channel' => $found['label'] ?? t('the channel')]));
             } catch (\Throwable $e) {
-                Web::flash('The test failed: ' . $e->getMessage(), 'bad');
+                Web::flash(t('The test failed: {error}', ['error' => $e->getMessage()]), 'bad');
             }
             break;
 
@@ -210,11 +224,11 @@ if (Web::posted()) {
             $template = Web::post('sms_template');
             $apprise = rtrim(Web::post('apprise_url'), '/');
             if ($template !== '' && (!str_contains($template, '{phone}') || !preg_match('~^[a-z][a-z0-9+.-]*://\S+$~i', $template) || Channels::normalize(['type' => 'apprise', 'url' => str_replace('{phone}', '1', $template)]) === null)) {
-                Web::flash('The SMS address must be an Apprise address that contains {phone}, for example serwersms://user:pass@{phone}.', 'bad');
+                Web::flash(t('The SMS address must be an Apprise address that contains {phone}, for example serwersms://user:pass@{phone}.', ['phone' => '{phone}']), 'bad');
                 break;
             }
             if ($apprise !== '' && !preg_match('~^https?://[^\s/]+(/\S*)?$~i', $apprise)) {
-                Web::flash('The Apprise server address must start with http:// or https://.', 'bad');
+                Web::flash(t('The Apprise server address must start with http:// or https://.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $phone, $template, $apprise): void {
@@ -224,22 +238,22 @@ if (Web::posted()) {
                 $config['apprise_url'] = $apprise;
                 $store->write('config', $config);
             });
-            Web::flash('Saved.');
+            Web::flash(t('Saved.'));
             break;
 
         case 'password':
             $check = Web::tryPassword((string) ($_POST['current'] ?? ''));
             $new = (string) ($_POST['new'] ?? '');
             if ($check !== true) {
-                Web::flash('Not changed. ' . $check, 'bad');
+                Web::flash(t('Not changed. {reason}', ['reason' => $check]), 'bad');
             } elseif (($problem = Setup::passwordProblem($new)) !== null) {
                 Web::flash($problem, 'bad');
             } else {
                 $config['password_hash'] = password_hash($new, PASSWORD_DEFAULT);
                 $store->write('config', $config);
-                $store->log('settings.password', 'The owner password was changed.');
+                $store->log('settings.password', t('The owner password was changed.'));
                 Web::signIn();
-                Web::flash('Password changed. Any other signed-in browser has been signed out.');
+                Web::flash(t('Password changed. Any other signed-in browser has been signed out.'));
             }
             break;
     }
@@ -254,21 +268,35 @@ $probeUrl = Probe::url($store, (string) $config['base_url']);
 $tickUrl = $engine->url($config, 'tick.php', ['key' => $config['tick_key'] ?? '']);
 $healthUrl = $engine->url($config, 'health.php', ['key' => $config['health_key'] ?? '']);
 
-Web::$title = 'Settings: Death Plan Switch';
+Web::$title = t('Settings: Death Plan Switch');
 ?>
-<h1>Settings</h1>
+<h1><?= e(t('Settings')) ?></h1>
 
-<h2>You, and your weekly email</h2>
+<h2>Język / Language</h2>
+<form method="post" action="index.php?p=settings">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="language_save">
+  <div class="field">
+    <label for="language">Język / Language</label>
+    <select id="language" name="language">
+      <option value="pl"<?= lang() === 'pl' ? ' selected' : '' ?>>Polski</option>
+      <option value="en"<?= lang() === 'en' ? ' selected' : '' ?>>English</option>
+    </select>
+  </div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
+</form>
+
+<h2><?= e(t('You, and your weekly email')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="profile">
   <div class="field">
-    <label for="owner_name">Your name</label>
+    <label for="owner_name"><?= e(t('Your name')) ?></label>
     <input type="text" id="owner_name" name="owner_name" value="<?= e($config['owner_name']) ?>" required maxlength="120">
-    <span class="help">As your contacts know you. It appears in every message they receive.</span>
+    <span class="help"><?= e(t('As your contacts know you. It appears in every message they receive.')) ?></span>
   </div>
   <div class="field">
-    <label for="timezone">Timezone</label>
+    <label for="timezone"><?= e(t('Timezone')) ?></label>
     <select id="timezone" name="timezone">
 <?php foreach (Setup::timezones() as $tz): ?>
       <option<?= $tz === $config['timezone'] ? ' selected' : '' ?>><?= e($tz) ?></option>
@@ -276,138 +304,142 @@ Web::$title = 'Settings: Death Plan Switch';
     </select>
   </div>
   <div class="field">
-    <span class="label" id="slot-label">Send my check-in email every</span>
+    <span class="label" id="slot-label"><?= e(t('Send my check-in email every')) ?></span>
     <div class="inline" role="group" aria-labelledby="slot-label">
-      <select name="slot_dow" aria-label="Day">
+      <select name="slot_dow" aria-label="<?= e(t('Day')) ?>">
 <?php foreach (Schedule::DAYS as $n => $day): ?>
-        <option value="<?= $n ?>"<?= $n === (int) $config['slot_dow'] ? ' selected' : '' ?>><?= e($day) ?></option>
+        <option value="<?= $n ?>"<?= $n === (int) $config['slot_dow'] ? ' selected' : '' ?>><?= e(t($day)) ?></option>
 <?php endforeach ?>
       </select>
-      <span>at</span>
-      <select name="slot_hour" aria-label="Hour">
+      <span><?= e(t('at')) ?></span>
+      <select name="slot_hour" aria-label="<?= e(t('Hour')) ?>">
 <?php for ($h = 0; $h < 24; $h++): ?>
         <option value="<?= $h ?>"<?= $h === (int) $config['slot_hour'] ? ' selected' : '' ?>><?= e(hourLabel($h)) ?></option>
 <?php endfor ?>
       </select>
     </div>
-    <span class="help">Pick a time you reliably read email. The interval is fixed at one week.</span>
+    <span class="help"><?= e(t('Pick a time you reliably read email. The interval is fixed at one week.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Save</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
 
-<h2>Your email addresses</h2>
-<p>Check-in emails go to your main address. Reminders also go to the backup, so one failed mailbox cannot set the switch off. Use a different provider for the backup.</p>
+<h2><?= e(t('Your email addresses')) ?></h2>
+<p><?= e(t('Check-in emails go to your main address. Reminders also go to the backup, so one failed mailbox cannot set the switch off. Use a different provider for the backup.')) ?></p>
 <?php if ($pending): ?>
 <div class="panel">
-  <h3>Enter the code sent to <?= e($pending['address']) ?></h3>
+  <h3><?= e(t('Enter the code sent to {address}', ['address' => $pending['address']])) ?></h3>
   <form method="post" action="index.php?p=settings">
     <?= Web::csrfField() ?>
     <input type="hidden" name="action" value="email_finish">
     <div class="inline">
-      <label for="code" class="visually-hidden">Code</label>
+      <label for="code" class="visually-hidden"><?= e(t('Code')) ?></label>
       <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
-      <button type="submit">Confirm address</button>
+      <button type="submit"><?= e(t('Confirm address')) ?></button>
     </div>
   </form>
-  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="email_cancel"><button class="link" type="submit">Cancel this change</button></form>
+  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="email_cancel"><button class="link" type="submit"><?= e(t('Cancel this change')) ?></button></form>
 </div>
 <?php endif ?>
 <dl class="facts">
-  <dt>Main</dt><dd><?= e($config['owner_email']) ?></dd>
-  <dt>Backup</dt><dd><?= !empty($config['backup_email']) ? e($config['backup_email']) : 'None' ?></dd>
+  <dt><?= e(t('Main')) ?></dt><dd><?= e($config['owner_email']) ?></dd>
+  <dt><?= e(t('Backup')) ?></dt><dd><?= !empty($config['backup_email']) ? e($config['backup_email']) : e(t('None')) ?></dd>
 </dl>
 <details>
-  <summary>Change an address</summary>
+  <summary><?= e(t('Change an address')) ?></summary>
   <form method="post" action="index.php?p=settings">
     <?= Web::csrfField() ?>
     <input type="hidden" name="action" value="email_start">
     <div class="field">
-      <label for="which">Which one</label>
+      <label for="which"><?= e(t('Which one')) ?></label>
       <select id="which" name="which">
-        <option value="backup_email">Backup address</option>
-        <option value="owner_email">Main address</option>
+        <option value="backup_email"><?= e(t('Backup address')) ?></option>
+        <option value="owner_email"><?= e(t('Main address')) ?></option>
       </select>
     </div>
     <div class="field">
-      <label for="address">New address</label>
+      <label for="address"><?= e(t('New address')) ?></label>
       <input type="email" id="address" name="address" required maxlength="254">
-      <span class="help">A code is emailed to it. The change takes effect when you enter the code here.</span>
+      <span class="help"><?= e(t('A code is emailed to it. The change takes effect when you enter the code here.')) ?></span>
     </div>
-    <button type="submit">Send the code</button>
+    <button type="submit"><?= e(t('Send the code')) ?></button>
   </form>
 <?php if (!empty($config['backup_email'])): ?>
-  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="backup_remove"><button class="link" type="submit">Remove the backup address</button></form>
+  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="backup_remove"><button class="link" type="submit"><?= e(t('Remove the backup address')) ?></button></form>
 <?php endif ?>
 </details>
 
-<h2>Notification channels</h2>
-<p>Every email to you can also arrive on a channel such as Discord, Telegram, ntfy, SMS or a webhook. The message carries the subject and the link only, never the text of the email. A step counts as delivered when the email or any channel gets through.</p>
+<h2><?= e(t('Notification channels')) ?></h2>
+<p><?= e(t('Every email to you can also arrive on a channel such as Discord, Telegram, ntfy, SMS or a webhook. The message carries the subject and the link only, never the text of the email. A step counts as delivered when the email or any channel gets through.')) ?></p>
 <?php $channels = array_values(array_filter((array) ($config['channels'] ?? []), 'is_array')); $self = 'index.php?p=settings'; require __DIR__ . '/_channels.php' ?>
-<h3>SMS and Apprise server</h3>
+<h3><?= e(t('SMS and Apprise server')) ?></h3>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="channels_save">
   <div class="field">
-    <label for="owner_phone">Your phone number <span class="muted">(optional)</span></label>
+    <label for="owner_phone"><?= e(t('Your phone number')) ?> <span class="muted"><?= e(t('(optional)')) ?></span></label>
     <input type="text" id="owner_phone" name="owner_phone" value="<?= e($config['owner_phone'] ?? '') ?>" maxlength="40" autocomplete="off">
-    <span class="help">With the country code, for example +48 600 100 200.</span>
+    <span class="help"><?= e(t('With the country code, for example +48 600 100 200.')) ?></span>
   </div>
   <div class="field">
-    <label for="sms_template">SMS address <span class="muted">(optional)</span></label>
+    <label for="sms_template"><?= e(t('SMS address')) ?> <span class="muted"><?= e(t('(optional)')) ?></span></label>
     <input type="text" id="sms_template" name="sms_template" value="<?= e($config['sms_template'] ?? '') ?>" maxlength="500" autocomplete="off">
-    <span class="help">An Apprise address with <code>{phone}</code> where the number goes, for example <code>serwersms://user:pass@{phone}</code>. It is used for you and for contacts with a phone number.</span>
+    <span class="help"><?= t('An Apprise address with {phone} where the number goes, for example {example}. It is used for you and for contacts with a phone number.', ['phone' => '<code>{phone}</code>', 'example' => '<code>serwersms://user:pass@{phone}</code>']) ?></span>
   </div>
   <div class="field">
-    <label for="apprise_url">Apprise server <span class="muted">(optional)</span></label>
+    <label for="apprise_url"><?= e(t('Apprise server')) ?> <span class="muted"><?= e(t('(optional)')) ?></span></label>
     <input type="text" id="apprise_url" name="apprise_url" value="<?= e($config['apprise_url'] ?? '') ?>" maxlength="300" autocomplete="off">
-    <span class="help">Leave empty to use the one that came with this install.</span>
+    <span class="help"><?= e(t('Leave empty to use the one that came with this install.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Save</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
 
-<h2>Mail server</h2>
+<h2><?= e(t('Mail server')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="smtp">
 <?php require __DIR__ . '/_smtp_fields.php' ?>
-  <div class="actions"><button type="submit">Test and save</button></div>
-  <p class="small muted">The new settings are saved only if a test email to <?= e($config['owner_email']) ?> is accepted.</p>
+  <div class="actions"><button type="submit"><?= e(t('Test and save')) ?></button></div>
+  <p class="small muted"><?= e(t('The new settings are saved only if a test email to {address} is accepted.', ['address' => $config['owner_email']])) ?></p>
 </form>
 
-<h2>Scheduler</h2>
-<p>The switch does nothing by itself. Every 15 minutes, something has to run it. <?= $state['last_tick_at'] ? 'It last ran ' . e(relative($state['last_tick_at'])) . ', by ' . ($state['last_tick_source'] === 'cron' ? 'cron' : 'the trigger address') . '.' : 'It has never run.' ?></p>
+<h2><?= e(t('Scheduler')) ?></h2>
+<p><?= e(t('The switch does nothing by itself. Every 15 minutes, something has to run it.')) ?> <?= e($state['last_tick_at']
+    ? ($state['last_tick_source'] === 'cron'
+        ? t('It last ran {when}, by cron.', ['when' => relative($state['last_tick_at'])])
+        : t('It last ran {when}, by the trigger address.', ['when' => relative($state['last_tick_at'])]))
+    : t('It has never run.')) ?></p>
 <?php if (\DPS\inDocker()): ?>
-<p>The <code>scheduler</code> service runs the switch every 15 minutes. To see its runs, use <code>docker compose logs scheduler</code>.</p>
+<p><?= t('The {service} service runs the switch every 15 minutes. To see its runs, use {command}.', ['service' => '<code>scheduler</code>', 'command' => '<code>docker compose logs scheduler</code>']) ?></p>
 <?php else: ?>
-<h3>Crontab line</h3>
-<p>Goes in the crontab of the user the web pages run as. Open it with <code><?= e(Web::crontabCommand()) ?></code>.</p>
+<h3><?= e(t('Crontab line')) ?></h3>
+<p><?= t('Goes in the crontab of the user the web pages run as. Open it with {command}.', ['command' => '<code>' . e(Web::crontabCommand()) . '</code>']) ?></p>
 <pre class="cron"><?= e(Web::cronLine()) ?></pre>
 <?php if (Web::phpCli() === null): ?>
-<p class="small">The path to PHP could not be detected. Replace <code>php</code> at the start of the command with the full path your host gives you.</p>
+<p class="small"><?= t('The path to PHP could not be detected. Replace {php} at the start of the command with the full path your host gives you.', ['php' => '<code>php</code>']) ?></p>
 <?php endif ?>
-<h3>No cron on your hosting?</h3>
-<p>Have any outside scheduler request this address every 15 minutes instead (hourly at the least). It does the same job. Treat the address as a secret.</p>
+<h3><?= e(t('No cron on your hosting?')) ?></h3>
+<p><?= e(t('Have any outside scheduler request this address every 15 minutes instead (hourly at the least). It does the same job. Treat the address as a secret.')) ?></p>
 <pre class="cron"><?= e($tickUrl) ?></pre>
 <?php endif ?>
-<h3>Be told when it stops</h3>
-<p>If the scheduler stops, the switch cannot tell you. Point an uptime monitor at this address. It answers 200 when all is well, and 503 when the scheduler has stopped, mail is failing or the data folder is exposed. It reveals nothing else.</p>
+<h3><?= e(t('Be told when it stops')) ?></h3>
+<p><?= e(t('If the scheduler stops, the switch cannot tell you. Point an uptime monitor at this address. It answers 200 when all is well, and 503 when the scheduler has stopped, mail is failing or the data folder is exposed. It reveals nothing else.')) ?></p>
 <pre class="cron"><?= e($healthUrl) ?></pre>
 <?php if (\DPS\inDocker()): ?>
-<p>Set <code>HEARTBEAT_URL</code> in <code>.env</code> to have every run reported to Healthchecks.io.</p>
+<p><?= t('Set {variable} in {file} to have every run reported to Healthchecks.io.', ['variable' => '<code>HEARTBEAT_URL</code>', 'file' => '<code>.env</code>']) ?></p>
 <?php endif ?>
-<form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="rekey"><button class="link" type="submit" data-confirm="Make new addresses? The current ones will stop working.">Make new secret addresses</button></form>
+<form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="rekey"><button class="link" type="submit" data-confirm="<?= e(t('Make new addresses? The current ones will stop working.')) ?>"><?= e(t('Make new secret addresses')) ?></button></form>
 
-<h2>Data folder</h2>
-<p>Your contacts and their messages are stored as files in <code><?= e($store->dir()) ?></code>. They must not be readable from the web. The switch tests this every day by requesting one of its own files.</p>
+<h2><?= e(t('Data folder')) ?></h2>
+<p><?= t('Your contacts and their messages are stored as files in {folder}. They must not be readable from the web. The switch tests this every day by requesting one of its own files.', ['folder' => '<code>' . e($store->dir()) . '</code>']) ?></p>
 <dl class="facts">
-  <dt>Last result</dt>
+  <dt><?= e(t('Last result')) ?></dt>
   <dd><?php
     $label = [
-        'protected' => 'Blocked from the web',
-        'outside' => 'Outside the web folder',
-        'exposed' => 'Readable from the web',
-        'unknown' => !empty($probe['browser_ok_at']) ? 'Blocked (checked from your browser)' : 'Could not be checked by the server',
-    ][$probe['result'] ?? ''] ?? 'Not checked yet';
+        'protected' => t('Blocked from the web'),
+        'outside' => t('Outside the web folder'),
+        'exposed' => t('Readable from the web'),
+        'unknown' => !empty($probe['browser_ok_at']) ? t('Blocked (checked from your browser)') : t('Could not be checked by the server'),
+    ][$probe['result'] ?? ''] ?? t('Not checked yet');
     echo e($label);
     if (!empty($probe['checked_at'])) {
         echo ', ' . e(relative((int) $probe['checked_at']));
@@ -415,57 +447,57 @@ Web::$title = 'Settings: Death Plan Switch';
   ?></dd>
 </dl>
 <div class="actions">
-  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="probe"><button class="button-quiet" type="submit">Check again from the server</button></form>
+  <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="probe"><button class="button-quiet" type="submit"><?= e(t('Check again from the server')) ?></button></form>
 <?php if ($probeUrl !== null): ?>
   <form method="post" action="index.php?p=settings" data-probe-url="<?= e($probeUrl) ?>" data-probe-secret="<?= e(Probe::secret($store)) ?>">
     <?= Web::csrfField() ?>
     <input type="hidden" name="action" value="probe_browser">
     <input type="hidden" name="found" value="">
-    <button class="button-quiet" type="submit">Check from this browser</button>
+    <button class="button-quiet" type="submit"><?= e(t('Check from this browser')) ?></button>
   </form>
 <?php endif ?>
 </div>
 
-<h2>Public page</h2>
+<h2><?= e(t('Public page')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="landing_save">
   <div class="field">
-    <label for="landing_title">Title</label>
+    <label for="landing_title"><?= e(t('Title')) ?></label>
     <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($config['landing']['title'] ?? '') ?>" placeholder="Death Plan Switch">
   </div>
   <div class="field">
-    <label for="landing_text">Text</label>
-    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="This switch is not active."><?= e($config['landing']['text'] ?? '') ?></textarea>
-    <span class="help">What visitors see at this address before the switch has fired. Leave empty for the defaults. A blank line starts a new paragraph.</span>
+    <label for="landing_text"><?= e(t('Text')) ?></label>
+    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="<?= e(t('This switch is not active.')) ?>"><?= e($config['landing']['text'] ?? '') ?></textarea>
+    <span class="help"><?= e(t('What visitors see at this address before the switch has fired. Leave empty for the defaults. A blank line starts a new paragraph.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Save</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
 
-<h2>Address of this install</h2>
+<h2><?= e(t('Address of this install')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="baseurl">
   <div class="field">
-    <label for="base_url">Web address</label>
+    <label for="base_url"><?= e(t('Web address')) ?></label>
     <input type="url" id="base_url" name="base_url" value="<?= e($config['base_url']) ?>" required>
-    <span class="help">Used to build the links in emails. Change it if you move the install.</span>
+    <span class="help"><?= e(t('Used to build the links in emails. Change it if you move the install.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Save</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
 
-<h2>Password</h2>
+<h2><?= e(t('Password')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="password">
   <div class="field">
-    <label for="current">Current password</label>
+    <label for="current"><?= e(t('Current password')) ?></label>
     <input type="password" id="current" name="current" autocomplete="current-password" required>
   </div>
   <div class="field">
-    <label for="new">New password</label>
+    <label for="new"><?= e(t('New password')) ?></label>
     <input type="password" id="new" name="new" autocomplete="new-password" minlength="<?= Setup::MIN_PASSWORD ?>" required>
-    <span class="help">At least <?= Setup::MIN_PASSWORD ?> characters.</span>
+    <span class="help"><?= e(t('At least {count} characters.', ['count' => Setup::MIN_PASSWORD])) ?></span>
   </div>
-  <div class="actions"><button type="submit">Change password</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Change password')) ?></button></div>
 </form>

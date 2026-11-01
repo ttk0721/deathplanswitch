@@ -125,7 +125,7 @@ final class Engine
                 $state['paused_until'] = null;
                 $state['next_due_at'] = $this->nextSlot($config, $now);
                 $this->saveState($state);
-                $this->store->log('pause.ended', 'The pause ended. The switch is active again.');
+                $this->store->log('pause.ended', t('The pause ended. The switch is active again.'));
                 $this->outbox->send($this->ownerAddresses($config), Messages::ownerPauseEnded($config, $state['next_due_at']));
                 $did[] = 'Pause ended.';
             }
@@ -265,7 +265,7 @@ final class Engine
             'steps' => ['checkin' => $now],
         ];
         $this->saveState($state);
-        $this->store->log('cycle.started', 'Weekly check-in email sent.');
+        $this->store->log('cycle.started', t('Weekly check-in email sent.'));
         $did[] = 'Sent the weekly check-in email.';
     }
 
@@ -289,7 +289,7 @@ final class Engine
         $state['cycle']['reminders'][] = Clock::now();
         $state['cycle']['steps']['reminder' . $number] = Clock::now();
         $this->saveState($state);
-        $this->store->log('cycle.reminder', "Reminder {$number} sent to the owner.");
+        $this->store->log('cycle.reminder', t('Reminder {number} sent to the owner.', ['number' => $number]));
         $did[] = "Sent reminder {$number} to the owner.";
     }
 
@@ -336,8 +336,8 @@ final class Engine
         $state['cycle']['steps']['verify'] = $now;
         $this->saveState($state);
         $this->store->log('cycle.verify', $reached
-            ? 'No check-in after 72 hours. The next of kin has been asked.'
-            : 'No check-in after 72 hours. The next of kin could not be emailed; the 72-hour wait has started anyway.');
+            ? t('No check-in after 72 hours. The next of kin has been asked.')
+            : t('No check-in after 72 hours. The next of kin could not be emailed; the 72-hour wait has started anyway.'));
         $did[] = $reached ? 'Asked the next of kin.' : 'Could not email the next of kin. Waiting 72 hours before notifying the others.';
     }
 
@@ -363,7 +363,7 @@ final class Engine
         $state['cycle']['verify']['reminded_at'] = $now;
         $state['cycle']['steps']['nok_reminder'] = $now;
         $this->saveState($state);
-        $this->store->log('cycle.verify_reminder', 'The next of kin was reminded.');
+        $this->store->log('cycle.verify_reminder', t('The next of kin was reminded.'));
         $did[] = 'Reminded the next of kin.';
     }
 
@@ -376,8 +376,8 @@ final class Engine
         $state['cycle']['steps']['fire'] = $state['cycle']['fired_at'];
         $this->saveState($state);
         $this->store->log('cycle.fired', $reason === 'nok_wrong'
-            ? 'The next of kin answered "Something\'s wrong". The switch has fired.'
-            : 'Neither the owner nor the next of kin confirmed all is well. The switch has fired.');
+            ? t('The next of kin answered "Something\'s wrong". The switch has fired.')
+            : t('Neither the owner nor the next of kin confirmed all is well. The switch has fired.'));
         $did[] = 'The switch fired.';
         $this->deliverFired($state, $config, $did);
     }
@@ -410,7 +410,7 @@ final class Engine
             $vars = Messages::vars($config, $state, $all, $contact);
             $fired = Messages::fired($config, $contact, $vars);
             if (in_array((string) $contact['id'], $vaultContacts, true)) {
-                $fired->link('Open the vault', $this->url($config, 'vault.php'));
+                $fired->link(t('Open the vault'), $this->url($config, 'vault.php'));
             }
             // A channel notice only points to the email. Until the email itself is accepted the
             // contact is not "notified": a channel alone never carries the message.
@@ -427,7 +427,7 @@ final class Engine
                 $state['cycle']['steps']['deliver:' . $contact['id']] = Clock::now();
                 $state['cycle']['own_notified'] = true;
                 $this->saveState($state);
-                $this->store->log('cycle.notified', "{$contact['role_label']} ({$contact['name']}) was sent their message.");
+                $this->store->log('cycle.notified', t('{role} ({name}) was sent their message.', ['role' => Contacts::label((string) $contact['role_label']), 'name' => $contact['name']]));
                 $did[] = "Sent {$contact['name']} their message.";
             } else {
                 $did[] = "Could not send {$contact['name']} their message. Will try again on the next run.";
@@ -505,7 +505,7 @@ final class Engine
             }
             if ($this->outbox->send((string) $contact['email'], Messages::allClear($config), 'contact')) {
                 $told[] = $contact['name'];
-                $this->store->log('cycle.all_clear', "{$contact['name']} was told it was a false alarm.");
+                $this->store->log('cycle.all_clear', t('{name} was told it was a false alarm.', ['name' => $contact['name']]));
             } else {
                 $remaining[] = $id; // retried on the next run
             }
@@ -542,7 +542,7 @@ final class Engine
             if ($result['result'] === 'exposed' && $result['alerted_at'] === null) {
                 $this->outbox->send($this->ownerAddresses($config), Messages::ownerDataExposed($this->url($config, 'index.php')));
                 $result['alerted_at'] = $now;
-                $this->store->log('probe.exposed', 'The data folder can be read from the web.');
+                $this->store->log('probe.exposed', t('The data folder can be read from the web.'));
                 $did[] = 'Warning sent: the data folder can be read from the web.';
             } elseif ($result['result'] !== 'exposed') {
                 $result['alerted_at'] = null;
@@ -602,16 +602,18 @@ final class Engine
             $state['next_due_at'] = $this->nextSlot($config, $now);
             $state['review_at'] = $now;
             $this->saveState($state);
-            $this->store->log('switch.armed', 'The switch was armed.');
+            $this->store->log('switch.armed', t('The switch was armed.'));
             $this->outbox->send($this->ownerAddresses($config), Messages::ownerArmed($config, $state['next_due_at']));
             return [];
         });
     }
 
     /** @return string[] names told it was a false alarm */
-    public function disarm(string $reason = 'You disarmed it from the dashboard.'): array
+    public function disarm(string $reason = 'You disarmed it from the dashboard.', ?string $shownReason = null): array
     {
-        return $this->store->locked(function () use ($reason): array {
+        // $reason is the English wording; the history and the owner's email get it in the current language.
+        $shownReason ??= $reason === 'You disarmed it from the dashboard.' ? t('You disarmed it from the dashboard.') : $reason;
+        return $this->store->locked(function () use ($reason, $shownReason): array {
             $config = $this->config();
             $state = $this->state();
             if (!$state['armed']) {
@@ -622,8 +624,8 @@ final class Engine
             $state['paused_until'] = null;
             $state['next_due_at'] = null;
             $this->saveState($state);
-            $this->store->log('switch.disarmed', 'The switch was disarmed. ' . $reason);
-            $this->outbox->send($this->ownerAddresses($config), Messages::ownerDisarmed($reason));
+            $this->store->log('switch.disarmed', t('The switch was disarmed. {reason}', ['reason' => $shownReason]));
+            $this->outbox->send($this->ownerAddresses($config), Messages::ownerDisarmed($shownReason));
             return $told;
         });
     }
@@ -644,7 +646,7 @@ final class Engine
             $state['last_checkin_via'] = 'pausing the switch';
             $state['paused_until'] = $now + $days * Schedule::DAY;
             $this->saveState($state);
-            $this->store->log('pause.started', "The switch was paused for {$days} days.");
+            $this->store->log('pause.started', t('The switch was paused for {days} days.', ['days' => lang() === 'pl' ? $days . ' ' . plPlural($days, 'dzień', 'dni', 'dni') : $days]));
             return ['until' => $state['paused_until'], 'told' => $told];
         });
     }
@@ -662,7 +664,7 @@ final class Engine
             $state['last_checkin_via'] = 'ending the pause';
             $state['next_due_at'] = $this->nextSlot($this->config(), $now);
             $this->saveState($state);
-            $this->store->log('pause.ended', 'The pause was ended early.');
+            $this->store->log('pause.ended', t('The pause was ended early.'));
         });
     }
 
@@ -685,8 +687,8 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($now, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', 'Checked in by ' . $via . '.'
-                . ($told ? ' False-alarm notices sent to ' . implode(', ', $told) . '.' : ''));
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+                . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
                 'told' => $told,
@@ -719,8 +721,8 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($at, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', 'Checked in by ' . $via . '.'
-                . ($told ? ' False-alarm notices sent to ' . implode(', ', $told) . '.' : ''));
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+                . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
                 'told' => $told,
@@ -768,7 +770,7 @@ final class Engine
                 $state = $this->state();
                 $state['review_at'] = $now;
                 $this->saveState($state);
-                $this->store->log('review.done', 'Yearly review completed.');
+                $this->store->log('review.done', t('Yearly review completed.'));
             }
         });
     }
@@ -829,7 +831,7 @@ final class Engine
             $state['cycle'] = null;
             $state['next_due_at'] = $this->nextSlot($config, $now);
             $this->saveState($state);
-            $this->store->log('cycle.vouched', 'The next of kin answered "All fine". Nobody else was contacted.');
+            $this->store->log('cycle.vouched', t('The next of kin answered "All fine". Nobody else was contacted.'));
             $this->outbox->send($this->ownerAddresses($config), Messages::ownerVouched($config, $nok, $state['next_due_at']));
             return 'fine';
         });
@@ -906,24 +908,27 @@ final class Engine
                 $contact['reconfirm_asked_at'] = null;
                 $contact['reconfirm_nudged_at'] = null;
                 $this->contacts->save($contact);
-                $this->store->log('contact.confirmed', "{$contact['name']} confirmed as {$contact['role_label']}.");
+                $this->store->log('contact.confirmed', t('{name} confirmed as {role}.', ['name' => $contact['name'], 'role' => Contacts::label((string) $contact['role_label'])]));
             } elseif ($purpose === 'email_change') {
                 // The new address said no. The confirmed address stays in use.
                 $contact['pending_email'] = null;
                 $this->contacts->save($contact);
-                $this->store->log('contact.declined', "The new address for {$contact['name']} was declined. The old one is still in use.");
-                $extra = 'Their previous address is still in use.';
+                $this->store->log('contact.declined', t('The new address for {name} was declined. The old one is still in use.', ['name' => $contact['name']]));
+                $extra = t('Their previous address is still in use.');
             } else {
                 $contact['status'] = 'declined';
                 $contact['pending_email'] = null;
                 $this->contacts->save($contact);
-                $this->store->log('contact.declined', "{$contact['name']} declined to be {$contact['role_label']}.");
+                $this->store->log('contact.declined', t('{name} declined to be {role}.', ['name' => $contact['name'], 'role' => Contacts::label((string) $contact['role_label'])]));
 
                 // An armed switch must always have its required contacts.
                 $state = $this->state();
                 if ($state['armed'] && !$this->requiredContactsConfirmed()) {
-                    $this->disarm("{$contact['name']} declined to be your " . Contacts::role($contact) . ', so a required contact is missing.');
-                    $extra = 'Your switch has been disarmed, because it needs this role filled.';
+                    $this->disarm(
+                        "{$contact['name']} declined to be your " . Contacts::role($contact) . ', so a required contact is missing.',
+                        t('{name} declined to be your {role}, so a required contact is missing.', ['name' => $contact['name'], 'role' => Contacts::role($contact)])
+                    );
+                    $extra = t('Your switch has been disarmed, because it needs this role filled.');
                 }
             }
 
@@ -956,42 +961,42 @@ final class Engine
         $ticked = $state['last_tick_at'] !== null && $now - $state['last_tick_at'] <= Schedule::CRON_STALE;
         $items[] = [
             'key' => 'scheduler',
-            'label' => 'The scheduler is running',
+            'label' => t('The scheduler is running'),
             'ok' => $ticked,
             'blocking' => true,
             'hint' => $state['last_tick_at'] === null
-                ? 'No run has been recorded yet. Add the crontab line shown in Settings.'
-                : 'The last run was ' . relative($state['last_tick_at']) . '. Check the crontab line shown in Settings.',
+                ? t('No run has been recorded yet. Add the crontab line shown in Settings.')
+                : t('The last run was {when}. Check the crontab line shown in Settings.', ['when' => relative($state['last_tick_at'])]),
         ];
 
         $probe = (string) ($state['probe']['result'] ?? 'unknown');
         $probeOk = in_array($probe, ['protected', 'outside'], true) || ($probe === 'unknown' && !empty($state['probe']['browser_ok_at']));
         $items[] = [
             'key' => 'data',
-            'label' => 'The data folder cannot be read from the web',
+            'label' => t('The data folder cannot be read from the web'),
             'ok' => $probeOk,
             'blocking' => true,
             'hint' => $probe === 'exposed'
-                ? 'Files in the data folder can be opened in a browser. See "Protecting the data folder" in the README.'
-                : 'The server could not test this by itself. Run the check from Settings.',
+                ? t('Files in the data folder can be opened in a browser. See "Protecting the data folder" in the README.')
+                : t('The server could not test this by itself. Run the check from Settings.'),
         ];
 
         $nok = $this->contacts->nok();
         $items[] = [
             'key' => 'nok',
-            'label' => 'Your next of kin has confirmed',
+            'label' => t('Your next of kin has confirmed'),
             'ok' => $nok !== null && $nok['status'] === 'confirmed',
             'blocking' => true,
-            'hint' => $nok === null ? 'Add your next of kin.' : self::contactHint($nok),
+            'hint' => $nok === null ? t('Add your next of kin.') : self::contactHint($nok),
         ];
 
         $technical = array_values(array_filter($this->contacts->all(), static fn (array $c): bool => $c['kind'] === 'technical'));
         $items[] = [
             'key' => 'technical',
-            'label' => 'Your technical 2IC has confirmed',
+            'label' => t('Your technical 2IC has confirmed'),
             'ok' => $this->contacts->confirmedOfKind('technical') !== [],
             'blocking' => true,
-            'hint' => $technical === [] ? 'Add the person who would look after your clients.' : self::contactHint($technical[0]),
+            'hint' => $technical === [] ? t('Add the person who would look after your clients.') : self::contactHint($technical[0]),
         ];
 
         $unwritten = [];
@@ -1009,29 +1014,29 @@ final class Engine
         $any = $this->contacts->confirmed() !== [];
         $items[] = [
             'key' => 'messages',
-            'label' => 'Every message says where things are',
+            'label' => t('Every message says where things are'),
             'ok' => $any && $unwritten === [],
             'blocking' => true,
             'hint' => $any
-                ? 'Still holding starter text in square brackets: ' . implode(', ', $unwritten) . '.'
-                : 'Checked once your contacts have confirmed.',
+                ? t('Still holding starter text in square brackets: {names}.', ['names' => implode(', ', $unwritten)])
+                : t('Checked once your contacts have confirmed.'),
         ];
         $items[] = [
             'key' => 'needs',
-            'label' => 'Each contact has been given what they need',
+            'label' => t('Each contact has been given what they need'),
             'ok' => $any && $unticked === [],
             'blocking' => true,
             'hint' => $any
-                ? 'Not ticked yet: ' . implode(', ', $unticked) . '.'
-                : 'Checked once your contacts have confirmed.',
+                ? t('Not ticked yet: {names}.', ['names' => implode(', ', $unticked)])
+                : t('Checked once your contacts have confirmed.'),
         ];
 
         $items[] = [
             'key' => 'backup',
-            'label' => 'A second email address for reminders',
+            'label' => t('A second email address for reminders'),
             'ok' => !empty($config['backup_email']),
             'blocking' => false,
-            'hint' => 'Recommended: an address with a different provider, in case your main one fails. Add it in Settings.',
+            'hint' => t('Recommended: an address with a different provider, in case your main one fails. Add it in Settings.'),
         ];
 
         return $items;
@@ -1040,11 +1045,11 @@ final class Engine
     private static function contactHint(array $contact): string
     {
         return match ($contact['status']) {
-            'declined' => "{$contact['name']} declined. Choose someone else.",
+            'declined' => t('{name} declined. Choose someone else.', ['name' => $contact['name']]),
             'confirmed' => '',
             default => empty($contact['confirm_sent_at'])
-                ? "Send {$contact['name']} their confirmation email."
-                : "Waiting for {$contact['name']} to confirm. The email went " . relative($contact['confirm_sent_at']) . '.',
+                ? t('Send {name} their confirmation email.', ['name' => $contact['name']])
+                : t('Waiting for {name} to confirm. The email went {when}.', ['name' => $contact['name'], 'when' => relative($contact['confirm_sent_at'])]),
         };
     }
 
@@ -1062,13 +1067,13 @@ final class Engine
         $out = [];
 
         foreach ($this->store->recoveredFiles() as $name) {
-            $out[] = ['key' => 'store', 'level' => 'bad', 'text' => "{$name}.json was damaged and the last good copy is in use. Check what changed recently, then save any setting to rewrite the file."];
+            $out[] = ['key' => 'store', 'level' => 'bad', 'text' => t('{name}.json was damaged and the last good copy is in use. Check what changed recently, then save any setting to rewrite the file.', ['name' => $name])];
         }
 
         if ($state['last_tick_at'] === null) {
-            $out[] = ['key' => 'scheduler', 'level' => 'bad', 'text' => 'The scheduler has never run. Nothing will be sent until it does.'];
+            $out[] = ['key' => 'scheduler', 'level' => 'bad', 'text' => t('The scheduler has never run. Nothing will be sent until it does.')];
         } elseif ($now - $state['last_tick_at'] > Schedule::CRON_STALE) {
-            $out[] = ['key' => 'scheduler', 'level' => 'bad', 'text' => 'The scheduler last ran ' . relative($state['last_tick_at']) . '. While it is stopped, the switch cannot send anything.'];
+            $out[] = ['key' => 'scheduler', 'level' => 'bad', 'text' => t('The scheduler last ran {when}. While it is stopped, the switch cannot send anything.', ['when' => relative($state['last_tick_at'])])];
         }
 
         if ($this->federated() && $this->coordinator->isolated($now)) {
@@ -1076,14 +1081,14 @@ final class Engine
             foreach ((array) $this->store->read('peers') as $peer) {
                 $heard = max($heard, (int) (is_array($peer) ? ($peer['seen_at'] ?? 0) : 0));
             }
-            $out[] = ['key' => 'peers', 'level' => 'bad', 'text' => 'This node has not heard from any other node '
-                . ($heard > 0 ? 'for ' . duration($now - $heard) : 'yet')
-                . '. Serious steps are delayed while it is cut off.'];
+            $out[] = ['key' => 'peers', 'level' => 'bad', 'text' => $heard > 0
+                ? t('This node has not heard from any other node for {duration}. Serious steps are delayed while it is cut off.', ['duration' => duration($now - $heard)])
+                : t('This node has not heard from any other node yet. Serious steps are delayed while it is cut off.')];
         }
 
         if (!empty($mail['last_send_error'])) {
             $error = $mail['last_send_error'];
-            $out[] = ['key' => 'mail', 'level' => 'bad', 'text' => 'The last email could not be sent (' . relative((int) $error['at']) . '): ' . $error['error']];
+            $out[] = ['key' => 'mail', 'level' => 'bad', 'text' => t('The last email could not be sent ({when}): {error}', ['when' => relative((int) $error['at']), 'error' => (string) $error['error']])];
         }
 
         // Label and error are stored data; they stay plain text and the pages escape them with e().
@@ -1091,46 +1096,50 @@ final class Engine
             if (!is_array($channel) || empty($channel['error_at']) || (int) $channel['error_at'] <= (int) ($channel['ok_at'] ?? 0)) {
                 continue;
             }
-            $out[] = ['key' => 'channels', 'level' => 'bad', 'text' => 'The ' . (string) ($channel['label'] ?? 'notification') . ' channel failed ' . relative((int) $channel['error_at']) . ': ' . (string) ($channel['error'] ?? 'unknown error')];
+            $out[] = ['key' => 'channels', 'level' => 'bad', 'text' => t('The {label} channel failed {when}: {error}', [
+                'label' => (string) ($channel['label'] ?? t('notification')),
+                'when' => relative((int) $channel['error_at']),
+                'error' => (string) ($channel['error'] ?? t('unknown error')),
+            ])];
         }
 
         $probe = (string) ($state['probe']['result'] ?? '');
         if ($probe === 'exposed') {
-            $out[] = ['key' => 'data', 'level' => 'bad', 'text' => 'Files in the data folder can be opened in a browser.'];
+            $out[] = ['key' => 'data', 'level' => 'bad', 'text' => t('Files in the data folder can be opened in a browser.')];
         } elseif ($probe === 'unknown' && empty($state['probe']['browser_ok_at'])) {
-            $out[] = ['key' => 'data', 'level' => 'warn', 'text' => 'The server could not check whether the data folder is blocked from the web.'];
+            $out[] = ['key' => 'data', 'level' => 'warn', 'text' => t('The server could not check whether the data folder is blocked from the web.')];
         }
 
         if ($state['armed'] && !$this->requiredContactsConfirmed()) {
-            $out[] = ['key' => 'required', 'level' => 'bad', 'text' => 'A required contact is missing or unconfirmed.'];
+            $out[] = ['key' => 'required', 'level' => 'bad', 'text' => t('A required contact is missing or unconfirmed.')];
         }
 
         foreach ($this->contacts->all() as $contact) {
             $name = $contact['name'] ?: $contact['email'];
             if ($contact['status'] === 'declined') {
-                $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => "{$name} declined and will not be contacted."];
+                $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} declined and will not be contacted.', ['name' => $name])];
             } elseif ($contact['status'] === 'unconfirmed') {
-                $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => "{$name} has not confirmed, so will not be contacted."];
+                $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} has not confirmed, so will not be contacted.', ['name' => $name])];
             } else {
                 if (!empty($contact['pending_email'])) {
-                    $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => "{$name} has not confirmed their new address. The old one is still in use."];
+                    $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} has not confirmed their new address. The old one is still in use.', ['name' => $name])];
                 }
                 $asked = $contact['reconfirm_asked_at'] ?? null;
                 if ($asked !== null && $now - $asked > Schedule::RECONFIRM_NUDGE) {
-                    $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => "{$name} has not answered their yearly reconfirmation. Check their address still works."];
+                    $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} has not answered their yearly reconfirmation. Check their address still works.', ['name' => $name])];
                 }
                 if ($state['armed'] && Messages::hasMarker(($contact['message']['body'] ?? '') . ($contact['verify_message']['body'] ?? ''))) {
-                    $out[] = ['key' => 'contact', 'level' => 'bad', 'text' => "The message for {$name} still holds starter text in square brackets."];
+                    $out[] = ['key' => 'contact', 'level' => 'bad', 'text' => t('The message for {name} still holds starter text in square brackets.', ['name' => $name])];
                 }
             }
         }
 
         if ($state['armed'] && $state['review_at'] !== null && $now >= $state['review_at'] + Schedule::YEAR) {
-            $out[] = ['key' => 'review', 'level' => 'warn', 'text' => 'Your yearly review is due: confirm each contact still has what they need.'];
+            $out[] = ['key' => 'review', 'level' => 'warn', 'text' => t('Your yearly review is due: confirm each contact still has what they need.')];
         }
 
         if (!empty($config['base_url']) && !str_starts_with((string) $config['base_url'], 'https://')) {
-            $out[] = ['key' => 'https', 'level' => 'warn', 'text' => 'This install is not using HTTPS. Links in its emails can be read in transit.'];
+            $out[] = ['key' => 'https', 'level' => 'warn', 'text' => t('This install is not using HTTPS. Links in its emails can be read in transit.')];
         }
 
         return $out;
@@ -1240,7 +1249,7 @@ final class Engine
         $vars = Messages::vars($config, $state, $this->contacts->all(), $contact);
         $out = [];
         if ($contact['kind'] === 'nok') {
-            $out['When you miss a check-in and its reminders'] = Messages::nokVerify(
+            $out[t('When you miss a check-in and its reminders')] = Messages::nokVerify(
                 $config,
                 $contact,
                 $vars,
@@ -1250,7 +1259,7 @@ final class Engine
                 false
             );
         }
-        $out['When the switch fires'] = Messages::fired($config, $contact, $vars);
+        $out[t('When the switch fires')] = Messages::fired($config, $contact, $vars);
         return $out;
     }
 
@@ -1356,7 +1365,7 @@ final class Engine
             'steps' => ['checkin' => $at],
         ];
         $this->saveState($state);
-        $this->store->log('cycle.started', 'The weekly check-in email was sent by another node.');
+        $this->store->log('cycle.started', t('The weekly check-in email was sent by another node.'));
         $did[] = 'Joined the cycle another node started.';
     }
 
@@ -1367,7 +1376,7 @@ final class Engine
         $state['cycle']['fired_reason'] = $reason;
         $state['cycle']['steps']['fire'] = $at;
         $this->saveState($state);
-        $this->store->log('cycle.fired', 'Another node fired the switch.');
+        $this->store->log('cycle.fired', t('Another node fired the switch.'));
         $did[] = 'The switch fired (another node).';
     }
 
@@ -1472,8 +1481,8 @@ final class Engine
                 $state['last_checkin_via'] = 'another node (' . $latest['via'] . ')';
                 $state['next_due_at'] = $this->nextSlot($config, max($latest['at'], (int) $state['paused_until']));
                 $this->saveState($state);
-                $this->store->log('checkin', 'Checked in by another node (' . $latest['via'] . ').'
-                    . ($told ? ' False-alarm notices sent to ' . implode(', ', $told) . '.' : ''));
+                $this->store->log('checkin', t('Checked in by another node ({via}).', ['via' => t((string) $latest['via'])])
+                    . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
                 $did[] = 'A check-in on another node ended the cycle.';
             }
 
@@ -1536,7 +1545,7 @@ final class Engine
         $state['cycle'] = null;
         $state['next_due_at'] = $this->nextSlot($config, $at);
         $this->saveState($state);
-        $this->store->log('cycle.vouched', 'The next of kin answered "All fine" (' . $via . '). Nobody else was contacted.');
+        $this->store->log('cycle.vouched', t('The next of kin answered "All fine" ({via}). Nobody else was contacted.', ['via' => t($via)]));
         return true;
     }
 

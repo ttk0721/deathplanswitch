@@ -22,24 +22,24 @@ final class Setup
         $writable = (is_dir($dir) || @mkdir($dir, 0700, true)) && is_writable($dir);
         return [
             [
-                'label' => 'PHP ' . self::MIN_PHP . ' or newer',
+                'label' => t('PHP {version} or newer', ['version' => self::MIN_PHP]),
                 'ok' => version_compare(PHP_VERSION, self::MIN_PHP, '>='),
-                'hint' => 'This server runs PHP ' . PHP_VERSION . '. Ask your host to switch to a current version.',
+                'hint' => t('This server runs PHP {version}. Ask your host to switch to a current version.', ['version' => PHP_VERSION]),
             ],
             [
-                'label' => 'The OpenSSL extension, for encrypted mail',
+                'label' => t('The OpenSSL extension, for encrypted mail'),
                 'ok' => extension_loaded('openssl'),
-                'hint' => 'Ask your host to enable the PHP openssl extension.',
+                'hint' => t('Ask your host to enable the PHP openssl extension.'),
             ],
             [
-                'label' => 'The mbstring extension',
+                'label' => t('The mbstring extension'),
                 'ok' => extension_loaded('mbstring'),
-                'hint' => 'Ask your host to enable the PHP mbstring extension.',
+                'hint' => t('Ask your host to enable the PHP mbstring extension.'),
             ],
             [
-                'label' => 'The data folder can be written to',
+                'label' => t('The data folder can be written to'),
                 'ok' => $writable,
-                'hint' => "PHP cannot write to {$dir}. Give that folder to the user the web pages run as"
+                'hint' => t('PHP cannot write to {dir}. Give that folder to the user the web pages run as', ['dir' => $dir])
                     . (Web::runUser()['name'] !== '' ? ': sudo chown -R ' . Web::runUser()['name'] . ' ' . escapeshellarg($dir) : '.'),
             ],
         ];
@@ -48,10 +48,10 @@ final class Setup
     public static function passwordProblem(string $password): ?string
     {
         if (strlen($password) < self::MIN_PASSWORD) {
-            return 'Choose a password of at least ' . self::MIN_PASSWORD . ' characters.';
+            return t('Choose a password of at least {min} characters.', ['min' => self::MIN_PASSWORD]);
         }
         if (strlen($password) > 1000) {
-            return 'That password is too long.';
+            return t('That password is too long.');
         }
         return null;
     }
@@ -89,13 +89,13 @@ final class Setup
             $smtp['pass'] = (string) ($existing['pass'] ?? '');
         }
         if ($smtp['host'] === '' || !preg_match('/^[A-Za-z0-9.\-\[\]:]+$/', $smtp['host'])) {
-            $errors[] = 'Enter the mail server host, for example smtp.example.com.';
+            $errors[] = t('Enter the mail server host, for example smtp.example.com.');
         }
         if ($smtp['port'] < 1 || $smtp['port'] > 65535) {
-            $errors[] = 'Enter the mail server port. 587 is the usual one.';
+            $errors[] = t('Enter the mail server port. 587 is the usual one.');
         }
         if (!Web::validEmail($smtp['from_email'])) {
-            $errors[] = 'Enter the address the switch sends from. Your mail service must allow it.';
+            $errors[] = t('Enter the address the switch sends from. Your mail service must allow it.');
         }
         return [$smtp, $errors];
     }
@@ -139,23 +139,23 @@ final class Setup
             $config = $store->read('config');
             $pending = $config['pending_email'] ?? null;
             if (!is_array($pending)) {
-                return 'There is no code waiting. Send a new one.';
+                return t('There is no code waiting. Send a new one.');
             }
             if ($pending['expires_at'] < Clock::now() || $pending['attempts'] >= 6) {
                 $config['pending_email'] = null;
                 $store->write('config', $config);
-                return 'That code has expired. Send a new one.';
+                return t('That code has expired. Send a new one.');
             }
             $code = preg_replace('/\D/', '', $code) ?? '';
             if (!hash_equals((string) $pending['hash'], Tokens::hash($code . '|' . $pending['address']))) {
                 $config['pending_email']['attempts']++;
                 $store->write('config', $config);
-                return 'That code is not right. Check the email and try again.';
+                return t('That code is not right. Check the email and try again.');
             }
             $config[$pending['which']] = $pending['address'];
             $config['pending_email'] = null;
             $store->write('config', $config);
-            $store->log('settings.email', ($pending['which'] === 'backup_email' ? 'Backup' : 'Main') . ' email address confirmed: ' . $pending['address'] . '.');
+            $store->log('settings.email', $pending['which'] === 'backup_email' ? t('Backup email address confirmed: {address}.', ['address' => $pending['address']]) : t('Main email address confirmed: {address}.', ['address' => $pending['address']]));
             return true;
         });
     }

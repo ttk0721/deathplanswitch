@@ -3,6 +3,7 @@ import { client } from './api.js';
 import * as c from './crypto.js';
 import * as flows from './flows.js';
 import { combine } from './shamir.js';
+import { tr } from './i18n.js';
 
 const root = document.getElementById('vault-recipient');
 const api = client(root.dataset.api, '');
@@ -37,34 +38,34 @@ async function setPassword() {
   try {
     r = (await api.get('invite', { t: invite })).recipient;
   } catch {
-    return show(message('This link has expired or was used.'));
+    return show(message(tr('This link has expired or was used.')));
   }
-  const code = field('code', 'Your code, from the card');
-  const p1 = field('pw1', 'New password (at least 12 characters)', 'password');
-  const p2 = field('pw2', 'New password again', 'password');
+  const code = field('code', tr('Your code, from the card'));
+  const p1 = field('pw1', tr('New password (at least 12 characters)'), 'password');
+  const p2 = field('pw2', tr('New password again'), 'password');
   const form = el('form');
   const err = el('div');
-  const btn = el('button', 'Set password', { type: 'submit' });
+  const btn = el('button', tr('Set password'), { type: 'submit' });
   form.append(code.wrap, p1.wrap, p2.wrap, err, el('div', null, { class: 'actions' }));
   form.lastChild.append(btn);
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     err.replaceChildren();
-    if (p1.input.value.length < 12) return err.replaceChildren(message('Use at least 12 characters.'));
-    if (p1.input.value !== p2.input.value) return err.replaceChildren(message('The two passwords differ.'));
+    if (p1.input.value.length < 12) return err.replaceChildren(message(tr('Use at least 12 characters.')));
+    if (p1.input.value !== p2.input.value) return err.replaceChildren(message(tr('The two passwords differ.')));
     btn.disabled = true;
     try {
       const done = await flows.addPassword({ id: r.id, code: r.code, password: null }, code.input.value, p1.input.value);
       await api.post('password', { password: done.password }, { t: invite });
-      show(el('h2', 'Password set'), el('p', 'Your code still works too.'));
+      show(el('h2', tr('Password set')), el('p', tr('Your code still works too.')));
     } catch (x) {
       btn.disabled = false;
-      err.replaceChildren(message(x.message === 'wrong code' ? 'That code does not match.' : x.message));
+      err.replaceChildren(message(x.message === 'wrong code' ? tr('That code does not match.') : x.message));
     } finally {
       code.input.value = p1.input.value = p2.input.value = '';
     }
   });
-  show(el('p', 'Choose a password for opening the vault.'), form);
+  show(el('p', tr('Choose a password for opening the vault.')), form);
 }
 
 async function download(ck, fileId, file) {
@@ -89,23 +90,23 @@ async function renderPackage(p, raw) {
   try {
     manifest = await flows.openManifest(p.ck, raw);
   } catch {
-    box.append(el('p', 'This package has nothing in it yet.'));
+    box.append(el('p', tr('This package has nothing in it yet.')));
     return box;
   }
   if (manifest.notes) box.append(el('pre', manifest.notes));
   const ul = el('ul');
   for (const f of manifest.files || []) {
     const li = el('li');
-    const btn = el('button', 'Download', { type: 'button', class: 'button-quiet' });
+    const btn = el('button', tr('Download'), { type: 'button', class: 'button-quiet' });
     const status = el('span', '', { class: 'vault-progress' });
     btn.addEventListener('click', async () => {
       btn.disabled = true;
-      status.textContent = ' Decrypting...';
+      status.textContent = ' ' + tr('Decrypting...');
       try {
         await download(p.ck, f.id, f);
-        status.textContent = ' Done.';
+        status.textContent = ' ' + tr('Done.');
       } catch {
-        status.textContent = ' This file could not be opened.';
+        status.textContent = ' ' + tr('This file could not be opened.');
       }
       btn.disabled = false;
     });
@@ -157,18 +158,18 @@ async function releaseKey(status) {
     if (s && validX(s.x) && !got.has(s.x)) got.set(s.x, s);
   }
   if (got.size < k) {
-    throw new Error(`Only ${got.size} of the ${k} needed nodes answered. The vault cannot be opened yet. Try again later.`);
+    throw new Error(tr('Only {got} of the {k} needed nodes answered. The vault cannot be opened yet. Try again later.', { got: got.size, k }));
   }
   return combine([...got.values()].slice(0, k));
 }
 
 async function open() {
   const status = await api.get('status');
-  if (!status.released) return show(el('p', 'Nothing has been released.'));
-  const secret = field('secret', 'Your code or password', 'password');
+  if (!status.released) return show(el('p', tr('Nothing has been released.')));
+  const secret = field('secret', tr('Your code or password'), 'password');
   const form = el('form');
   const err = el('div');
-  const btn = el('button', 'Open', { type: 'submit' });
+  const btn = el('button', tr('Open'), { type: 'submit' });
   form.append(secret.wrap, err, el('div', null, { class: 'actions' }));
   form.lastChild.append(btn);
   form.addEventListener('submit', async (ev) => {
@@ -182,7 +183,7 @@ async function open() {
       try {
         result = await flows.unlockRecipient(view, rk, secret.input.value);
       } catch {
-        return err.replaceChildren(message('That code or password does not open anything here.'));
+        return err.replaceChildren(message(tr('That code or password does not open anything here.')));
       }
       const nodes = [];
       for (const p of result.packages) {
@@ -196,7 +197,7 @@ async function open() {
       btn.disabled = false;
     }
   });
-  show(el('p', 'Enter the code from your card, or your password.'), form);
+  show(el('p', tr('Enter the code from your card, or your password.')), form);
 }
 
 (invite ? setPassword() : open()).catch((x) => show(message(x.message)));

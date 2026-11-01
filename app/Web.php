@@ -31,9 +31,9 @@ final class Web
             ob_end_clean();
             http_response_code(500);
             self::$layout = 'plain';
-            self::$title = 'The data folder needs attention';
-            $content = '<h1>The data folder needs attention</h1><p class="lede">' . e($e->getMessage()) . '</p>'
-                . '<p>Nothing has been changed. See "If a data file is damaged" in the README.</p>';
+            self::$title = t('The data folder needs attention');
+            $content = '<h1>' . e(t('The data folder needs attention')) . '</h1><p class="lede">' . e($e->getMessage()) . '</p>'
+                . '<p>' . e(t('Nothing has been changed. See "If a data file is damaged" in the README.')) . '</p>';
         }
         require __DIR__ . '/pages/_layout.php';
         exit;
@@ -252,7 +252,7 @@ final class Web
             $now = Clock::now();
             $auth = $store->read('auth') + ['failures' => 0, 'locked_until' => 0];
             if ($auth['locked_until'] > $now) {
-                return 'Too many wrong passwords. Try again ' . relative((int) $auth['locked_until']) . '.';
+                return t('Too many wrong passwords. Try again {when}.', ['when' => relative((int) $auth['locked_until'])]);
             }
             $hash = (string) ($store->read('config')['password_hash'] ?? '');
             if ($hash !== '' && password_verify($password, $hash)) {
@@ -267,8 +267,8 @@ final class Web
                 $auth['locked_until'] = $now + min(3600, 60 * 2 ** ($auth['failures'] - 5));
             }
             $store->write('auth', $auth);
-            $store->log('auth.failed', 'A wrong password was entered at sign-in.');
-            return 'That password is not right.';
+            $store->log('auth.failed', t('A wrong password was entered at sign-in.'));
+            return t('That password is not right.');
         });
     }
 
@@ -303,7 +303,7 @@ final class Web
         if ($sent === '' || !hash_equals((string) ($_SESSION['csrf'] ?? ''), $sent)) {
             http_response_code(400);
             self::$layout = 'plain';
-            self::flash('That form had expired. Go back, reload the page and try again.', 'bad');
+            self::flash(t('That form had expired. Go back, reload the page and try again.'), 'bad');
             self::redirect('index.php');
         }
         return true;

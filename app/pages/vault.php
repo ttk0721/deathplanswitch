@@ -24,15 +24,15 @@ if (Web::posted() && Web::post('action') === 'invite') {
     $contact = $recipient !== null ? $engine->contacts()->find((string) ($recipient['contact_id'] ?? '')) : null;
     $address = $contact !== null ? trim((string) ($contact['email'] ?? '')) : '';
     if ($address === '') {
-        Web::flash('That recipient has no contact with an email address, so no invitation was sent.', 'bad');
+        Web::flash(t('That recipient has no contact with an email address, so no invitation was sent.'), 'bad');
     } else {
         $token = $vault->issueInvite((string) $recipient['id']);
         $url = $engine->url($config, 'vault.php', ['invite' => $token]);
         $outbox = new Outbox(store(), new SmtpTransport());
         if ($outbox->send($address, Messages::vaultInvite($config, $url), 'contact', null, false)) {
-            Web::flash('Invitation sent to ' . $contact['name'] . '.');
+            Web::flash(t('Invitation sent to {name}.', ['name' => $contact['name']]));
         } else {
-            Web::flash('The invitation could not be sent. Check the mail settings.', 'bad');
+            Web::flash(t('The invitation could not be sent. Check the mail settings.'), 'bad');
         }
     }
     Web::redirect($self);
@@ -64,10 +64,10 @@ if (Cluster::enabled(store())) {
     $clusterAttr = ' data-cluster="' . e(json_encode($clusterData, $flags)) . '"';
 }
 
-Web::$title = 'Vault: Death Plan Switch';
+Web::$title = t('Vault: Death Plan Switch');
 ?>
-<h1>Vault</h1>
-<p class="lede">What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired.</p>
+<h1><?= e(t('Vault')) ?></h1>
+<p class="lede"><?= e(t("What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired.")) ?></p>
 
 <div id="vault-owner" class="vault"
      data-api="vault-api.php"
@@ -75,5 +75,5 @@ Web::$title = 'Vault: Death Plan Switch';
      data-contacts="<?= e(json_encode($people, $flags)) ?>"
      data-owner-name="<?= e((string) ($config['owner_name'] ?? '')) ?>"
      data-vault-url="<?= e($engine->url($config, 'vault.php')) ?>"<?= $clusterAttr ?>></div>
-<noscript><p class="notice notice-warn">The vault needs JavaScript. Turn it on for this page.</p></noscript>
+<noscript><p class="notice notice-warn"><?= e(t('The vault needs JavaScript. Turn it on for this page.')) ?></p></noscript>
 <script type="module" src="assets/vault/owner.js?v=<?= e(VERSION) ?>"></script>

@@ -10,24 +10,33 @@ if (!defined('DPS_ROOT')) {
 $config = store()->read('config');
 $landing = (array) ($config['landing'] ?? []);
 $title = trim((string) ($landing['title'] ?? '')) ?: 'Death Plan Switch';
-$text = trim((string) ($landing['text'] ?? '')) ?: 'This switch is not active.';
+$custom = trim((string) ($landing['text'] ?? ''));
 $released = engine()->released();
+$armed = !$released && (bool) (engine()->state()['armed'] ?? false);
 $hasRecipients = $released && (new Vault(store()))->read()['recipients'] !== [];
+$paragraphs = $custom !== '' ? (preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $custom)) ?: []) : [];
 
 Web::$layout = 'plain';
 Web::$title = $title;
 ?>
-<div class="public-status">
+<h1 class="public-title"><?= e($title) ?></h1>
 <?php if ($released): ?>
-  <h1>This switch has been triggered.</h1>
+<section class="pilot pilot-fired" aria-live="polite">
+  <span class="pilot-dot" aria-hidden="true"></span>
+  <p class="pilot-state"><?= e(t('Triggered')) ?></p>
+  <p class="pilot-line"><?= e(t('This switch has been triggered.')) ?></p>
+</section>
 <?php if ($hasRecipients): ?>
-  <p><a class="button" href="vault.php">Open the vault</a></p>
+<p><a class="button" href="vault.php"><?= e(t('Open the vault')) ?></a></p>
 <?php endif ?>
 <?php else: ?>
-  <h1><?= e($title) ?></h1>
-<?php foreach (preg_split('/\n\s*\n/', str_replace("\r\n", "\n", $text)) as $paragraph): ?>
+<section class="pilot pilot-<?= $armed ? 'armed' : 'off' ?>">
+  <span class="pilot-dot" aria-hidden="true"></span>
+  <p class="pilot-state"><?= e($armed ? t('Armed') : t('Not active')) ?></p>
+  <p class="pilot-line"><?= e($armed ? t('This switch is armed.') : t('This switch is not active.')) ?></p>
+</section>
+<?php endif ?>
+<?php foreach ($paragraphs as $paragraph): ?>
   <p><?= e(trim($paragraph)) ?></p>
 <?php endforeach ?>
-<?php endif ?>
-</div>
-<p class="help"><a href="index.php?p=login">Owner sign-in</a></p>
+<p class="help"><a href="index.php?p=login"><?= e(t('Owner sign-in')) ?></a></p>

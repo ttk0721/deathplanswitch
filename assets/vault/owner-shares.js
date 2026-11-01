@@ -3,6 +3,7 @@
 import { split, encodeShare } from './shamir.js';
 import { seal } from './sharebox.js';
 import { h } from './owner-packages.js';
+import { tr } from './i18n.js';
 
 export function renderShares(ctx) {
   if (typeof document === 'undefined') return;
@@ -20,31 +21,29 @@ export function renderShares(ctx) {
 
   const lines = [];
   if (!shares) {
-    lines.push(h('p', {}, 'No key shares yet. The release key is held by this node alone.'));
+    lines.push(h('p', {}, tr('No key shares yet. The release key is held by this node alone.')));
   } else {
-    lines.push(h('p', {}, 'Key shares: ' + shares.k + ' of ' + shares.n +
-      ' nodes are needed (cluster version ' + shares.cluster_version + ').'));
+    lines.push(h('p', {}, tr('Key shares: {k} of {n} nodes are needed (cluster version {version}).', { k: shares.k, n: shares.n, version: shares.cluster_version })));
     if (shares.cluster_version !== cluster.version || shares.k !== cluster.k) {
       lines.push(h('p', { class: 'notice notice-warn' },
-        'The cluster changed since the shares were made (now version ' + cluster.version +
-        ', ' + cluster.k + ' of ' + nodes.length + '). Distribute the key shares again.'));
+        tr('The cluster changed since the shares were made (now version {version}, {k} of {n}). Distribute the key shares again.', { version: cluster.version, k: cluster.k, n: nodes.length })));
     }
   }
 
-  const go = h('button', { type: 'button' }, shares ? 'Distribute key shares again' : 'Distribute key shares');
+  const go = h('button', { type: 'button' }, shares ? tr('Distribute key shares again') : tr('Distribute key shares'));
   go.addEventListener('click', async () => {
     go.disabled = true;
     try {
-      say('Sealing the key shares...');
+      say(tr('Sealing the key shares...'));
       const n = nodes.length;
-      if (n > 9) throw new Error('Key shares support at most 9 nodes.');
+      if (n > 9) throw new Error(tr('Key shares support at most 9 nodes.'));
       const parts = split(rk, n, cluster.k);
       const boxes = {};
       for (let i = 0; i < n; i++) {
         boxes[nodes[i].id] = await seal(nodes[i].share_pk, nodes[i].id, encodeShare(parts[i]));
       }
       await api.post('shares', { k: cluster.k, n, cluster_version: cluster.version, boxes });
-      say('Key shares distributed.');
+      say(tr('Key shares distributed.'));
       await ctx.reload();
     } catch (e) {
       say(e.message || String(e), true);
@@ -52,7 +51,6 @@ export function renderShares(ctx) {
   });
 
   root.replaceChildren(h('p', { class: 'help' },
-    'The release key is split so that ' + cluster.k + ' of your ' + nodes.length +
-    ' nodes must have fired before anyone can open the vault.'),
+    tr('The release key is split so that {k} of your {n} nodes must have fired before anyone can open the vault.', { k: cluster.k, n: nodes.length })),
   ...lines, status, h('div', { class: 'actions' }, go));
 }

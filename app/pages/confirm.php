@@ -25,35 +25,37 @@ if (Web::isPost()) {
 }
 $purpose = (string) ($contact['token']['purpose'] ?? 'confirm');
 
-Web::$title = 'Death Plan Switch';
+Web::$title = t('Death Plan Switch');
 ?>
 <?php if ($result !== null && $result['accepted']): ?>
-<h1>Confirmed</h1>
-<p>Thank you, <?= e($result['contact']['name']) ?>. <?= e($owner) ?> has been told. There is nothing else to do.</p>
-<p>If <?= e($owner) ?> ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.</p>
+<h1><?= e(t('Confirmed')) ?></h1>
+<p><?= e(t('Thank you, {name}. {owner} has been told. There is nothing else to do.', ['name' => $result['contact']['name'], 'owner' => $owner])) ?></p>
+<p><?= e(t('If {owner} ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.', ['owner' => $owner])) ?></p>
 
 <?php elseif ($result !== null): ?>
-<h1>Done</h1>
-<p>You will not be contacted by <?= e($owner) ?>'s Death Plan Switch. <?= e($owner) ?> has been told.</p>
+<h1><?= e(t('Done')) ?></h1>
+<p><?= e(t("You will not be contacted by {owner}'s Death Plan Switch. {owner} has been told.", ['owner' => $owner])) ?></p>
 
 <?php elseif ($contact !== null): ?>
-<h1><?= $purpose === 'reconfirm' ? 'Still happy to be ' . e($owner) . "'s " . e(Contacts::role($contact)) . '?' : e($owner) . ' has listed you as their ' . e(Contacts::role($contact)) ?></h1>
-<p><?= e($owner) ?> uses Death Plan Switch, a small app on their own server. Every week it asks <?= e($owner) ?> to check in. If they stop, it emails the people they have chosen.</p>
+<h1><?= e($purpose === 'reconfirm'
+    ? t("Still happy to be {owner}'s {role}?", ['owner' => $owner, 'role' => Contacts::role($contact)])
+    : t('{owner} has listed you as their {role}', ['owner' => $owner, 'role' => Contacts::role($contact)])) ?></h1>
+<p><?= e(t('{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen.', ['owner' => $owner])) ?></p>
 <?php if ($contact['kind'] === 'nok'): ?>
-<p>As next of kin you would be asked first. If <?= e($owner) ?> misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.</p>
+<p><?= e(t('As next of kin you would be asked first. If {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.', ['owner' => $owner])) ?></p>
 <?php else: ?>
-<p>If <?= e($owner) ?> stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what <?= e($owner) ?> needs you to do.</p>
+<p><?= e(t('If {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what {owner} needs you to do.', ['owner' => $owner])) ?></p>
 <?php endif ?>
-<p>Confirming tells <?= e($owner) ?> that <strong><?= e($purpose === 'email_change' ? (string) $contact['pending_email'] : (string) $contact['email']) ?></strong> reaches you, and that you are willing.</p>
+<p><?= t('Confirming tells {owner} that {address} reaches you, and that you are willing.', ['owner' => e($owner), 'address' => '<strong>' . e($purpose === 'email_change' ? (string) $contact['pending_email'] : (string) $contact['email']) . '</strong>']) ?></p>
 <form method="post" action="confirm.php">
   <input type="hidden" name="t" value="<?= e($token) ?>">
   <div class="actions">
-    <button class="button-big" type="submit" name="answer" value="yes">Yes, I confirm</button>
-    <button class="button-quiet" type="submit" name="answer" value="no">No, leave me out</button>
+    <button class="button-big" type="submit" name="answer" value="yes"><?= e(t('Yes, I confirm')) ?></button>
+    <button class="button-quiet" type="submit" name="answer" value="no"><?= e(t('No, leave me out')) ?></button>
   </div>
 </form>
 
 <?php else: ?>
-<h1>This link is no longer active</h1>
-<p>It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.</p>
+<h1><?= e(t('This link is no longer active')) ?></h1>
+<p><?= e(t('It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.')) ?></p>
 <?php endif ?>

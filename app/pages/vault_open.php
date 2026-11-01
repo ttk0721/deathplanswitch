@@ -8,9 +8,9 @@ if (!defined('DPS_ROOT')) {
 }
 
 Web::$layout = 'plain';
-Web::$title = 'Vault: Death Plan Switch';
+Web::$title = t('Vault: Death Plan Switch');
 ?>
-<h1>Vault</h1>
+<h1><?= e(t('Vault')) ?></h1>
 <div id="vault-recipient" class="vault" data-api="vault-api.php" data-invite="<?= e(Web::get('invite')) ?>"></div>
-<noscript><p class="lede">This page needs JavaScript, because everything is decrypted in your browser.</p></noscript>
+<noscript><p class="lede"><?= e(t('This page needs JavaScript, because everything is decrypted in your browser.')) ?></p></noscript>
 <script type="module" src="assets/vault/recipient.js?v=<?= e(VERSION) ?>"></script>

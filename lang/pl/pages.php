@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+// Check-in, confirm, respond, history, public page and the vault pages.
+// Keys are the English source strings. Pages for family avoid gendered forms.
+return [
+    // Check-in (owner)
+    'Check in: Death Plan Switch' => 'Potwierdzenie: Death Plan Switch',
+    'Checked in' => 'Potwierdzone',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm: {names}.' => 'Twój przełącznik został uruchomiony. Wszyscy, z którymi się skontaktowaliśmy, dostali już informację, że to fałszywy alarm: {names}.',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm.' => 'Twój przełącznik został uruchomiony. Wszyscy, z którymi się skontaktowaliśmy, dostali już informację, że to fałszywy alarm.',
+    'Your contacts have read their messages, so any pointer in them has been seen. {link} to review what needs changing.' => 'Twoi bliscy przeczytali swoje wiadomości, więc ktoś mógł zobaczyć zawarte w nich wskazówki. {link}, żeby przejrzeć, co trzeba zmienić.',
+    'Sign in' => 'Zaloguj się',
+    '{names} had been asked whether you are all right, and has now been told it was a false alarm. Nobody else was contacted.' => 'Zapytaliśmy, czy wszystko u ciebie w porządku: {names}. Dostali już informację, że to fałszywy alarm. Nikt inny nie był kontaktowany.',
+    '{names} had been asked whether you are all right, and have now been told it was a false alarm. Nobody else was contacted.' => 'Zapytaliśmy, czy wszystko u ciebie w porządku: {names}. Dostali już informację, że to fałszywy alarm. Nikt inny nie był kontaktowany.',
+    'Thank you. Nobody was contacted.' => 'Dziękujemy. Nikt nie został powiadomiony.',
+    'Your switch is paused until {date}.' => 'Twój przełącznik jest wstrzymany do: {date}.',
+    'Your next check-in email arrives on {date} at {time}.' => 'Następna wiadomość z prośbą o potwierdzenie przyjdzie: {date}, o {time}.',
+    'Are you there, {name}?' => '{name}, jesteś tam?',
+    'owner' => 'właścicielu',
+    'Press the button to check in. Opening this page is not enough.' => 'Kliknij przycisk, żeby potwierdzić. Samo otwarcie tej strony nie wystarczy.',
+    'I am here: check in' => 'Jestem: potwierdzam',
+    'This link is no longer active' => 'Ten link już nie działa',
+    'Each check-in link works once, and for 14 days. If you have a newer email from Death Plan Switch, use the link in that one.' => 'Każdy link do potwierdzenia działa jeden raz i przez 14 dni. Jeśli masz nowszą wiadomość z Death Plan Switch, użyj linku z niej.',
+    'You can also {link} and check in from the dashboard.' => 'Możesz też {link} i potwierdzić z pulpitu.',
+    'sign in' => 'zalogować się',
+
+    // Confirm (contact)
+    'Death Plan Switch' => 'Death Plan Switch',
+    'Confirmed' => 'Potwierdzone',
+    'Thank you, {name}. {owner} has been told. There is nothing else to do.' => 'Dziękujemy, {name}. Dajemy znać osobie: {owner}. Nic więcej nie trzeba robić.',
+    'If {owner} ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.' => 'Jeśli osoba: {owner} przestanie się odzywać, dostaniesz wiadomość z tego samego adresu, z którego przyszła ta prośba. Dodaj go do kontaktów, żeby nie trafił do spamu.',
+    'Done' => 'Gotowe',
+    "You will not be contacted by {owner}'s Death Plan Switch. {owner} has been told." => 'Death Plan Switch osoby: {owner} nie będzie się z tobą kontaktować. Dajemy jej o tym znać.',
+    "Still happy to be {owner}'s {role}?" => 'Czy nadal zgadzasz się pełnić rolę: {role} (dla: {owner})?',
+    '{owner} has listed you as their {role}' => '{owner} wskazuje cię w roli: {role}',
+    '{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen.' => 'Osoba: {owner} korzysta z Death Plan Switch, niewielkiej aplikacji na własnym serwerze. Co tydzień prosi ona o potwierdzenie, że wszystko w porządku. Gdy potwierdzenia zabraknie, aplikacja pisze do wybranych przez nią osób.',
+    'As next of kin you would be asked first. If {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.' => 'Jako najbliższa osoba dostaniesz wiadomość jako pierwsza. Jeśli {owner} nie potwierdzi i nie zareaguje na przypomnienia przez trzy dni, przyjdzie jedna wiadomość z pytaniem, czy wszystko w porządku, z dwoma przyciskami do odpowiedzi.',
+    'If {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what {owner} needs you to do.' => 'Jeśli {owner} przestanie potwierdzać, a najbliższa osoba nie potwierdzi, że wszystko w porządku, dostaniesz jedną wiadomość z tym, o co prosi {owner}.',
+    'Confirming tells {owner} that {address} reaches you, and that you are willing.' => 'Potwierdzenie informuje osobę: {owner}, że adres {address} do ciebie dociera i że się zgadzasz.',
+    'Yes, I confirm' => 'Tak, potwierdzam',
+    'No, leave me out' => 'Nie, proszę mnie pominąć',
+    'It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.' => 'Link został już użyty albo wygasł. Jeśli chcesz potwierdzić, poproś osobę, która cię wpisała, o nową prośbę.',
+
+    // Respond (next of kin)
+    'All fine' => 'Wszystko w porządku',
+    'You have seen or spoken to {owner} and they are all right. Nobody else is contacted, and {owner} is told you answered.' => 'Masz kontakt z osobą: {owner} i nic jej nie jest. Nikt inny nie zostanie powiadomiony, a ona dowie się, że odpowiedziano.',
+    "Something's wrong" => 'Coś jest nie tak',
+    '{owner} cannot run their business at the moment.' => 'Osoba: {owner} nie może teraz zająć się swoimi sprawami.',
+    'These people are sent their instructions straight away: {names}.' => 'Te osoby dostaną swoje wskazówki od razu: {names}.',
+    'The people they chose are sent their instructions straight away.' => 'Wybrane przez nią osoby dostaną swoje wskazówki od razu.',
+    'You are sent yours too.' => 'Ty też dostaniesz swoje.',
+    'Thank you' => 'Dziękujemy',
+    'Your answer has been recorded. Nobody else has been contacted, and {owner} has been told that you answered.' => 'Odpowiedź zapisana. Nikt inny nie został powiadomiony, a osoba: {owner} dowie się, że odpowiedziano.',
+    'Your answer has been recorded.' => 'Odpowiedź zapisana.',
+    'These people have been sent their instructions: {names}.' => 'Te osoby dostały swoje wskazówki: {names}.',
+    'The people {owner} chose have been sent their instructions.' => 'Osoby wybrane przez: {owner} dostały swoje wskazówki.',
+    'You have been emailed a message from {owner} as well, with what to do next.' => 'Wysłaliśmy ci też wiadomość od: {owner}, z opisem, co robić dalej.',
+    'Is {owner} all right?' => 'Czy u osoby: {owner} wszystko w porządku?',
+    '{owner} has not answered their weekly check-in or its reminders. You are their next of kin, so you are asked first. Nothing has been sent to anyone else.' => 'Osoba: {owner} nie odpowiedziała na cotygodniowe pytanie ani na przypomnienia. Jesteś jej najbliższą osobą, więc to ciebie pytamy w pierwszej kolejności. Nikt inny nic jeszcze nie dostał.',
+    'Not sure yet? You can come back to this page. If neither you nor {owner} answers by the time given in the email, the others are sent their instructions.' => 'Jeszcze nie wiesz? Możesz wrócić na tę stronę. Jeśli do terminu podanego w wiadomości nie odpowiesz ani ty, ani {owner}, pozostałe osoby dostaną swoje wskazówki.',
+    'It has either been used already, or the check it belonged to has been settled. You do not need to do anything.' => 'Link został już użyty albo sprawa, której dotyczył, jest załatwiona. Nie musisz nic robić.',
+
+    // History
+    'History: Death Plan Switch' => 'Historia: Death Plan Switch',
+    'History' => 'Historia',
+    'Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.' => 'Wszystko, co zrobił przełącznik, od najnowszych. Uruchomienia harmonogramu, które nie miały nic do zrobienia, nie są wypisane.',
+    'Nothing has happened yet.' => 'Nic się jeszcze nie wydarzyło.',
+
+    // Public page
+    'This switch is active.' => 'Ten przełącznik jest aktywny.',
+    'This switch is not active.' => 'Przełącznik nie jest aktywny.',
+    'This switch is armed.' => 'Przełącznik czuwa.',
+    'Triggered' => 'Uruchomiony',
+    'This switch has been triggered.' => 'Przełącznik został uruchomiony.',
+    'Open the vault' => 'Otwórz sejf',
+    'Armed' => 'Czuwa',
+    'Not active' => 'Nieaktywny',
+    'Owner sign-in' => 'Logowanie właściciela',
+
+    // Vault (owner and recipient)
+    'That recipient has no contact with an email address, so no invitation was sent.' => 'Ten odbiorca nie ma kontaktu z adresem e-mail, więc nie wysłano zaproszenia.',
+    'Invitation sent to {name}.' => 'Zaproszenie wysłane: {name}.',
+    'The invitation could not be sent. Check the mail settings.' => 'Nie udało się wysłać zaproszenia. Sprawdź ustawienia poczty.',
+    'Vault: Death Plan Switch' => 'Sejf: Death Plan Switch',
+    'Vault' => 'Sejf',
+    "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'To, co zostawiasz wybranym osobom, zamknięte w twojej przeglądarce. Otworzy to tylko kod lub hasło odbiorcy, i to dopiero po uruchomieniu przełącznika.',
+    'The vault needs JavaScript. Turn it on for this page.' => 'Sejf wymaga JavaScriptu. Włącz go dla tej strony.',
+    'This page needs JavaScript, because everything is decrypted in your browser.' => 'Ta strona wymaga JavaScriptu, bo wszystko jest odszyfrowywane w twojej przeglądarce.',
+];

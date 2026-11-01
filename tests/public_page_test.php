@@ -39,6 +39,7 @@ test('the owner text is escaped and split into paragraphs', function (): void {
     $html = render();
     check(!str_contains($html, '<script>') && str_contains($html, '&lt;script&gt;'), 'escaped');
     check(str_contains($html, '<p>Second</p>'), 'paragraphs');
+    check(strpos($html, '<h1 class="public-title">Hi</h1>') < strpos($html, 'pilot-state') && strpos($html, 'pilot-state') < strpos($html, '&lt;script&gt;'), 'title, pilot, phrases order');
 });
 test('after release it says triggered and links the vault only with recipients', function (): void {
     setFired(true);

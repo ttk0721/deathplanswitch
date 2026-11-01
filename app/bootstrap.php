@@ -86,47 +86,101 @@ function appriseUrl(): string
     return is_string($env) ? trim($env) : '';
 }
 
+/** Translate an English source string; {name} placeholders are filled from $vars. */
+function t(string $en, array $vars = []): string
+{
+    return I18n::t($en, $vars);
+}
+
+/** The interface language: 'pl' or 'en'. */
+function lang(): string
+{
+    return I18n::lang();
+}
+
 /** Format a UTC timestamp in the owner's timezone. */
 function when(?int $ts, string $tz = 'UTC', string $format = 'l j F Y, g:ia'): string
 {
     if (!$ts) {
-        return 'never';
+        return t('never');
     }
     try {
         $zone = new \DateTimeZone($tz);
     } catch (\Throwable) {
         $zone = new \DateTimeZone('UTC');
     }
-    return (new \DateTimeImmutable('@' . $ts))->setTimezone($zone)->format($format);
+    $date = (new \DateTimeImmutable('@' . $ts))->setTimezone($zone);
+    return lang() === 'pl' ? whenPl($date, $format) : $date->format($format);
+}
+
+/** Polish date text: nominative weekdays, genitive months, 24-hour clock, no am/pm. */
+function whenPl(\DateTimeImmutable $date, string $format): string
+{
+    $days = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+    $daysShort = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
+    $months = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+    $monthsShort = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+    $out = '';
+    $len = strlen($format);
+    for ($i = 0; $i < $len; $i++) {
+        $c = $format[$i];
+        $out .= match ($c) {
+            '\\' => $format[++$i] ?? '',
+            'l' => $days[(int) $date->format('w')],
+            'D' => $daysShort[(int) $date->format('w')],
+            'F' => $months[(int) $date->format('n') - 1],
+            'M' => $monthsShort[(int) $date->format('n') - 1],
+            'g' => $date->format('G'),
+            'h' => $date->format('H'),
+            'a', 'A' => '',
+            default => $date->format($c),
+        };
+    }
+    return $out;
 }
 
 /** "3 hours", "2 days": a rough human duration. */
 function duration(int $seconds): string
 {
     $seconds = abs($seconds);
+    $pl = lang() === 'pl';
     if ($seconds < 90) {
-        return 'a minute';
+        return t('a minute');
     }
     if ($seconds < 3600 * 1.5) {
-        return round($seconds / 60) . ' minutes';
+        $n = (int) round($seconds / 60);
+        return $pl ? $n . ' ' . plPlural($n, 'minuta', 'minuty', 'minut') : $n . ' minutes';
     }
     if ($seconds < 86400 * 2) {
-        return round($seconds / 3600) . ' hours';
+        $n = (int) round($seconds / 3600);
+        return $pl ? $n . ' ' . plPlural($n, 'godzina', 'godziny', 'godzin') : $n . ' hours';
     }
-    return round($seconds / 86400) . ' days';
+    $n = (int) round($seconds / 86400);
+    return $pl ? $n . ' ' . plPlural($n, 'dzień', 'dni', 'dni') : $n . ' days';
+}
+
+/** Polish plural form: 1, 2-4 (not 12-14), 5+. */
+function plPlural(int $n, string $one, string $few, string $many): string
+{
+    if ($n === 1) {
+        return $one;
+    }
+    $mod10 = $n % 10;
+    $mod100 = $n % 100;
+    return ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) ? $few : $many;
 }
 
 /** "in 3 hours" or "3 hours ago". */
 function relative(?int $ts): string
 {
     if (!$ts) {
-        return 'never';
+        return t('never');
     }
     $diff = $ts - Clock::now();
     if (abs($diff) < 60) {
-        return 'just now';
+        return t('just now');
     }
-    return $diff >= 0 ? 'in ' . duration($diff) : duration($diff) . ' ago';
+    return t($diff >= 0 ? 'in {duration}' : '{duration} ago', ['duration' => duration($diff)]);
 }
 
 /** True inside the Docker image, where DPS_DOCKER=1 is set. */
@@ -138,5 +192,7 @@ function inDocker(): bool
 /** 9 becomes "9:00am". */
 function hourLabel(int $hour): string
 {
-    return gmdate('g:ia', gmmktime(min(23, max(0, $hour)), 0, 0, 1, 1, 2026));
+    $at = gmmktime(min(23, max(0, $hour)), 0, 0, 1, 1, 2026);
+
+    return gmdate(lang() === 'pl' ? 'G:i' : 'g:ia', $at);
 }

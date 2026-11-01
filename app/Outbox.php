@@ -121,7 +121,7 @@ final class Outbox
             $where = $label . ' (' . (strpos($url, '://') !== false ? substr($url, 0, (int) strpos($url, '://')) . '://…' : '…') . ')';
             $this->store->log(
                 $error === '' ? 'channel.sent' : 'channel.failed',
-                $error === '' ? 'Notified ' . $where : 'Could not notify ' . $where . '. ' . mb_substr($error, 0, 300)
+                $error === '' ? t('Notified {where}', ['where' => $where]) : t('Could not notify {where}.', ['where' => $where]) . ' ' . mb_substr($error, 0, 300)
             );
         } catch (\Throwable) {
         }
@@ -150,7 +150,7 @@ final class Outbox
         }
         $this->store->log(
             $ok ? 'mail.sent' : 'mail.failed',
-            ($ok ? 'Sent' : 'Could not send') . ' "' . $subject . '" to ' . implode(', ', $to)
+            ($ok ? t('Sent "{subject}" to {to}', ['subject' => $subject, 'to' => implode(', ', $to)]) : t('Could not send "{subject}" to {to}', ['subject' => $subject, 'to' => implode(', ', $to)]))
                 . ($ok ? '' : '. ' . mb_substr($error, 0, 300))
         );
     }

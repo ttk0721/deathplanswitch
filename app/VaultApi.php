@@ -69,7 +69,7 @@ final class VaultApi
             return $this->err(413, $e->getMessage());
         } catch (\Throwable $e) {
             try {
-                store()->log('vault.error', 'Vault API error: ' . get_class($e) . ': ' . $e->getMessage());
+                store()->log('vault.error', t('Vault API error: {detail}', ['detail' => get_class($e) . ': ' . $e->getMessage()]));
             } catch (\Throwable) {
             }
             return $this->err(500, 'server error');

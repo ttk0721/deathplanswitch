@@ -310,6 +310,16 @@ final class Messages
             ->note(self::footer($config, $vars));
     }
 
+    public static function vaultInvite(array $config, string $url): Email
+    {
+        $owner = (string) $config['owner_name'];
+        return (new Email("{$owner} asks you to set a password for their vault"))
+            ->p("{$owner} left some things for you in a private vault. You can set a password of your own, so you do not have to rely on the code card you were given.")
+            ->p('You will need the code on that card once, to set the password.')
+            ->link('Set your password', $url)
+            ->note('This link works once, within 30 days.');
+    }
+
     public static function allClear(array $config): Email
     {
         $owner = (string) $config['owner_name'];

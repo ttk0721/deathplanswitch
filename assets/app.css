@@ -361,3 +361,38 @@ pre.cron {
   .button, button { transition: opacity .12s; }
   .button:active, button:active { opacity: .8; }
 }
+
+/* ---------- vault ---------- */
+
+.vault { display: grid; gap: 1.25rem; }
+
+/* The code card: printed once, kept whole on the page. */
+.vault-card {
+  font-family: var(--mono);
+  font-size: 1.4rem;
+  letter-spacing: .12em;
+  line-height: 1.6;
+  padding: 1.25rem 1.5rem;
+  border: 2px dashed var(--ink);
+  background: var(--panel);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  break-inside: avoid;
+}
+
+.vault-progress { width: 100%; height: .6rem; accent-color: var(--ok); }
+
+.vault-files { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+.vault-files li { padding: .5rem 0; border-bottom: 1px solid var(--line); }
+
+/* The public page after the switch has been released. */
+.public-status { font-family: var(--serif); font-size: 1.5rem; margin: 0 0 1rem; }
+
+@media print {
+  body * { visibility: hidden; }
+  .vault-card, .vault-card * { visibility: visible; }
+  .vault-card {
+    position: absolute; left: 0; top: 0; width: 100%;
+    border-color: #000; background: none; color: #000;
+  }
+}

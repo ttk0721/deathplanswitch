@@ -101,6 +101,21 @@ if (Web::posted()) {
             Web::flash('Saved. A test email has been sent to ' . $config['owner_email'] . '.');
             break;
 
+        case 'landing_save':
+            $title = trim(Web::post('landing_title'));
+            $text = trim(str_replace("\r\n", "\n", Web::post('landing_text')));
+            if (mb_strlen($title) > 80 || mb_strlen($text) > 2000) {
+                Web::flash('The title can be up to 80 characters and the text up to 2000.', 'bad');
+                break;
+            }
+            $store->locked(static function () use ($store, $title, $text): void {
+                $config = $store->read('config');
+                $config['landing'] = ['title' => $title, 'text' => $text];
+                $store->write('config', $config);
+            });
+            Web::flash('Saved. This is what visitors see at the front of this install.');
+            break;
+
         case 'baseurl':
             $url = rtrim(Web::post('base_url'), '/');
             if (!preg_match('~^https?://[^\s/]+(/[^\s]*)?$~i', $url)) {
@@ -410,6 +425,22 @@ Web::$title = 'Settings: Death Plan Switch';
   </form>
 <?php endif ?>
 </div>
+
+<h2>Public page</h2>
+<form method="post" action="index.php?p=settings">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="landing_save">
+  <div class="field">
+    <label for="landing_title">Title</label>
+    <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($config['landing']['title'] ?? '') ?>" placeholder="Death Plan Switch">
+  </div>
+  <div class="field">
+    <label for="landing_text">Text</label>
+    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="This switch is not active."><?= e($config['landing']['text'] ?? '') ?></textarea>
+    <span class="help">What visitors see at this address before the switch has fired. Leave empty for the defaults. A blank line starts a new paragraph.</span>
+  </div>
+  <div class="actions"><button type="submit">Save</button></div>
+</form>
 
 <h2>Address of this install</h2>
 <form method="post" action="index.php?p=settings">

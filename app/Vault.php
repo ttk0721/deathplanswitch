@@ -79,6 +79,11 @@ final class Vault
         $this->store->locked(function () use ($id): void {
             $v = $this->read();
             $v['recipients'] = array_values(array_filter($v['recipients'], fn($r) => $r['id'] !== $id));
+            $invites = $this->store->read('vault-invites', []);
+            if (isset($invites[$id])) {
+                unset($invites[$id]);
+                $this->store->write('vault-invites', $invites);
+            }
             foreach ($v['packages'] as &$p) {
                 $p['recipients'] = array_values(array_filter($p['recipients'], fn($x) => $x !== $id));
                 unset($p['wraps'][$id]);
@@ -86,6 +91,75 @@ final class Vault
             unset($p);
             $this->store->write('vault', $v);
         });
+    }
+
+    /** Issues a single-use invite token for a recipient; a new one replaces the old. Returns the plain token. */
+    public function issueInvite(string $recipientId): string
+    {
+        $this->id($recipientId, 'r');
+        return $this->store->locked(function () use ($recipientId): string {
+            if (!in_array($recipientId, array_column($this->read()['recipients'], 'id'), true)) {
+                throw new \InvalidArgumentException('Unknown recipient.');
+            }
+            [$plain, $record] = Tokens::issue(Schedule::CONFIRM_TOKEN_TTL);
+            $invites = $this->store->read('vault-invites', []);
+            $invites[$recipientId] = $record;
+            $this->store->write('vault-invites', $invites);
+            return $plain;
+        });
+    }
+
+    /** The recipient an unexpired invite token belongs to: only its id and code wrap. */
+    public function inviteRecipient(string $token): ?array
+    {
+        $rid = $this->inviteOwner($token);
+        if ($rid === null) {
+            return null;
+        }
+        foreach ($this->read()['recipients'] as $r) {
+            if ($r['id'] === $rid) {
+                return ['id' => $r['id'], 'code' => $r['code']];
+            }
+        }
+        return null;
+    }
+
+    /** Sets the recipient's password wrap and consumes the token. */
+    public function setPassword(string $token, array $password): void
+    {
+        $box = $this->box($password, true, 'password');
+        if ($box['iterations'] < 100000 || $box['iterations'] > 20000000) {
+            throw new \InvalidArgumentException('Iterations must be 100000 to 20000000.');
+        }
+        $this->store->locked(function () use ($token, $box): void {
+            $rid = $this->inviteOwner($token);
+            $v = $this->read();
+            $done = false;
+            foreach ($v['recipients'] as $i => $r) {
+                if ($rid !== null && $r['id'] === $rid) {
+                    $v['recipients'][$i]['password'] = $box;
+                    $done = true;
+                }
+            }
+            if (!$done) {
+                throw new \InvalidArgumentException('The invite is not valid.');
+            }
+            $this->store->write('vault', $v);
+            $invites = $this->store->read('vault-invites', []);
+            unset($invites[$rid]);
+            $this->store->write('vault-invites', $invites);
+        });
+    }
+
+    private function inviteOwner(string $token): ?string
+    {
+        $found = null;
+        foreach ($this->store->read('vault-invites', []) as $rid => $record) {
+            if (Tokens::matches($token, [$record])) {
+                $found = (string) $rid;
+            }
+        }
+        return $found;
     }
 
     public function savePackage(array $p): void

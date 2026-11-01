@@ -27,6 +27,8 @@ final class VaultApi
         'GET chunk' => ['owner_or_released', false],
         'GET public' => ['released', false],
         'GET release' => ['released', false],
+        'GET invite' => ['any', false],
+        'POST password' => ['any', false],
     ];
 
     public function __construct(private Vault $vault)
@@ -118,8 +120,28 @@ final class VaultApi
             case 'GET release':
                 $rk = $v->releaseKey();
                 return $rk === null ? $this->err(404, 'not found') : $this->ok(['rk' => $rk]);
+            case 'GET invite':
+                $r = $v->inviteRecipient($this->token($req));
+                return $r === null ? $this->err(404, 'not found') : $this->ok(['recipient' => $r]);
+            case 'POST password':
+                $t = $this->token($req);
+                if ($v->inviteRecipient($t) === null) {
+                    return $this->err(404, 'not found');
+                }
+                $b = $this->json($req);
+                if (!is_array($b['password'] ?? null)) {
+                    throw new \InvalidArgumentException('password is required.');
+                }
+                $v->setPassword($t, $b['password']);
+                return $this->ok(['ok' => true]);
         }
         return $this->err(404, 'not found');
+    }
+
+    private function token(array $req): string
+    {
+        $q = is_array($req['query'] ?? null) ? $req['query'] : [];
+        return is_string($q['t'] ?? null) ? $q['t'] : '';
     }
 
     private function json(array $req): array

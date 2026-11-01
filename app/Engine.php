@@ -327,15 +327,20 @@ final class Engine
     private function deliverFired(array &$state, array $config, array &$did): void
     {
         $all = $this->contacts->all();
+        $vaultContacts = array_filter(array_column((new Vault($this->store))->read()['recipients'], 'contact_id'), 'is_string');
         foreach ($this->contacts->confirmed() as $contact) {
             if (isset($state['cycle']['notified'][$contact['id']])) {
                 continue;
             }
             $vars = Messages::vars($config, $state, $all, $contact);
+            $fired = Messages::fired($config, $contact, $vars);
+            if (in_array((string) $contact['id'], $vaultContacts, true)) {
+                $fired->link('Open the vault', $this->url($config, 'vault.php'));
+            }
             // A channel notice only points to the email. Until the email itself is accepted the
             // contact is not "notified": a channel alone never carries the message.
             $told = isset($state['cycle']['channel_told'][$contact['id']]);
-            $sent = $this->outbox->send((string) $contact['email'], Messages::fired($config, $contact, $vars), 'contact', null, !$told);
+            $sent = $this->outbox->send((string) $contact['email'], $fired, 'contact', null, !$told);
             if ($sent && !$this->outbox->emailOk) {
                 $state['cycle']['channel_told'][$contact['id']] = Clock::now();
                 $this->saveState($state);

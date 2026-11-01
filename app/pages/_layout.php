@@ -13,7 +13,7 @@ if (!isset($content)) {
 
 $admin = Web::$layout === 'admin';
 $current = Web::get('p', 'switch');
-$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'settings' => 'Settings', 'history' => 'History'];
+$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'settings' => 'Settings', 'history' => 'History'];
 $navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
 $current = $navFor[$current] ?? $current;
 

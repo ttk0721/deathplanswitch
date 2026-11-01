@@ -48,6 +48,14 @@ test('mayAct is false once a peer did the step', function (): void {
     same(true, $c->mayAct(6, 'reminder1', 1000, 99999), 'other cycle');
     same(true, $c->mayAct(5, 'reminder2', 1000, 99999), 'other step');
 });
+test('a peer step dated more than the clock skew before the local due time is not believed', function (): void {
+    [, $c] = cw([P1], 0);
+    $c->recordPeer(P1, st(P1, ['key' => 5, 'stage' => 'verify', 'steps' => ['verify' => 1000], 'fired_at' => null, 'fired_reason' => null, 'nok' => null]), 1);
+    same(null, $c->peerDid(5, 'verify', 1001), 'too early for the floor');
+    same(1000, $c->peerDid(5, 'verify', 1000), 'at the floor');
+    same(true, $c->mayAct(5, 'verify', 1601, 99999), 'early peer step ignored: this node acts');
+    same(false, $c->mayAct(5, 'verify', 1600, 99999), 'within the skew: the peer did it');
+});
 test('peerDid takes the earliest across peers, even from a stale peer', function (): void {
     [, $c] = cw([P1, P2], 0);
     $cy = fn(int $at) => ['key' => 5, 'stage' => 'checkin', 'steps' => ['verify' => $at], 'fired_at' => null, 'fired_reason' => null, 'nok' => null];

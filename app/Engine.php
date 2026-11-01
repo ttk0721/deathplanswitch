@@ -151,7 +151,8 @@ final class Engine
                 $key = (int) $state['next_due_at'];
                 $peer = $this->coordinator->peerDid($key, 'checkin');
                 if ($peer !== null) {
-                    $this->adoptCycle($state, $peer, $did);
+                    // The local timeline starts no earlier than the local due time, whatever the peer claims.
+                    $this->adoptCycle($state, max($peer, $key), $did);
                     return;
                 }
                 if (!$this->coordinator->mayAct($key, 'checkin', $key, $now)) {
@@ -171,7 +172,7 @@ final class Engine
                     $n = $i + 1;
                     $step = $plan['reminder' . $n];
                     if (!$step['done']) {
-                        $peer = $this->peerDid($key, 'reminder' . $n);
+                        $peer = $this->peerDid($key, 'reminder' . $n, $step['at'] - self::CLOCK_SKEW);
                         if ($peer !== null) {
                             $state['cycle']['reminders'][] = $peer;
                             $state['cycle']['steps']['reminder' . $n] = $peer;
@@ -184,7 +185,7 @@ final class Engine
                     }
                 }
                 $verifyAt = $plan['verify']['at'] + $this->extraDelay('verify', $now);
-                $peer = $this->peerDid($key, 'verify');
+                $peer = $this->peerDid($key, 'verify', $verifyAt - self::CLOCK_SKEW);
                 if ($peer !== null) {
                     $state['cycle']['stage'] = 'verify';
                     $state['cycle']['verify'] = [
@@ -205,7 +206,7 @@ final class Engine
 
             case 'verify':
                 if (!$plan['nok_reminder']['done']) {
-                    $peer = $this->peerDid($key, 'nok_reminder');
+                    $peer = $this->peerDid($key, 'nok_reminder', $plan['nok_reminder']['at'] - self::CLOCK_SKEW);
                     if ($peer !== null) {
                         $state['cycle']['verify']['reminded_at'] = $peer;
                         $state['cycle']['steps']['nok_reminder'] = $peer;
@@ -217,7 +218,7 @@ final class Engine
                     return;
                 }
                 $fireAt = $plan['fire']['at'] + $this->extraDelay('fire', $now);
-                $peer = $this->peerDid($key, 'fire');
+                $peer = $this->peerFire($state['cycle'], $now);
                 if ($peer !== null) {
                     $reason = (string) ($this->coordinator->peerCycle($key)['fired_reason'] ?? 'timeout');
                     $this->adoptFire($state, $peer, $reason, $did);
@@ -393,7 +394,7 @@ final class Engine
             if ($this->federated()) {
                 $key = (int) ($state['cycle']['due_at'] ?? 0);
                 $step = 'deliver:' . $contact['id'];
-                $peer = $this->coordinator->peerDid($key, $step);
+                $peer = $this->coordinator->peerDid($key, $step, $this->deliverFloor($state['cycle']));
                 if ($peer !== null) {
                     $state['cycle']['notified'][$contact['id']] = $peer;
                     $state['cycle']['peer_told'][] = (string) $contact['id'];
@@ -1258,17 +1259,72 @@ final class Engine
     // ------------------------------------------------------------------
 
     /** Seconds two nodes' clocks may differ before a check-in is read as older than the cycle. */
-    private const CLOCK_SKEW = 600;
+    private const CLOCK_SKEW = Coordinator::CLOCK_SKEW;
 
     private function federated(): bool
     {
         return $this->coordinator !== null && Cluster::enabled($this->store);
     }
 
-    /** The time a peer did $step in cycle $key, or null (always null without federation). */
-    private function peerDid(int $key, string $step): ?int
+    /** The time a peer did $step in cycle $key, not before $notBefore, or null (always null without federation). */
+    private function peerDid(int $key, string $step, ?int $notBefore = null): ?int
     {
-        return $this->federated() ? $this->coordinator->peerDid($key, $step) : null;
+        return $this->federated() ? $this->coordinator->peerDid($key, $step, $notBefore) : null;
+    }
+
+    /**
+     * The time to adopt a peer's firing at, or null. Only while this cycle waits in verify and
+     * this node would fire now anyway: a peer can never make this node contact anyone early.
+     */
+    private function peerFire(array $cycle, int $now): ?int
+    {
+        if (!$this->federated() || ($cycle['stage'] ?? null) !== 'verify') {
+            return null;
+        }
+        $due = self::plan($cycle, null)['fire']['at'] + $this->extraDelay('fire', $now);
+        if ($now < $due - self::CLOCK_SKEW) {
+            return null;
+        }
+        $t = $this->coordinator->peerDid((int) ($cycle['due_at'] ?? 0), 'fire', $due - self::CLOCK_SKEW);
+        return $t === null ? null : min($t, $now);
+    }
+
+    /**
+     * The earliest believable time of a peer's delivery in this fired cycle: the local fire due time,
+     * or the kin's "something's wrong" answer on a peer when that came after the local question.
+     */
+    private function deliverFloor(array $cycle): int
+    {
+        $plan = self::plan(['fired_at' => null] + $cycle, null);
+        $floor = min($plan['fire']['at'], (int) ($cycle['fired_at'] ?? PHP_INT_MAX));
+        $nok = $this->coordinator->peerCycle((int) ($cycle['due_at'] ?? 0))['nok'] ?? null;
+        if (is_array($nok) && ($nok['answer'] ?? null) === 'wrong' && is_int($nok['at'] ?? null)
+            && $nok['at'] >= $plan['verify']['at'] - self::CLOCK_SKEW) {
+            $floor = min($floor, $nok['at']);
+        }
+        return $floor - self::CLOCK_SKEW;
+    }
+
+    /** Mark the contacts a peer believably delivered to, so this node does not send them a second message. */
+    private function adoptPeerDeliveries(array &$state): void
+    {
+        $key = (int) ($state['cycle']['due_at'] ?? 0);
+        $floor = $this->deliverFloor($state['cycle']);
+        foreach ($this->contacts->confirmed() as $contact) {
+            $id = (string) $contact['id'];
+            if (isset($state['cycle']['notified'][$id])) {
+                continue;
+            }
+            $t = $this->coordinator->peerDid($key, 'deliver:' . $id, $floor);
+            if ($t === null) {
+                continue;
+            }
+            $state['cycle']['notified'][$id] = $t;
+            $state['cycle']['steps']['deliver:' . $id] = $t;
+            if (!in_array($id, (array) ($state['cycle']['peer_told'] ?? []), true)) {
+                $state['cycle']['peer_told'][] = $id;
+            }
+        }
     }
 
     /** May this node send $step now? Always yes without federation. */
@@ -1425,23 +1481,17 @@ final class Engine
                 $key = (int) ($state['cycle']['due_at'] ?? 0);
                 $pc = $this->coordinator->peerCycle($key);
 
-                if ($pc !== null && $pc['stage'] === 'fired' && is_int($pc['fired_at']) && $state['cycle']['stage'] !== 'fired') {
-                    $this->adoptFire($state, $pc['fired_at'], (string) ($pc['fired_reason'] ?? 'timeout'), $did);
-                    foreach ($pc['steps'] as $name => $t) {
-                        if (str_starts_with((string) $name, 'deliver:')) {
-                            $id = substr((string) $name, 8);
-                            $state['cycle']['notified'][$id] ??= (int) $t;
-                            $state['cycle']['steps'][(string) $name] ??= (int) $t;
-                            if (!in_array($id, (array) ($state['cycle']['peer_told'] ?? []), true)) {
-                                $state['cycle']['peer_told'][] = $id;
-                            }
-                        }
-                    }
+                // A peer's firing is only taken in when this node would fire now anyway; then it just avoids duplicates.
+                $firedAt = $this->peerFire($state['cycle'], Clock::now());
+                if ($pc !== null && $firedAt !== null) {
+                    $this->adoptFire($state, $firedAt, (string) ($pc['fired_reason'] ?? 'timeout'), $did);
+                    $this->adoptPeerDeliveries($state);
                     $this->saveState($state);
                 }
 
+                // Only "all fine" is taken from a peer: it can stop this node, never make it fire.
                 $nok = $pc['nok'] ?? null;
-                if (is_array($nok) && in_array($nok['answer'] ?? null, ['fine', 'wrong'], true)) {
+                if (is_array($nok) && ($nok['answer'] ?? null) === 'fine') {
                     if ($this->applyPeerNok($state, $config, (string) $nok['answer'], (int) ($nok['at'] ?? Clock::now()), 'another node', true)) {
                         $did[] = 'The next of kin answered on another node: ' . $nok['answer'] . '.';
                     }
@@ -1451,7 +1501,7 @@ final class Engine
         });
     }
 
-    /** A next-of-kin answer reported by a peer. Ignored unless the cycle is waiting for one. */
+    /** A next-of-kin answer reported by a peer. Only "all fine" counts, and only while the cycle waits for one. */
     public function recordNokAnswer(string $answer, int $at, string $via): void
     {
         if ($answer !== 'fine' && $answer !== 'wrong') {
@@ -1467,12 +1517,14 @@ final class Engine
     private function applyPeerNok(array &$state, array $config, string $answer, int $at, string $via, bool $sameCycle = false): bool
     {
         $cycle = $state['cycle'];
-        if ($cycle === null || ($cycle['verify']['response'] ?? null) !== null) {
+        // A peer's "something's wrong" never fires this node early: the node where the kin answered
+        // fires and delivers itself, and this node keeps its own timeline.
+        if ($answer !== 'fine' || $cycle === null || ($cycle['verify']['response'] ?? null) !== null) {
             return false;
         }
         // An answer matched to this very cycle by its key also ends it while this node still lags before verify:
         // the kin was asked by a peer, so "all fine" must not wait for this node to catch up.
-        $lagging = $sameCycle && $answer === 'fine' && $cycle['stage'] === 'checkin';
+        $lagging = $sameCycle && $cycle['stage'] === 'checkin';
         if ($cycle['stage'] !== 'verify' && !$lagging) {
             return false;
         }
@@ -1480,11 +1532,6 @@ final class Engine
         $state['cycle']['verify']['response'] = $answer;
         $state['cycle']['verify']['responded_at'] = $at;
         $state['cycle']['verify']['tokens'] = [];
-        if ($answer === 'wrong') {
-            $did = [];
-            $this->fire($state, $config, 'nok_wrong', $did);
-            return true;
-        }
         $this->rememberVouched($state, $at);
         $state['cycle'] = null;
         $state['next_due_at'] = $this->nextSlot($config, $at);

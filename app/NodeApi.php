@@ -10,6 +10,11 @@ namespace DPS;
  * Every call is signed. The signature covers the method, the path and query
  * exactly as received (REQUEST_URI), the time, a nonce and the body hash, so
  * a caller must sign the same path-and-query string it puts on the wire.
+ *
+ * Every answer to a request that passed the signature check is signed too:
+ * X-DPS-Node names this node and X-DPS-Signature covers the request nonce,
+ * the status and the hash of the exact body bytes (or file bytes), so a
+ * caller can tell a genuine answer from one changed or replayed on the way.
  */
 final class NodeApi
 {
@@ -26,7 +31,16 @@ final class NodeApi
     {
     }
 
-    /** @return array{status: int, json?: array, file?: string} */
+    /** What a response signature covers. */
+    public static function responseCanonical(string $nonce, int $status, string $bodySha256Hex): string
+    {
+        return "DPS1-RESP\n" . $nonce . "\n" . $status . "\n" . $bodySha256Hex;
+    }
+
+    /**
+     * @return array{status: int, json?: array, body?: string, file?: string, headers?: array<string, string>}
+     *  body is the exact JSON to send; headers carry the response signature.
+     */
     public function handle(array $req): array
     {
         $method = strtoupper((string)($req['method'] ?? ''));
@@ -44,10 +58,34 @@ final class NodeApi
             return self::err(400, 'bad input');
         }
         try {
-            return $this->{'do' . ucfirst($route)}($req);
+            $result = $this->{'do' . ucfirst($route)}($req);
         } catch (\LogicException) {
-            return self::err(403, 'not allowed');
+            $result = self::err(403, 'not allowed');
         }
+        return $this->signed($result, (string)$req['headers']['nonce']);
+    }
+
+    /** Adds the body to send and the response signature. */
+    private function signed(array $result, string $nonce): array
+    {
+        $self = Node::publicIdentity($this->store);
+        if ($self === null) {
+            return $result;
+        }
+        if (isset($result['file'])) {
+            $hash = @hash_file('sha256', $result['file']);
+            if ($hash === false) {
+                return self::err(404, 'not found');
+            }
+        } else {
+            $result['body'] = (string)json_encode($result['json'] ?? [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $hash = hash('sha256', $result['body']);
+        }
+        $result['headers'] = [
+            'X-DPS-Node' => (string)$self['id'],
+            'X-DPS-Signature' => Node::sign($this->store, self::responseCanonical($nonce, (int)$result['status'], $hash)),
+        ];
+        return $result;
     }
 
     private function authenticate(array $req, string $method): ?array

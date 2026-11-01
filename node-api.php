@@ -18,10 +18,14 @@ header('Referrer-Policy: no-referrer');
 header('X-Frame-Options: DENY');
 header('X-Robots-Tag: noindex');
 
-$respond = static function (int $status, array $json): never {
+$respond = static function (int $status, array $json, ?string $body = null, array $headers = []): never {
     http_response_code($status);
     header('Content-Type: application/json');
-    exit(json_encode($json, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+    foreach ($headers as $name => $value) {
+        header($name . ': ' . $value);
+    }
+    // $body is the exact text the response signature covers.
+    exit($body ?? json_encode($json, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
 };
 
 try {
@@ -75,7 +79,10 @@ if (isset($result['file'])) {
     http_response_code(200);
     header('Content-Type: application/octet-stream');
     header('Content-Length: ' . $size);
+    foreach ($result['headers'] ?? [] as $name => $value) {
+        header($name . ': ' . $value);
+    }
     readfile($result['file']);
     exit;
 }
-$respond($result['status'], $result['json'] ?? []);
+$respond($result['status'], $result['json'] ?? [], $result['body'] ?? null, $result['headers'] ?? []);

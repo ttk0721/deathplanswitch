@@ -14,7 +14,7 @@ final class SRec implements Transport
     public array $sent = [];
     public function send(array $smtp, array $to, string $fromName, string $replyTo, Email $email): void
     {
-        $this->sent[] = ['at' => Clock::now(), 'to' => $to, 'subject' => $email->subject];
+        $this->sent[] = ['at' => Clock::now(), 'to' => $to, 'subject' => $email->subject, 'link' => $email->firstLink()];
     }
 }
 
@@ -80,6 +80,29 @@ final class SN
     public function to(string $address): int
     {
         return count(array_filter($this->mail->sent, static fn (array $m): bool => in_array($address, $m['to'], true)));
+    }
+
+    /** Contact messages sent when the switch fires, leaving out the next-of-kin question. */
+    public function firedTo(string $address): int
+    {
+        return count(array_filter($this->mail->sent, static fn (array $m): bool => in_array($address, $m['to'], true)
+            && !str_contains($m['subject'], 'all right?')));
+    }
+
+    /** The token in the last next-of-kin question this node sent. */
+    public function kinToken(): string
+    {
+        $tok = null;
+        foreach ($this->mail->sent as $m) {
+            if (in_array('kin@example.test', $m['to'], true) && str_contains($m['subject'], 'all right?')) {
+                parse_str((string) parse_url((string) $m['link'], PHP_URL_QUERY), $q);
+                $tok = (string) $q['t'];
+            }
+        }
+        if ($tok === null) {
+            throw new \RuntimeException('No question to the kin was sent.');
+        }
+        return $tok;
     }
 
     public function stage(): ?string
@@ -240,36 +263,140 @@ test('4c. a peer vouched for the cycle while this node still lags in checkin: it
     same(null, $b2['vouched'], 'a node that never vouched reports none');
 });
 
-test('5. kin says wrong on B: A fires without duplicating what B sent', function (): void {
-    [$a, $b] = pair();
+/** @return array{0: SN, 1: SN} B is rank 0 here, so B asks the kin and the kin answers on B. */
+function pairB0(): array
+{
+    $ranks = [IA => 1, IB => 0];
+    $b = new SN(IB, $ranks);
+    $a = new SN(IA, $ranks, $b);
+    return [$a, $b];
+}
+
+function firedTotal(SN $a, SN $b, string $who): int
+{
+    return $a->firedTo("$who@example.test") + $b->firedTo("$who@example.test");
+}
+
+/** A peer report for cycle $key, refreshed on every tick so this node is not isolated. */
+function feed(SN $n, array $cycle): callable
+{
+    return function () use ($n, $cycle): void {
+        $st = ['node' => IB, 'at' => Clock::now(), 'last_checkin_at' => null, 'last_checkin_via' => null,
+            'armed' => true, 'released' => false, 'cycle' => $cycle];
+        $n->coord->recordPeer(IB, $st, Clock::now());
+        $n->engine->applyRemote();
+    };
+}
+
+test('5. kin says wrong on B: A does not fire early, and at its own fire time sends no duplicates', function (): void {
+    [$a, $b] = pairB0();
     $due = $a->due();
     run([$a, $b], $due + 73 * H, syncer($a, $b));
+    same('verify', $a->stage(), 'A adopted the question B asked');
     Clock::set($due + 74 * H);
-    $b->engine->recordNokAnswer('wrong', Clock::now(), 'web');
-    same('fired', $b->stage(), 'B fired');
+    $token = $b->kinToken();
     $a->mail->sent = [];
     $b->mail->sent = [];
-    run([$a, $b], $due + 80 * H, syncer($a, $b));
-    same('fired', $a->stage(), 'A fired');
+    same('wrong', $b->engine->nokAnswer($token, 'wrong'), 'kin answered on B');
+    same('fired', $b->stage(), 'B fired');
+    $fireDue = Engine::plan($a->engine->state()['cycle'], null)['fire']['at'];
+    run([$a, $b], $fireDue - 601, syncer($a, $b));
+    same('verify', $a->stage(), 'A has not fired before its own fire time');
     foreach (['kin', 'tech', 'legal'] as $who) {
-        same(1, total($a, $b, $who), "$who told once");
+        same(0, $a->firedTo("$who@example.test"), "A sent $who nothing yet");
+        same(1, $b->firedTo("$who@example.test"), "B told $who");
+    }
+    run([$a, $b], $fireDue + 2 * H, syncer($a, $b));
+    same('fired', $a->stage(), 'A fired on its own timeline');
+    check((int) $a->engine->state()['cycle']['fired_at'] >= $fireDue, 'not before its fire time');
+    foreach (['kin', 'tech', 'legal'] as $who) {
+        same(1, firedTotal($a, $b, $who), "$who told once");
     }
 });
 
 test('5b. kin says wrong on B, sync down 40 min: at most one duplicate round', function (): void {
-    [$a, $b] = pair();
+    [$a, $b] = pairB0();
     $due = $a->due();
     run([$a, $b], $due + 73 * H, syncer($a, $b));
     Clock::set($due + 74 * H);
-    $b->engine->recordNokAnswer('wrong', Clock::now(), 'web');
+    $token = $b->kinToken();
     $a->mail->sent = [];
     $b->mail->sent = [];
+    $b->engine->nokAnswer($token, 'wrong');
+    $fireDue = Engine::plan($a->engine->state()['cycle'], null)['fire']['at'];
     run([$a, $b], $due + 74 * H + 40 * 60);
-    run([$a, $b], $due + 80 * H, syncer($a, $b));
+    run([$a, $b], $fireDue + 2 * H, syncer($a, $b));
     same('fired', $a->stage(), 'A fired');
     foreach (['kin', 'tech', 'legal'] as $who) {
-        check(total($a, $b, $who) <= 2, "$who at most twice");
+        check(firedTotal($a, $b, $who) <= 2, "$who at most twice");
     }
+});
+
+test('5c. a peer reporting fired at hour 1: no local fire, no early emails', function (): void {
+    [$a, $b] = pair();
+    $due = $a->due();
+    run([$a], $due);
+    $start = (int) $a->engine->state()['cycle']['started_at'];
+    $steps = ['checkin' => $start, 'fire' => $start + H];
+    foreach ($a->engine->contacts()->confirmed() as $c) {
+        $steps['deliver:' . $c['id']] = $start + H;
+    }
+    $cy = ['key' => $due, 'stage' => 'fired', 'steps' => $steps, 'fired_at' => $start + H, 'fired_reason' => 'nok_wrong',
+        'nok' => ['answer' => 'wrong', 'at' => $start + H]];
+    $a->mail->sent = [];
+    run([$a], $start + 71 * H, feed($a, $cy));
+    same('checkin', $a->stage(), 'still waiting for the owner');
+    foreach (['kin', 'tech', 'legal'] as $who) {
+        same(0, $a->to("$who@example.test"), "$who not emailed");
+    }
+    run([$a], $start + 72 * H + 1800, feed($a, $cy));
+    same('verify', $a->stage(), 'kin asked on the local timeline');
+    $fireDue = Engine::plan($a->engine->state()['cycle'], null)['fire']['at'];
+    run([$a], $fireDue - 601, feed($a, $cy));
+    same('verify', $a->stage(), 'not fired before the local fire time');
+    same(0, $a->to('tech@example.test'), 'tech not emailed early');
+    run([$a], $fireDue + H, feed($a, $cy));
+    same('fired', $a->stage(), 'fired at the local time');
+    same(1, $a->firedTo('tech@example.test'), 'the early delivery claim did not stop the real one');
+});
+
+test('5d. a peer reporting verify dated at the cycle start: the kin is still asked at the local 72 h', function (): void {
+    [$a, $b] = pair();
+    $due = $a->due();
+    run([$a], $due);
+    $start = (int) $a->engine->state()['cycle']['started_at'];
+    $cy = ['key' => $due, 'stage' => 'verify', 'steps' => ['checkin' => $start, 'reminder1' => $start, 'reminder2' => $start, 'verify' => $start],
+        'fired_at' => null, 'fired_reason' => null, 'nok' => null];
+    run([$a], $start + 71 * H, feed($a, $cy));
+    same('checkin', $a->stage(), 'no early verify adopted');
+    same(0, $a->to('kin@example.test'), 'kin not asked early');
+    run([$a], $start + 73 * H, feed($a, $cy));
+    same('verify', $a->stage(), 'verify at 72 h');
+    same(1, $a->to('kin@example.test'), 'this node asked the kin itself');
+    check((int) $a->engine->state()['cycle']['verify']['asked_at'] >= $start + 72 * H, 'asked at the local time');
+    same(2, count($a->engine->state()['cycle']['reminders']), 'own reminders sent');
+    check($a->engine->state()['cycle']['reminders'][0] >= $start + 24 * H, 'reminder 1 on the local timeline');
+});
+
+test('5e. a peer claiming a delivery before the local fire time: ignored', function (): void {
+    [$a, $b] = pair();
+    $due = $a->due();
+    run([$a], $due);
+    $start = (int) $a->engine->state()['cycle']['started_at'];
+    $tech = '';
+    foreach ($a->engine->contacts()->confirmed() as $c) {
+        if ($c['email'] === 'tech@example.test') {
+            $tech = (string) $c['id'];
+        }
+    }
+    $cy = ['key' => $due, 'stage' => 'verify', 'steps' => ['checkin' => $start, 'deliver:' . $tech => $start + 100 * H],
+        'fired_at' => null, 'fired_reason' => null, 'nok' => null];
+    run([$a], $start + 73 * H, feed($a, $cy));
+    $fireDue = Engine::plan($a->engine->state()['cycle'], null)['fire']['at'];
+    run([$a], $fireDue + H, feed($a, $cy));
+    same('fired', $a->stage(), 'fired');
+    same(1, $a->firedTo('tech@example.test'), 'tech sent their message by this node');
+    check(!in_array($tech, (array) ($a->engine->state()['cycle']['peer_told'] ?? []), true), 'not counted as told by a peer');
 });
 
 test('6. stale peer state from a previous cycle does not adopt or fire', function (): void {

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace DPS\Tests;
-use DPS\{Clock, Cluster, Coordinator, Engine, Node, Outbox, PeerClient, Store, Sync, Transport, Email};
+use DPS\{Clock, Cluster, Coordinator, Engine, Node, NodeApi, Outbox, PeerClient, Store, Sync, Transport, Email};
 require __DIR__ . '/lib.php';
 
 final class NullMail implements Transport
@@ -24,6 +24,10 @@ final class Net
 {
     public array $routes = [];
     public array $calls = [];
+    /** host => [node id, Ed25519 secret key]; answers are signed as that node. */
+    public array $keys = [];
+    /** fn(string $host, string $a, array $answer): array may change the answer after it is signed. */
+    public ?\Closure $tamper = null;
     public function __invoke(string $method, string $url, array $headers, string $body, int $timeout = 20): array
     {
         $host = (string) parse_url($url, PHP_URL_HOST);
@@ -33,10 +37,20 @@ final class Net
         $this->calls[] = ['host' => $host, 'method' => $method, 'a' => $a, 'query' => $q, 'body' => $body];
         $fn = $this->routes[$host][$a] ?? null;
         if ($fn === null) {
-            return [404, '{"error":"not found"}'];
+            return [404, '{"error":"not found"}', []];
         }
         $out = $fn($method, $q, $body);
-        return [200, is_array($out) ? json_encode($out) : $out];
+        $raw = is_array($out) ? json_encode($out) : $out;
+        $nonce = '';
+        foreach ($headers as $h) {
+            if (str_starts_with($h, 'X-DPS-Nonce: ')) {
+                $nonce = substr($h, 13);
+            }
+        }
+        [$id, $sk] = $this->keys[$host];
+        $answer = [200, $raw, ['x-dps-node' => $id,
+            'x-dps-signature' => b64(sodium_crypto_sign_detached(NodeApi::responseCanonical($nonce, 200, hash('sha256', $raw)), $sk))]];
+        return $this->tamper === null ? $answer : ($this->tamper)($host, $a, $answer);
     }
     public function count(string $host, string $a): int
     {
@@ -63,14 +77,19 @@ final class SW
         $this->store = new Store($dir);
         $this->id = Node::init($this->store, 'Home')['id'];
         $self = Node::publicIdentity($this->store);
-        $nodes = [nd($this->id, 2, 'https://self.example.org', $self['sign_pk']), nd(self::P1, 0, 'https://p1.example.org')];
+        $this->net = new Net();
+        $peerNode = function (string $id, int $rank, string $host): array {
+            $kp = sodium_crypto_sign_keypair();
+            $this->net->keys[$host] = [$id, sodium_crypto_sign_secretkey($kp)];
+            return nd($id, $rank, 'https://' . $host, b64(sodium_crypto_sign_publickey($kp)));
+        };
+        $nodes = [nd($this->id, 2, 'https://self.example.org', $self['sign_pk']), $peerNode(self::P1, 0, 'p1.example.org')];
         if ($two) {
-            $nodes[] = nd(self::P2, 1, 'https://p2.example.org');
+            $nodes[] = $peerNode(self::P2, 1, 'p2.example.org');
         }
         Cluster::save($this->store, ['k' => 1, 'primary' => $primary, 'isolation_hours' => 48, 'step_delay_min' => 30, 'nodes' => $nodes]);
         $this->store->write('config', ['owner_name' => 'Local', 'base_url' => 'https://local.example.org', 'tick_key' => 'ltk',
             'health_key' => 'lhk', 'installed_at' => 111]);
-        $this->net = new Net();
         $coord = new Coordinator($this->store, $this->id);
         $this->engine = new Engine($this->store, new Outbox($this->store, new NullMail()), null, $coord);
         $this->sync = new Sync($this->store, $this->engine, new PeerClient($this->store, $this->net), $coord, $this->id);
@@ -143,6 +162,14 @@ function bundleFrom(SW $w, int $version): array
         'cluster' => $cluster];
 }
 
+/** A vault package that passes Vault's checks. */
+function pkg(string $fid, int $chunks): array
+{
+    $sealed = ['iv' => str_repeat('A', 16), 'ct' => 'AAAA'];
+    return ['id' => 'p_0123456789abcdef', 'label' => 'Papers', 'recipients' => [], 'owner_wrapped_ck' => $sealed,
+        'wraps' => [], 'manifest' => null, 'files' => [['id' => $fid, 'chunks' => $chunks, 'size' => 10]]];
+}
+
 test('a bundle is applied and the local keys survive', function (): void {
     $w = new SW(SW::P1);
     $w->answerStates();
@@ -185,7 +212,7 @@ test('a missing blob is downloaded, an existing one is not', function (): void {
     $w->answerStates();
     $fid = 'f_0123456789abcdef';
     $b = bundleFrom($w, 5);
-    $b['vault'] = ['recipients' => [], 'packages' => [['id' => 'p_0123456789abcdef', 'files' => [['id' => $fid, 'chunks' => 2, 'size' => 10]]]]];
+    $b['vault'] = ['recipients' => [], 'packages' => [pkg($fid, 2)]];
     $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
     $w->net->routes['p1.example.org']['blob'] = fn (string $m, array $q) => 'BYTES-' . $q['n'];
     $dir = $w->store->dir() . '/vault/' . $fid;
@@ -204,7 +231,7 @@ test('an exhausted budget stops the downloads', function (): void {
     $w->answerStates();
     $fid = 'f_0123456789abcdef';
     $b = bundleFrom($w, 5);
-    $b['vault'] = ['recipients' => [], 'packages' => [['id' => 'p_0123456789abcdef', 'files' => [['id' => $fid, 'chunks' => 3, 'size' => 10]]]]];
+    $b['vault'] = ['recipients' => [], 'packages' => [pkg($fid, 3)]];
     $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
     $w->net->routes['p1.example.org']['blob'] = fn () => 'X';
     $w->sync->run(0);
@@ -225,6 +252,75 @@ test('a state that claims to be another node is ignored', function (): void {
     $w->net->routes['p1.example.org']['state'] = fn () => $w->peerState('n_99999999');
     $w->sync->run();
     same([], array_keys($w->store->read('peers')), 'nothing recorded');
+});
+
+test('a bundle whose signature does not match is never applied', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $w->net->routes['p1.example.org']['bundle'] = fn () => bundleFrom($w, 777);
+    $w->net->tamper = function (string $host, string $a, array $r): array {
+        if ($a === 'bundle') {
+            $r[1] = str_replace('Primary Owner', 'Attacker', $r[1]);
+        }
+        return $r;
+    };
+    $log = $w->sync->run();
+    same('Local', $w->store->read('config')['owner_name'], 'config untouched');
+    same([], $w->store->read('contacts'), 'contacts untouched');
+    check(!isset($w->store->read('sync')['bundle_version']), 'no version stored');
+    check((bool) array_filter($log, fn ($l) => str_contains($l, 'bad response signature')), 'logged');
+});
+
+test('a state or blob whose signature does not match is not used', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $fid = 'f_0123456789abcdef';
+    $b = bundleFrom($w, 5);
+    $b['vault'] = ['recipients' => [], 'packages' => [pkg($fid, 1)]];
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->net->routes['p1.example.org']['blob'] = fn () => 'BYTES';
+    $w->net->tamper = function (string $host, string $a, array $r): array {
+        if ($a === 'blob' || ($a === 'state' && $host === 'p2.example.org')) {
+            $r[1] = $a === 'blob' ? 'EVIL!' : str_replace('"last_checkin_at":null', '"last_checkin_at":1799999999', $r[1]);
+        }
+        return $r;
+    };
+    $w->sync->run();
+    same([SW::P1], array_keys($w->store->read('peers')), 'the forged state is not recorded');
+    $dir = $w->store->dir() . '/vault/' . $fid;
+    check(!is_file("$dir/0.bin") && !is_file("$dir/0.bin.part"), 'no forged blob on disk');
+});
+
+test('bundle schema: unknown config keys are dropped, bad contacts or vault refuse the bundle', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $b = bundleFrom($w, 7);
+    $b['config']['evil_key'] = 'x';
+    $b['vault'] = ['version' => 1, 'owner' => null, 'recipients' => [], 'packages' => [pkg('f_0123456789abcdef', 1) + ['extra' => 'x']], 'junk' => 1];
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->net->routes['p1.example.org']['blob'] = fn () => 'B';
+    $w->sync->run();
+    $c = $w->store->read('config');
+    check(!array_key_exists('evil_key', $c) && $c['owner_name'] === 'Primary Owner', 'unknown key dropped, known kept');
+    $v = $w->store->read('vault');
+    same(['version', 'owner', 'recipients', 'packages'], array_keys($v), 'vault shape');
+    check(!isset($v['packages'][0]['extra']) && $v['packages'][0]['label'] === 'Papers', 'package cleaned by Vault');
+
+    foreach ([
+        'contacts not a list' => fn (array $x): array => ['contacts' => $x['contacts']['contacts'][0]] + $x,
+        'contact not an object' => fn (array $x): array => ['contacts' => ['contacts' => ['Kim']]] + $x,
+        'contacts key missing' => fn (array $x): array => ['contacts' => ['people' => []]] + $x,
+        'bad package' => fn (array $x): array => ['vault' => ['recipients' => [], 'packages' => [['id' => 'p_0123456789abcdef', 'files' => []]]]] + $x,
+        'bad recipient' => fn (array $x): array => ['vault' => ['recipients' => [['id' => '../x']], 'packages' => []]] + $x,
+    ] as $why => $mutate) {
+        $w2 = new SW(SW::P1);
+        $w2->answerStates();
+        $bad = $mutate(bundleFrom($w2, 9));
+        $w2->net->routes['p1.example.org']['bundle'] = fn () => $bad;
+        $log = $w2->sync->run();
+        same('Local', $w2->store->read('config')['owner_name'], "$why: not applied");
+        check((bool) array_filter($log, fn ($l) => str_contains($l, 'no valid')), "$why: logged");
+    }
 });
 
 test('Sync::bundle is for the primary, and unchanged on the same version', function (): void {

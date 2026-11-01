@@ -12,6 +12,8 @@ final class Coordinator
     private const DOC = 'peers';
     private const ISOLATION_WINDOW = 21600;
     private const STAGE_RANK = ['checkin' => 1, 'verify' => 2, 'fired' => 3];
+    /** Seconds two nodes' clocks may differ. A peer step dated earlier than this before its local due time is not believed. */
+    public const CLOCK_SKEW = 600;
 
     public function __construct(private Store $store, private string $nodeId)
     {
@@ -26,13 +28,16 @@ final class Coordinator
         });
     }
 
-    /** The earliest time any peer did $step in cycle $cycleKey. */
-    public function peerDid(int $cycleKey, string $step): ?int
+    /**
+     * The earliest time any peer did $step in cycle $cycleKey, not counting times before $notBefore.
+     * A peer dating a step before this node's own due time must not pull this node's timeline forward.
+     */
+    public function peerDid(int $cycleKey, string $step, ?int $notBefore = null): ?int
     {
         $best = null;
         foreach ($this->peerCycles($cycleKey) as $cy) {
             $t = $cy['steps'][$step] ?? null;
-            if (is_int($t) && ($best === null || $t < $best)) {
+            if (is_int($t) && ($notBefore === null || $t >= $notBefore) && ($best === null || $t < $best)) {
                 $best = $t;
             }
         }
@@ -44,7 +49,8 @@ final class Coordinator
         if (!Cluster::enabled($this->store)) {
             return true;
         }
-        if ($this->peerDid($cycleKey, $step) !== null) {
+        // An early-dated peer step is ignored: this node then acts on its own timeline.
+        if ($this->peerDid($cycleKey, $step, $dueAt - self::CLOCK_SKEW) !== null) {
             return false;
         }
         $c = Cluster::read($this->store);

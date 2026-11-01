@@ -178,11 +178,12 @@ test('not isolated: asked at 72 h when a peer is heard', function (): void {
 test('adopted verify sends nothing and later closing does not notify the kin', function (): void {
     $w = new FW(1);
     $t = $w->due + 72 * H;
-    $w->peer(pst(pcy($w->due, 'verify', ['checkin' => $w->due, 'reminder1' => $w->due + 24 * H, 'reminder2' => $w->due + 48 * H, 'verify' => $t])));
-    $w->at($w->due);
-    $w->at($w->due + 24 * H);
-    $w->at($w->due + 48 * H);
-    $w->at($w->due + 72 * H);
+    // The peer is heard on every run: an isolated node would wait 48 h more and not believe a verify at 72 h.
+    foreach ([0, 24, 48, 72] as $h) {
+        Clock::set($w->due + $h * H);
+        $w->peer(pst(pcy($w->due, 'verify', ['checkin' => $w->due, 'reminder1' => $w->due + 24 * H, 'reminder2' => $w->due + 48 * H, 'verify' => $t])));
+        $w->engine->tick();
+    }
     $c = $w->engine->state()['cycle'];
     same('verify', $c['stage'], 'verify adopted');
     same($t, $c['verify']['asked_at'], 'peer time');
@@ -221,9 +222,10 @@ test('a peer that fired: local fires with its reason, no duplicate mail to conta
     $key = $w->due;
     $t = $w->due + 144 * H;
     $nok = $w->nokId();
-    $w->peer(pst(pcy($key, 'verify', ['checkin' => $key, 'reminder1' => $key + 24 * H, 'reminder2' => $key + 48 * H, 'verify' => $key + 72 * H])));
     foreach ([0, 24, 48, 72] as $h) {
-        $w->at($key + $h * H);
+        Clock::set($key + $h * H);
+        $w->peer(pst(pcy($key, 'verify', ['checkin' => $key, 'reminder1' => $key + 24 * H, 'reminder2' => $key + 48 * H, 'verify' => $key + 72 * H])));
+        $w->engine->tick();
     }
     same('verify', $w->engine->state()['cycle']['stage'], 'verify');
     Clock::set($t);
@@ -253,7 +255,7 @@ test('a stale peer state for another cycle changes nothing', function (): void {
     same('checkin', $w->engine->state()['cycle']['stage'], 'stage unchanged');
 });
 
-test('recordNokAnswer applies fine and wrong, and ignores everything else', function (): void {
+test('recordNokAnswer applies fine, and ignores wrong and everything else', function (): void {
     $w = new FW(0);
     $w->engine->recordNokAnswer('fine', Clock::now(), 'node');
     same(null, $w->engine->state()['cycle'], 'no cycle: ignored');
@@ -276,8 +278,9 @@ test('recordNokAnswer applies fine and wrong, and ignores everything else', func
         $w2->at($s2 + $h * H);
     }
     $w2->engine->recordNokAnswer('wrong', Clock::now(), 'node');
-    same('fired', $w2->engine->state()['cycle']['stage'], 'wrong fires');
-    same('nok_wrong', $w2->engine->state()['cycle']['fired_reason'], 'reason');
+    same('verify', $w2->engine->state()['cycle']['stage'], 'a peer\'s wrong does not fire this node early');
+    same(null, $w2->engine->state()['cycle']['fired_at'], 'not fired');
+    same(0, $w2->to('tech@example.test'), 'nobody contacted');
 });
 
 test('nodeState has the documented shape', function (): void {

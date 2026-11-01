@@ -18,6 +18,12 @@ final class Sync
     private const ID = '/^[rpf]_[0-9a-f]{16}$/';
     /** Config keys a secondary keeps for itself. */
     private const LOCAL_CONFIG = ['base_url', 'tick_key', 'health_key', 'installed_at'];
+    /** Config keys a bundle may carry (as written by install, settings and Setup); others are dropped. */
+    private const CONFIG_KEYS = [
+        'owner_name', 'owner_email', 'backup_email', 'owner_phone', 'timezone', 'slot_dow', 'slot_hour',
+        'base_url', 'password_hash', 'smtp', 'tick_key', 'health_key', 'pending_email', 'landing', 'channels',
+        'sms_template', 'apprise_url', 'separate_hosting_confirmed_at', 'install_step', 'installed_at', 'created_at',
+    ];
 
     public function __construct(
         private Store $store,
@@ -161,10 +167,21 @@ final class Sync
                 throw new \RuntimeException("the bundle has no valid $k");
             }
         }
+        $config = array_intersect_key($b['config'], array_flip(self::CONFIG_KEYS));
+        // A primary with no contacts file yet sends an empty document.
+        $contacts = $b['contacts'] === [] ? [] : ($b['contacts']['contacts'] ?? null);
+        if (!is_array($contacts) || !array_is_list($contacts)) {
+            throw new \RuntimeException('the bundle has no valid contacts');
+        }
+        foreach ($contacts as $c) {
+            if (!is_array($c)) {
+                throw new \RuntimeException('the bundle has no valid contacts');
+            }
+        }
+        $vault = self::cleanVault($b['vault']);
         $log = [];
-        $this->store->locked(function () use ($b, &$log): void {
+        $this->store->locked(function () use ($b, $config, $contacts, $vault, &$log): void {
             $local = $this->store->read('config');
-            $config = $b['config'];
             foreach (self::LOCAL_CONFIG as $key) {
                 if (array_key_exists($key, $local)) {
                     $config[$key] = $local[$key];
@@ -173,8 +190,8 @@ final class Sync
                 }
             }
             $this->store->write('config', $config);
-            $this->store->write('contacts', $b['contacts']);
-            $this->store->write('vault', $b['vault']);
+            $this->store->write('contacts', ['contacts' => $contacts]);
+            $this->store->write('vault', $vault);
 
             $listsMe = false;
             foreach ((array) ($b['cluster']['nodes'] ?? []) as $n) {
@@ -195,6 +212,48 @@ final class Sync
             $log[] = 'Copied the settings, contacts and vault from the primary.';
         });
         return $log;
+    }
+
+    /**
+     * The vault document from a bundle, passed through Vault's own checks by saving it into a
+     * scratch store. Throws when any part is not valid, so a bad vault is never applied.
+     */
+    private static function cleanVault(array $in): array
+    {
+        $recipients = $in['recipients'] ?? [];
+        $packages = $in['packages'] ?? [];
+        $owner = $in['owner'] ?? null;
+        if (!is_array($recipients) || !array_is_list($recipients) || !is_array($packages) || !array_is_list($packages)
+            || ($owner !== null && !is_array($owner))) {
+            throw new \RuntimeException('the bundle has no valid vault');
+        }
+        $dir = sys_get_temp_dir() . '/dps-vault-check-' . bin2hex(random_bytes(8));
+        if (!@mkdir($dir, 0700)) {
+            throw new \RuntimeException('cannot check the vault');
+        }
+        try {
+            $scratch = new Store($dir);
+            $vault = new Vault($scratch);
+            if ($owner !== null) {
+                $vault->initialise($owner, 'check');
+            }
+            foreach ($recipients as $r) {
+                $vault->saveRecipient(is_array($r) ? $r : []);
+            }
+            foreach ($packages as $p) {
+                $vault->savePackage(is_array($p) ? $p : []);
+            }
+            return $vault->read();
+        } catch (\InvalidArgumentException $e) {
+            throw new \RuntimeException('the bundle has no valid vault: ' . $e->getMessage());
+        } finally {
+            foreach (glob($dir . '/{,.}*', GLOB_BRACE) ?: [] as $f) {
+                if (is_file($f)) {
+                    @unlink($f);
+                }
+            }
+            @rmdir($dir);
+        }
     }
 
     /** @return string[] */

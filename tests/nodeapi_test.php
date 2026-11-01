@@ -135,4 +135,28 @@ test('blob: file result, 404 when missing, 400 on traversal', function () use (&
     same(400, $api->handle(signed($a, $ia, 'GET', 'blob', ['file' => '../config', 'n' => '0']))['status'], 'traversal');
     same(400, $api->handle(signed($a, $ia, 'GET', 'blob', ['file' => 'f1', 'n' => '-1']))['status'], 'negative n');
 });
+test('answers to signed requests are signed over the nonce, status and exact bytes', function () use (&$calls): void {
+    [$a, $b, $ia, $ib] = pair();
+    $api = api($b, $calls);
+    $check = function (array $req, int $status, string $bytes) use ($api, $ib): void {
+        $r = $api->handle($req);
+        same($status, $r['status'], 'status');
+        same($ib['id'], $r['headers']['X-DPS-Node'] ?? null, 'responder id');
+        $canon = NodeApi::responseCanonical($req['headers']['nonce'], $status, hash('sha256', $bytes === '' ? (string)($r['body'] ?? '') : $bytes));
+        check(Node::verify($ib['sign_pk'], $canon, (string)($r['headers']['X-DPS-Signature'] ?? '')), 'signature verifies');
+        check(!Node::verify($ib['sign_pk'], NodeApi::responseCanonical('ffffffffffffffff', $status, hash('sha256', $bytes === '' ? (string)$r['body'] : $bytes)), (string)$r['headers']['X-DPS-Signature']), 'bound to the nonce');
+    };
+    $req = signed($a, $ia, 'GET', 'state');
+    $check($req, 200, '');
+    same(['node' => 'b', 'armed' => true], json_decode($api->handle(signed($a, $ia, 'GET', 'state'))['body'], true), 'body is the json');
+    $check(signed($a, $ia, 'GET', 'blob', ['file' => 'f1', 'n' => '0']), 200, (string)file_get_contents(__FILE__));
+    $check(signed($a, $ia, 'GET', 'bundle', ['since' => 'x']), 400, '');
+    $unsigned = ['method' => 'GET', 'a' => 'state', 'pathQuery' => '/node-api.php?a=state', 'query' => ['a' => 'state'], 'body' => '', 'headers' => [], 'now' => NOW];
+    same(null, $api->handle($unsigned)['headers'] ?? null, 'an unsigned request gets an unsigned answer');
+});
+test('node-api.php sends the signed body and the signature headers', function (): void {
+    $src = (string)file_get_contents(dirname(__DIR__) . '/node-api.php');
+    check(str_contains($src, "\$result['body'] ?? null, \$result['headers'] ?? []"), 'json answer uses the signed body and headers');
+    check(substr_count($src, "\$result['headers'] ?? []") === 2, 'file answer sends the headers too');
+});
 finish();

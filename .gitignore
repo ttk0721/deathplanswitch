@@ -8,3 +8,6 @@ data/*.bak
 data/*.jsonl
 data/.lock
 data/*.tmp.*
+
+node_modules/
+data/vault/

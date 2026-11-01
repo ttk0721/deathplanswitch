@@ -131,6 +131,23 @@ else
   fail "apprise answers from the web container"
 fi
 
+# Vault: the release key is not served before the switch fires, and the owner
+# routes need a signed-in session; the data folder holds the key and the blobs.
+if [ "$(code '/vault-api.php?a=release')" = 403 ] && [ "$(code '/vault-api.php?a=owner')" = 401 ] \
+   && [ "$(code '/vault-api.php?a=public')" = 403 ] \
+   && [ "$(code '/data/release.json')" = 403 ] && [ "$(code '/data/vault/')" = 403 ]; then
+  pass "vault-api: release 403, owner 401, public 403; data/ not served"
+else
+  fail "vault-api: release 403, owner 401, public 403; data/ not served"
+fi
+vh="$(curl -s -D - -o /dev/null 'http://127.0.0.1:18080/vault-api.php?a=release' | tr -d '\r' | tr 'A-Z' 'a-z')"
+if printf '%s' "$vh" | grep -q '^cache-control: no-store' && printf '%s' "$vh" | grep -q '^x-content-type-options: nosniff' \
+   && ! printf '%s' "$vh" | grep -q '^set-cookie:' && ! printf '%s' "$vh" | grep -q '^access-control-'; then
+  pass "vault-api: error answers carry security headers, no cookie, no CORS"
+else
+  fail "vault-api: error answers carry security headers, no cookie, no CORS"
+fi
+
 if [ "$failed" -ne 0 ]; then
   compose logs --no-color --tail 30 scheduler web >&2 || true
   exit 1

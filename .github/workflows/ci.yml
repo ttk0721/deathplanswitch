@@ -25,11 +25,24 @@ jobs:
             php "$f" || exit 1
           done
 
+  js:
+    runs-on: ubuntu-latest
+    container: node:22-alpine
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - name: JS suites
+        run: |
+          for f in tests/js/*.test.mjs; do
+            echo "== $f"
+            node --test "$f" || exit 1
+          done
+
   smoke:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: bash tests/docker/smoke.sh
+      - run: bash tests/vault.e2e.sh
 
   image:
     needs: [test, smoke]

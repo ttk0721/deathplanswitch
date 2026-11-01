@@ -1068,6 +1068,13 @@ final class Engine
         ];
     }
 
+    /** True once the cycle has fired and every confirmed contact has their message. */
+    public function released(): bool
+    {
+        $cycle = $this->state()['cycle'];
+        return is_array($cycle) && ($cycle['stage'] ?? '') === 'fired';
+    }
+
     /**
      * For external monitors: is anything broken that the owner would not
      * otherwise hear about? Deliberately says nothing private.

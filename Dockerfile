@@ -3,7 +3,7 @@ FROM php:8.4-apache
 # headers/remoteip: security headers and the real client IP behind a proxy.
 RUN a2enmod headers remoteip
 COPY docker/apache-dps.conf /etc/apache2/conf-enabled/dps.conf
-RUN echo 'expose_php=Off' > /usr/local/etc/php/conf.d/dps.ini
+RUN printf 'expose_php=Off\npost_max_size=16M\nupload_max_filesize=16M\nmemory_limit=256M\n' > /usr/local/etc/php/conf.d/dps.ini
 
 COPY . /var/www/html
 RUN chmod +x /var/www/html/docker/entrypoint.sh

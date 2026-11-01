@@ -23,7 +23,7 @@ final class Channels
             return null;
         }
         if ($type === 'apprise') {
-            if (preg_match('/^([a-z][a-z0-9+.-]*):\/\/\S+$/', $url, $m) !== 1 || in_array($m[1], ['http', 'https'], true)) {
+            if (preg_match('/^([a-z][a-z0-9+.-]*):\/\/\S+$/', $url, $m) !== 1 || in_array(strtolower($m[1]), ['http', 'https', 'json', 'jsons', 'xml', 'xmls', 'form', 'forms'], true)) {
                 return null;
             }
             $default = $m[1];

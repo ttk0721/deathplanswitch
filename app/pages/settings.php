@@ -145,7 +145,7 @@ if (Web::posted()) {
         case 'channel_add':
             $channel = Channels::fromPost();
             if ($channel === null) {
-                Web::flash('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id, ntfy://topic or serwersms://user:pass@48600100200, or a webhook that starts with https://.', 'bad');
+                Web::flash('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id, ntfy://topic or serwersms://user:pass@48600100200, or a webhook that starts with https://. For a plain web address, choose Webhook.', 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $channel): void {

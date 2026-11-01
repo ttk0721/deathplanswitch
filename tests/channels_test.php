@@ -17,6 +17,12 @@ test('Apprise refuses web addresses and junk; webhooks need http(s)', function (
     same(null, Channels::normalize(['type' => 'webhook', 'url' => 'ftp://x.test']), 'ftp');
     same(null, Channels::normalize(['type' => 'pigeon', 'url' => 'discord://1/2']), 'type');
 });
+test('Apprise refuses its generic HTTP forwarders', function (): void {
+    foreach (['json://internal.host/x', 'JSONS://internal.host/x', 'form://internal.host/x', 'xml://internal.host/x'] as $u) {
+        same(null, Channels::normalize(['type' => 'apprise', 'url' => $u]), $u);
+    }
+    check(Channels::normalize(['type' => 'apprise', 'url' => 'discord://1/2']) !== null, 'discord still accepted');
+});
 test('a webhook gets a signing secret', function (): void {
     $c = Channels::normalize(['type' => 'webhook', 'url' => 'https://hooks.x.test/in', 'label' => 'My hook']);
     same('My hook', $c['label'], 'label');

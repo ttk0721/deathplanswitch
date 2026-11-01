@@ -23,6 +23,11 @@ test('Apprise refuses its generic HTTP forwarders', function (): void {
     }
     check(Channels::normalize(['type' => 'apprise', 'url' => 'discord://1/2']) !== null, 'discord still accepted');
 });
+test('Apprise refuses addresses that smuggle a second one after , or ;', function (): void {
+    same(null, Channels::normalize(['type' => 'apprise', 'url' => 'discord://a/b,json://internal.host/x']), 'comma');
+    same(null, Channels::normalize(['type' => 'apprise', 'url' => 'discord://a/b;form://x']), 'semicolon');
+    check(Channels::normalize(['type' => 'apprise', 'url' => 'discord://123/abc']) !== null, 'plain accepted');
+});
 test('a webhook gets a signing secret', function (): void {
     $c = Channels::normalize(['type' => 'webhook', 'url' => 'https://hooks.x.test/in', 'label' => 'My hook']);
     same('My hook', $c['label'], 'label');

@@ -19,7 +19,7 @@ final class Channels
     {
         $type = (string) ($raw['type'] ?? '');
         $url = trim((string) ($raw['url'] ?? ''));
-        if ($url === '' || strlen($url) > self::URL_MAX || preg_match('/\s/u', $url) === 1) {
+        if ($url === '' || strlen($url) > self::URL_MAX || preg_match('/\s/u', $url) === 1 || ($type === 'apprise' && strpbrk($url, ',;') !== false)) {
             return null;
         }
         if ($type === 'apprise') {

@@ -194,7 +194,7 @@ if (Web::posted()) {
             $phone = Channels::phone(Web::post('owner_phone'));
             $template = Web::post('sms_template');
             $apprise = rtrim(Web::post('apprise_url'), '/');
-            if ($template !== '' && (!str_contains($template, '{phone}') || !preg_match('~^[a-z][a-z0-9+.-]*://\S+$~i', $template))) {
+            if ($template !== '' && (!str_contains($template, '{phone}') || !preg_match('~^[a-z][a-z0-9+.-]*://\S+$~i', $template) || Channels::normalize(['type' => 'apprise', 'url' => str_replace('{phone}', '1', $template)]) === null)) {
                 Web::flash('The SMS address must be an Apprise address that contains {phone}, for example serwersms://user:pass@{phone}.', 'bad');
                 break;
             }

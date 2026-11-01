@@ -21,6 +21,9 @@ if (!defined('DPS_ROOT')) {
 if (is_file(DPS_ROOT . '/config.local.php')) {
     require DPS_ROOT . '/config.local.php';
 }
+if (!defined('DPS_DATA') && is_string(getenv('DPS_DATA')) && getenv('DPS_DATA') !== '') {
+    define('DPS_DATA', rtrim(getenv('DPS_DATA'), '/'));
+}
 if (!defined('DPS_DATA')) {
     define('DPS_DATA', DPS_ROOT . '/data');
 }
@@ -108,6 +111,12 @@ function relative(?int $ts): string
         return 'just now';
     }
     return $diff >= 0 ? 'in ' . duration($diff) : duration($diff) . ' ago';
+}
+
+/** True inside the Docker image, where DPS_DOCKER=1 is set. */
+function inDocker(): bool
+{
+    return getenv('DPS_DOCKER') === '1';
 }
 
 /** 9 becomes "9:00am". */

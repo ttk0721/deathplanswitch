@@ -266,6 +266,9 @@ Web::$title = 'Settings: Death Plan Switch';
 
 <h2>Scheduler</h2>
 <p>The switch does nothing by itself. Every 15 minutes, something has to run it. <?= $state['last_tick_at'] ? 'It last ran ' . e(relative($state['last_tick_at'])) . ', by ' . ($state['last_tick_source'] === 'cron' ? 'cron' : 'the trigger address') . '.' : 'It has never run.' ?></p>
+<?php if (\DPS\inDocker()): ?>
+<p>The <code>scheduler</code> service runs the switch every 15 minutes. To see its runs, use <code>docker compose logs scheduler</code>.</p>
+<?php else: ?>
 <h3>Crontab line</h3>
 <p>Goes in the crontab of the user the web pages run as. Open it with <code><?= e(Web::crontabCommand()) ?></code>.</p>
 <pre class="cron"><?= e(Web::cronLine()) ?></pre>
@@ -275,9 +278,13 @@ Web::$title = 'Settings: Death Plan Switch';
 <h3>No cron on your hosting?</h3>
 <p>Have any outside scheduler request this address every 15 minutes instead (hourly at the least). It does the same job. Treat the address as a secret.</p>
 <pre class="cron"><?= e($tickUrl) ?></pre>
+<?php endif ?>
 <h3>Be told when it stops</h3>
 <p>If the scheduler stops, the switch cannot tell you. Point an uptime monitor at this address. It answers 200 when all is well, and 503 when the scheduler has stopped, mail is failing or the data folder is exposed. It reveals nothing else.</p>
 <pre class="cron"><?= e($healthUrl) ?></pre>
+<?php if (\DPS\inDocker()): ?>
+<p>Set <code>HEARTBEAT_URL</code> in <code>.env</code> to have every run reported to Healthchecks.io.</p>
+<?php endif ?>
 <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="rekey"><button class="link" type="submit" data-confirm="Make new addresses? The current ones will stop working.">Make new secret addresses</button></form>
 
 <h2>Data folder</h2>

@@ -1,5 +1,7 @@
 # Death Plan Switch
 
+This is a fork with Docker support (NAS and Raspberry Pi).
+
 **If you disappear, the right people are told.**
 
 This project is open source but doesn't accept pull requests. Fork it freely.
@@ -184,3 +186,30 @@ MIT. See [LICENSE](LICENSE). The software is provided "as is", without warranty 
 Death Plan Switch bundles [PHPMailer](https://github.com/PHPMailer/PHPMailer) 7.1.1 in `app/lib/PHPMailer`, unmodified, under the LGPL 2.1. Its licence is in that folder.
 
 Made by [Tecky](https://tecky.au).
+
+## Docker
+
+The image runs as two services from one compose file: `web` (Apache) and `scheduler` (runs `cron.php` every 15 minutes and pings an optional heartbeat URL). Data lives in `./data`, mounted at `/data`, outside the web root.
+
+```
+cp .env.example .env
+docker compose up -d
+```
+
+Then open `http://localhost:8080/install.php`.
+
+This uses the published image `ghcr.io/ttk0721/deathplanswitch:latest`; nothing is built, so the compose file and `.env` are enough (this is how the NAS runs). To build from source instead (for example before CI has published the first image on `main`):
+
+```
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+This tags the image `dps-local:dev`. To pin a published version, set `DPS_IMAGE` in `.env`, for example `DPS_IMAGE=ghcr.io/ttk0721/deathplanswitch:sha-abc1234`.
+
+- `DPS_PORT`: host port (default 8080).
+- `TZ`: time zone (default Europe/Warsaw).
+- `HEARTBEAT_URL`: optional Healthchecks.io URL; the scheduler pings it, and `/fail` when it is unhealthy.
+- Both services restart by themselves (`unless-stopped`), so the switch comes back after a power cut.
+- Back up the `data/` folder.
+
+A step-by-step guide for Synology and Raspberry Pi (in Polish): [docs/pl/synology.md](docs/pl/synology.md).

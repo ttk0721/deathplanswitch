@@ -382,6 +382,10 @@ Web::$title = 'Install Death Plan Switch';
 
 <?php elseif ($step === 4): ?>
 <p class="lede">The switch does nothing by itself. Every 15 minutes, the server has to run it. This is the one technical step.</p>
+<?php if (\DPS\inDocker()): ?>
+<h2>The scheduler runs in its own container</h2>
+<p>The <code>scheduler</code> service runs the switch every 15 minutes. Waiting for its first run…</p>
+<?php else: ?>
 <h2>Add this line to the server's crontab</h2>
 <?php $runUser = Web::runUser(); ?>
 <?php if ($runUser['differs']): ?>
@@ -400,6 +404,7 @@ Web::$title = 'Install Death Plan Switch';
   <p>Use any outside scheduler to request this address every 15 minutes instead. It does the same job. Treat the address as a secret.</p>
   <pre class="cron"><?= e($engine->url($config, 'tick.php', ['key' => $config['tick_key']])) ?></pre>
 </details>
+<?php endif ?>
 
 <?php if ($ticked): ?>
 <div class="notice notice-ok" role="status"><p><strong>The first run has arrived.</strong> The scheduler ran <?= e(relative($ticked)) ?>.</p></div>
@@ -409,7 +414,7 @@ Web::$title = 'Install Death Plan Switch';
   <div class="actions"><button class="button-big" type="submit">Finish</button></div>
 </form>
 <?php else: ?>
-<div class="notice" role="status" data-poll="install.php?poll=1"><p><strong>Waiting for the first run.</strong> This page updates by itself when it arrives, within 15 minutes of adding the line.</p></div>
+<div class="notice" role="status" data-poll="install.php?poll=1"><p><strong>Waiting for the first run.</strong> This page updates by itself when it arrives, <?= \DPS\inDocker() ? 'within 15 minutes of the scheduler container starting.' : 'within 15 minutes of adding the line.' ?></p></div>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="finish">

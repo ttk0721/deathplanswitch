@@ -1,0 +1,12 @@
+# Local build override. Use only where the source is present:
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+# The NAS normally uses just docker-compose.yml and the published image.
+services:
+  web:
+    image: dps-local:dev
+    build: .
+
+  scheduler:
+    image: dps-local:dev
+    build: .

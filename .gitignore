@@ -1,0 +1,10 @@
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+data/*.json
+.env
+data/*.bak
+data/*.jsonl
+data/.lock
+data/*.tmp.*

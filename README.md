@@ -35,7 +35,7 @@ Read this part before relying on it.
 
 - **It is a notification tool, not a guarantee.** It sends emails. It cannot know why you stopped checking in, cannot make anyone act, and cannot work if its server, its scheduler or its mail service is down. The sections below on separate hosting and on monitoring exist because of this.
 - **It stores no documents and no passwords.** Messages say where things are and who to call. Keep the documents themselves with people: a lawyer, your next of kin, your backup developer.
-- **It is email only.** No SMS, no phone calls, no app.
+- **It is email first.** Every email can also go out on a channel you set up (Discord, Telegram, ntfy, SMS through Apprise, or a signed webhook); see the notification channels section of [the Synology guide](docs/pl/synology.md) (Polish). No phone calls, no app.
 - **It is for one person.** One install, one owner. There are no accounts and no hosted version.
 - **It comes with no warranty** and best-effort support. See [Support](#support).
 

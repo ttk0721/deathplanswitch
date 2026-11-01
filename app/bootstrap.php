@@ -65,9 +65,25 @@ function engine(): Engine
     static $engine = null;
     if ($engine === null) {
         $store = store();
-        $engine = new Engine($store, new Outbox($store, new SmtpTransport()));
+        $engine = new Engine($store, new Outbox($store, new SmtpTransport(), new HttpNotifier(appriseUrl())));
     }
     return $engine;
+}
+
+/** Address of the apprise-api sidecar: saved setting, else DPS_APPRISE_URL, else ''. */
+function appriseUrl(): string
+{
+    try {
+        if (store()->exists('config')) {
+            $saved = trim((string) (store()->read('config')['apprise_url'] ?? ''));
+            if ($saved !== '') {
+                return $saved;
+            }
+        }
+    } catch (\Throwable) {
+    }
+    $env = getenv('DPS_APPRISE_URL');
+    return is_string($env) ? trim($env) : '';
 }
 
 /** Format a UTC timestamp in the owner's timezone. */

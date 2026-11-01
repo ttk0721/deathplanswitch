@@ -124,6 +124,13 @@ else
   fail "both services run the same image"
 fi
 
+apprise_up() { compose exec -T web php -r 'exit(@file_get_contents("http://apprise:8000/status") === false ? 1 : 0);' >/dev/null 2>&1; }
+if wait_for 90 apprise_up; then
+  pass "apprise answers from the web container"
+else
+  fail "apprise answers from the web container"
+fi
+
 if [ "$failed" -ne 0 ]; then
   compose logs --no-color --tail 30 scheduler web >&2 || true
   exit 1

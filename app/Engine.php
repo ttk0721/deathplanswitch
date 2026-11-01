@@ -332,7 +332,17 @@ final class Engine
                 continue;
             }
             $vars = Messages::vars($config, $state, $all, $contact);
-            if ($this->outbox->send((string) $contact['email'], Messages::fired($config, $contact, $vars), 'contact')) {
+            // A channel notice only points to the email. Until the email itself is accepted the
+            // contact is not "notified": a channel alone never carries the message.
+            $told = isset($state['cycle']['channel_told'][$contact['id']]);
+            $sent = $this->outbox->send((string) $contact['email'], Messages::fired($config, $contact, $vars), 'contact', null, !$told);
+            if ($sent && !$this->outbox->emailOk) {
+                $state['cycle']['channel_told'][$contact['id']] = Clock::now();
+                $this->saveState($state);
+                $did[] = "Could not email {$contact['name']} their message; a notice went to their channels. Will try again on the next run.";
+                continue;
+            }
+            if ($sent) {
                 $state['cycle']['notified'][$contact['id']] = Clock::now();
                 $this->saveState($state);
                 $this->store->log('cycle.notified', "{$contact['role_label']} ({$contact['name']}) was sent their message.");
@@ -943,6 +953,14 @@ final class Engine
         if (!empty($mail['last_send_error'])) {
             $error = $mail['last_send_error'];
             $out[] = ['key' => 'mail', 'level' => 'bad', 'text' => 'The last email could not be sent (' . relative((int) $error['at']) . '): ' . $error['error']];
+        }
+
+        // Label and error are stored data; they stay plain text and the pages escape them with e().
+        foreach ((array) ($mail['channels'] ?? []) as $channel) {
+            if (!is_array($channel) || empty($channel['error_at']) || (int) $channel['error_at'] <= (int) ($channel['ok_at'] ?? 0)) {
+                continue;
+            }
+            $out[] = ['key' => 'channels', 'level' => 'bad', 'text' => 'The ' . (string) ($channel['label'] ?? 'notification') . ' channel failed ' . relative((int) $channel['error_at']) . ': ' . (string) ($channel['error'] ?? 'unknown error')];
         }
 
         $probe = (string) ($state['probe']['result'] ?? '');

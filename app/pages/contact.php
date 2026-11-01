@@ -71,6 +71,59 @@ if (Web::posted()) {
         Web::redirect($self);
     }
 
+    if (in_array($action, ['channel_add', 'channel_remove', 'channel_test'], true) && !$isNew) {
+        $channelId = Web::post('channel_id');
+        if ($action === 'channel_add') {
+            $channel = Channels::fromPost();
+            if ($channel === null) {
+                Web::flash('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id or ntfy://topic, or a webhook that starts with https://.', 'bad');
+            } else {
+                $done = store()->locked(static function () use ($book, $contact, $channel): bool {
+                    $fresh = $book->find($contact['id']);
+                    if ($fresh === null) {
+                        return false;
+                    }
+                    $list = array_values(array_filter((array) ($fresh['channels'] ?? []), 'is_array'));
+                    $list[] = $channel;
+                    $fresh['channels'] = $list;
+                    $book->save($fresh);
+                    return true;
+                });
+                Web::flash($done ? 'Channel added. Use Test to check that it works.' : 'That contact no longer exists.', $done ? 'ok' : 'warn');
+            }
+        } elseif ($action === 'channel_remove') {
+            store()->locked(static function () use ($book, $contact, $channelId): void {
+                $fresh = $book->find($contact['id']);
+                if ($fresh === null) {
+                    return;
+                }
+                $list = array_values(array_filter((array) ($fresh['channels'] ?? []), 'is_array'));
+                $fresh['channels'] = array_values(array_filter($list, static fn (array $c): bool => ($c['id'] ?? '') !== $channelId));
+                $book->save($fresh);
+            });
+            Web::flash('Channel removed.', 'warn');
+        } else {
+            $found = null;
+            $list = array_values(array_filter((array) (($book->find($contact['id']) ?? $contact)['channels'] ?? []), 'is_array'));
+            foreach ($list as $c) {
+                if ($channelId !== '' && ($c['id'] ?? '') === $channelId) {
+                    $found = $c;
+                }
+            }
+            if ($found === null) {
+                Web::flash('That channel no longer exists.', 'warn');
+            } else {
+                try {
+                    (new HttpNotifier(appriseUrl()))->notify($found, new Notice('Test from Death Plan Switch', 'If you can read this, this channel works.', null), 'test');
+                    Web::flash('Test sent to ' . ($found['label'] ?? 'the channel') . '.');
+                } catch (\Throwable $e) {
+                    Web::flash('The test failed: ' . $e->getMessage(), 'bad');
+                }
+            }
+        }
+        Web::redirect($self);
+    }
+
     // Save.
     $name = Web::post('name');
     $email = strtolower(Web::post('email'));
@@ -286,6 +339,13 @@ Web::$title = ($isNew ? 'Add a contact' : $contact['name']) . ': Death Plan Swit
     <a class="button button-quiet" href="index.php?p=contacts">Cancel</a>
   </div>
 </form>
+
+<?php if (!$isNew): ?>
+<h2>Channels</h2>
+<p>Emails to <?= e($contact['name']) ?> can also arrive on a channel. The message carries the subject and the link only.</p>
+<p class="small muted">SMS goes to the phone number above when an SMS address is set in Settings.</p>
+<?php $channels = array_values(array_filter((array) ($contact['channels'] ?? []), 'is_array')); $channelsWho = (string) $contact['name']; require __DIR__ . '/_channels.php' ?>
+<?php endif ?>
 
 <?php if ($previews): ?>
 <h2>What <?= e($contact['name']) ?> would receive</h2>

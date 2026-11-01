@@ -14,6 +14,7 @@ services:
     volumes: ["./data:/data"]
     environment:
       TZ: ${TZ:-Europe/Warsaw}
+      DPS_APPRISE_URL: http://apprise:8000
     healthcheck:
       test: ["CMD", "php", "/var/www/html/bin/healthcheck.php", "web"]
       <<: *hc
@@ -26,7 +27,15 @@ services:
     volumes: ["./data:/data"]
     environment:
       TZ: ${TZ:-Europe/Warsaw}
+      DPS_APPRISE_URL: http://apprise:8000
       HEARTBEAT_URL: ${HEARTBEAT_URL:-}
     healthcheck:
       test: ["CMD", "php", "/var/www/html/bin/healthcheck.php", "scheduler"]
       <<: *hc
+
+  apprise:
+    image: caronc/apprise:2.0.2
+    init: true
+    restart: unless-stopped
+    environment:
+      APPRISE_STATEFUL_MODE: disabled

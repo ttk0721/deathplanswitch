@@ -111,7 +111,7 @@ final class Setup
     public static function startEmailCode(Store $store, Outbox $outbox, string $which, string $address): bool
     {
         $code = Tokens::code();
-        if (!$outbox->send($address, Messages::testCode($code))) {
+        if (!$outbox->send($address, Messages::testCode($code), 'owner', null, false)) {
             return false;
         }
         $store->locked(static function () use ($store, $which, $address, $code): void {

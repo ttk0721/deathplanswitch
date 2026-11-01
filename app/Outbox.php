@@ -13,7 +13,13 @@ namespace DPS;
  */
 final class Outbox
 {
-    public function __construct(private Store $store, private Transport $transport)
+    /** Whether the mail server accepted the email of the last send(). */
+    public bool $emailOk = false;
+    /** Seconds one process may spend on failing channels; later channels are skipped. */
+    public float $channelBudget = 120.0;
+    private float $channelSpent = 0.0;
+
+    public function __construct(private Store $store, private Transport $transport, private ?Notifier $notifier = null)
     {
     }
 
@@ -21,14 +27,16 @@ final class Outbox
      * @param string|string[] $to
      * @param string $audience 'owner' or 'contact'; sets the From name and Reply-To
      * @param array|null $smtp Override the saved SMTP settings (used while testing new ones)
+     * @param bool $channels False for sign-in codes: they never go to notification channels
      */
-    public function send(string|array $to, Email $email, string $audience = 'owner', ?array $smtp = null): bool
+    public function send(string|array $to, Email $email, string $audience = 'owner', ?array $smtp = null, bool $channels = true): bool
     {
         $to = array_values(array_unique(array_filter(array_map('trim', (array) $to))));
         if ($to === []) {
             return false;
         }
         $config = $this->store->read('config');
+        $useChannels = $channels && $smtp === null && $this->notifier !== null;
         $smtp ??= (array) ($config['smtp'] ?? []);
         $owner = trim((string) ($config['owner_name'] ?? ''));
 
@@ -43,10 +51,79 @@ final class Outbox
         try {
             $this->transport->send($smtp, $to, $fromName, $replyTo, $email);
             $this->record(true, $to, $email->subject, '');
-            return true;
+            $ok = true;
         } catch (\Throwable $e) {
             $this->record(false, $to, $email->subject, $e->getMessage());
+            $ok = false;
+        }
+        $this->emailOk = $ok;
+        if ($useChannels) {
+            $ok = $this->fanOut($config, $to, $email, $audience, $ok) || $ok;
+        }
+        return $ok;
+    }
+
+    /** Send the notice on every channel of these recipients. True if any got through. */
+    private function fanOut(array $config, array $to, Email $email, string $audience, bool $emailSent): bool
+    {
+        $any = false;
+        try {
+            $contacts = (array) ($this->store->read('contacts')['contacts'] ?? []);
+            $found = Channels::forAddresses($config, $contacts, $to);
+            $notice = Notice::fromEmail($email, implode(', ', $to), $emailSent);
+        } catch (\Throwable) {
             return false;
+        }
+        foreach ($found as $channel) {
+            // One dead channel costs up to 10 s; many must not outlast the scheduler's 300 s limit.
+            if ($this->channelSpent >= $this->channelBudget) {
+                $this->recordChannel($channel, 'Skipped: too much time was already spent on slow channels in this run');
+                continue;
+            }
+            $started = microtime(true);
+            try {
+                $this->notifier->notify($channel, $notice, $audience);
+                $error = '';
+                $any = true;
+            } catch (\Throwable $e) {
+                $error = $e->getMessage() !== '' ? $e->getMessage() : 'Unknown error';
+                $this->channelSpent += microtime(true) - $started;
+            }
+            $this->recordChannel($channel, $error);
+        }
+        return $any;
+    }
+
+    private function recordChannel(array $channel, string $error): void
+    {
+        $id = (string) ($channel['id'] ?? '');
+        $label = mb_substr((string) ($channel['label'] ?? ''), 0, 60);
+        try {
+            $this->store->locked(function () use ($id, $label, $error): void {
+                $state = $this->store->read('mail');
+                $row = (array) ($state['channels'][$id] ?? []);
+                $row['label'] = $label;
+                if ($error === '') {
+                    $row['ok_at'] = Clock::now();
+                } else {
+                    $row['error'] = mb_substr($error, 0, 500);
+                    $row['error_at'] = Clock::now();
+                }
+                $state['channels'][$id] = $row;
+                $this->store->write('mail', $state);
+            });
+        } catch (\Throwable) {
+            // Best effort, like record().
+        }
+        try {
+            // Only the scheme: masked() would show a short address in full.
+            $url = (string) ($channel['url'] ?? '');
+            $where = $label . ' (' . (strpos($url, '://') !== false ? substr($url, 0, (int) strpos($url, '://')) . '://…' : '…') . ')';
+            $this->store->log(
+                $error === '' ? 'channel.sent' : 'channel.failed',
+                $error === '' ? 'Notified ' . $where : 'Could not notify ' . $where . '. ' . mb_substr($error, 0, 300)
+            );
+        } catch (\Throwable) {
         }
     }
 

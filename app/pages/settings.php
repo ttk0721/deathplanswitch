@@ -142,6 +142,76 @@ if (Web::posted()) {
             Web::flash('New addresses made. The old ones no longer work: update anything that used them.', 'warn');
             break;
 
+        case 'channel_add':
+            $channel = Channels::fromPost();
+            if ($channel === null) {
+                Web::flash('That channel was not accepted. Use an Apprise address such as discord://webhook_id/token, tgram://bot_token/chat_id, ntfy://topic or serwersms://user:pass@48600100200, or a webhook that starts with https://.', 'bad');
+                break;
+            }
+            $store->locked(static function () use ($store, $channel): void {
+                $config = $store->read('config');
+                $config['channels'] = array_values(array_filter((array) ($config['channels'] ?? []), 'is_array'));
+                $config['channels'][] = $channel;
+                $store->write('config', $config);
+            });
+            Web::flash('Channel added. Use Test to check that it works.');
+            break;
+
+        case 'channel_remove':
+            $channelId = Web::post('channel_id');
+            $store->locked(static function () use ($store, $channelId): void {
+                $config = $store->read('config');
+                $config['channels'] = array_values(array_filter(
+                    (array) ($config['channels'] ?? []),
+                    static fn ($c): bool => is_array($c) && ($c['id'] ?? '') !== $channelId
+                ));
+                $store->write('config', $config);
+            });
+            Web::flash('Channel removed.', 'warn');
+            break;
+
+        case 'channel_test':
+            $channelId = Web::post('channel_id');
+            $found = null;
+            foreach ((array) ($config['channels'] ?? []) as $c) {
+                if (is_array($c) && $channelId !== '' && ($c['id'] ?? '') === $channelId) {
+                    $found = $c;
+                }
+            }
+            if ($found === null) {
+                Web::flash('That channel no longer exists.', 'warn');
+                break;
+            }
+            try {
+                (new HttpNotifier(appriseUrl()))->notify($found, new Notice('Test from Death Plan Switch', 'If you can read this, this channel works.', null), 'test');
+                Web::flash('Test sent to ' . ($found['label'] ?? 'the channel') . '.');
+            } catch (\Throwable $e) {
+                Web::flash('The test failed: ' . $e->getMessage(), 'bad');
+            }
+            break;
+
+        case 'channels_save':
+            $phone = Channels::phone(Web::post('owner_phone'));
+            $template = Web::post('sms_template');
+            $apprise = rtrim(Web::post('apprise_url'), '/');
+            if ($template !== '' && (!str_contains($template, '{phone}') || !preg_match('~^[a-z][a-z0-9+.-]*://\S+$~i', $template))) {
+                Web::flash('The SMS address must be an Apprise address that contains {phone}, for example serwersms://user:pass@{phone}.', 'bad');
+                break;
+            }
+            if ($apprise !== '' && !preg_match('~^https?://[^\s/]+(/\S*)?$~i', $apprise)) {
+                Web::flash('The Apprise server address must start with http:// or https://.', 'bad');
+                break;
+            }
+            $store->locked(static function () use ($store, $phone, $template, $apprise): void {
+                $config = $store->read('config');
+                $config['owner_phone'] = $phone;
+                $config['sms_template'] = $template;
+                $config['apprise_url'] = $apprise;
+                $store->write('config', $config);
+            });
+            Web::flash('Saved.');
+            break;
+
         case 'password':
             $check = Web::tryPassword((string) ($_POST['current'] ?? ''));
             $new = (string) ($_POST['new'] ?? '');
@@ -254,6 +324,31 @@ Web::$title = 'Settings: Death Plan Switch';
   <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="backup_remove"><button class="link" type="submit">Remove the backup address</button></form>
 <?php endif ?>
 </details>
+
+<h2>Notification channels</h2>
+<p>Every email to you can also arrive on a channel such as Discord, Telegram, ntfy, SMS or a webhook. The message carries the subject and the link only, never the text of the email. A step counts as delivered when the email or any channel gets through.</p>
+<?php $channels = array_values(array_filter((array) ($config['channels'] ?? []), 'is_array')); $self = 'index.php?p=settings'; require __DIR__ . '/_channels.php' ?>
+<h3>SMS and Apprise server</h3>
+<form method="post" action="index.php?p=settings">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="channels_save">
+  <div class="field">
+    <label for="owner_phone">Your phone number <span class="muted">(optional)</span></label>
+    <input type="text" id="owner_phone" name="owner_phone" value="<?= e($config['owner_phone'] ?? '') ?>" maxlength="40" autocomplete="off">
+    <span class="help">With the country code, for example +48 600 100 200.</span>
+  </div>
+  <div class="field">
+    <label for="sms_template">SMS address <span class="muted">(optional)</span></label>
+    <input type="text" id="sms_template" name="sms_template" value="<?= e($config['sms_template'] ?? '') ?>" maxlength="500" autocomplete="off">
+    <span class="help">An Apprise address with <code>{phone}</code> where the number goes, for example <code>serwersms://user:pass@{phone}</code>. It is used for you and for contacts with a phone number.</span>
+  </div>
+  <div class="field">
+    <label for="apprise_url">Apprise server <span class="muted">(optional)</span></label>
+    <input type="text" id="apprise_url" name="apprise_url" value="<?= e($config['apprise_url'] ?? '') ?>" maxlength="300" autocomplete="off">
+    <span class="help">Leave empty to use the one that came with this install.</span>
+  </div>
+  <div class="actions"><button type="submit">Save</button></div>
+</form>
 
 <h2>Mail server</h2>
 <form method="post" action="index.php?p=settings">

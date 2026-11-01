@@ -12,4 +12,10 @@ require __DIR__ . '/app/bootstrap.php';
 use DPS\Web;
 
 Web::$layout = 'plain';
+try {
+    $origins = DPS\Cluster::publicOrigins(DPS\store());
+} catch (Throwable $e) {
+    $origins = [];
+}
+Web::headers($origins);
 Web::page('vault_open');

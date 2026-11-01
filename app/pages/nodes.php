@@ -27,8 +27,9 @@ if (Web::posted()) {
                     throw new \InvalidArgumentException('Paste the identity JSON shown on the other node.');
                 }
                 $url = rtrim(Web::post('url'), '/');
+                $publicUrl = trim(Web::post('public_url'));
                 $rank = ctype_digit(Web::post('rank')) ? (int) Web::post('rank') : -1;
-                $store->locked(static function () use ($store, $identity, $peer, $url, $rank, $config): void {
+                $store->locked(static function () use ($store, $identity, $peer, $url, $publicUrl, $rank, $config): void {
                     $cluster = Cluster::read($store);
                     if ($cluster['nodes'] === []) {
                         // The first peer: this node joins the list as rank 0 and primary.
@@ -38,14 +39,37 @@ if (Web::posted()) {
                         ];
                         $cluster['primary'] = $identity['id'];
                     }
-                    $cluster['nodes'][] = [
+                    $entry = [
                         'id' => $peer['id'] ?? null, 'name' => $peer['name'] ?? null, 'url' => $url,
                         'sign_pk' => $peer['sign_pk'] ?? null, 'share_pk' => $peer['share_pk'] ?? null, 'rank' => $rank,
                     ];
+                    if ($publicUrl !== '') {
+                        $entry['public_url'] = $publicUrl;
+                    }
+                    $cluster['nodes'][] = $entry;
                     Cluster::save($store, $cluster);
                     $store->log('cluster.add', 'A node was added to the cluster.');
                 });
                 Web::flash('Node added.');
+                break;
+
+            case 'node_public':
+                $id = Web::post('node_id');
+                $publicUrl = trim(Web::post('public_url'));
+                $store->locked(static function () use ($store, $id, $publicUrl): void {
+                    $cluster = Cluster::read($store);
+                    foreach ($cluster['nodes'] as $i => $n) {
+                        if ($n['id'] === $id) {
+                            unset($cluster['nodes'][$i]['public_url']);
+                            if ($publicUrl !== '') {
+                                $cluster['nodes'][$i]['public_url'] = $publicUrl;
+                            }
+                        }
+                    }
+                    Cluster::save($store, $cluster);
+                    $store->log('cluster.public', 'A node public address was changed.');
+                });
+                Web::flash('Saved.');
                 break;
 
             case 'node_remove':
@@ -111,7 +135,7 @@ Web::$title = 'Nodes: Death Plan Switch';
 <p>No other node is set up. With one node the switch works as before.</p>
 <?php else: ?>
 <table>
-  <thead><tr><th>Rank</th><th>Name</th><th>Address</th><th>Role</th><th>Last heard</th><th></th></tr></thead>
+  <thead><tr><th>Rank</th><th>Name</th><th>Address</th><th>Public address</th><th>Role</th><th>Last heard</th><th></th></tr></thead>
   <tbody>
 <?php
 $rows = $cluster['nodes'];
@@ -123,6 +147,13 @@ foreach ($rows as $n):
       <td><?= e($n['rank']) ?></td>
       <td><?= e($n['name']) ?><?= $self ? ' (this node)' : '' ?></td>
       <td><?= e($n['url']) ?></td>
+      <td>
+<?php if ($isPrimary): ?>
+        <form method="post" action="index.php?p=nodes"><?= Web::csrfField() ?><input type="hidden" name="action" value="node_public"><input type="hidden" name="node_id" value="<?= e($n['id']) ?>"><input type="text" name="public_url" value="<?= e($n['public_url'] ?? '') ?>" placeholder="https://" aria-label="Public address"><button class="link" type="submit">Save</button></form>
+<?php else: ?>
+        <?= e($n['public_url'] ?? '-') ?>
+<?php endif ?>
+      </td>
       <td><?= $n['id'] === $cluster['primary'] ? 'Primary' : 'Secondary' ?></td>
       <td><?= $self ? '-' : e(when($seenAt($n['id']), $tz)) ?></td>
       <td>
@@ -155,6 +186,11 @@ foreach ($rows as $n):
     <label for="url">Its address</label>
     <input type="text" id="url" name="url" placeholder="http://192.168.1.20:8080" required>
     <span class="help">https://, or http:// on a private or Tailscale address. This node's own address is taken from Settings.</span>
+  </div>
+  <div class="field">
+    <label for="public_url">Its public address (optional)</label>
+    <input type="text" id="public_url" name="public_url" placeholder="https://n2.deadman.example">
+    <span class="help">https:// only. Recipients' browsers fetch key shares from here after release.</span>
   </div>
   <div class="field">
     <label for="rank">Its rank</label>

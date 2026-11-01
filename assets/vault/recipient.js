@@ -2,6 +2,7 @@
 import { client } from './api.js';
 import * as c from './crypto.js';
 import * as flows from './flows.js';
+import { combine } from './shamir.js';
 
 const root = document.getElementById('vault-recipient');
 const api = client(root.dataset.api, '');
@@ -115,6 +116,52 @@ async function renderPackage(p, raw) {
   return box;
 }
 
+function validX(x) { return Number.isInteger(x) && x >= 1 && x <= 255; }
+
+function shareOf(r) {
+  if (!r || !r.share || !Number.isInteger(r.share.x)) return null;
+  return { x: r.share.x, y: c.unb64(r.share.y) };
+}
+
+async function remoteShare(base) {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 10000);
+  try {
+    const res = await fetch(`${base.replace(/\/$/, '')}/vault-api.php?a=release`, {
+      mode: 'cors', credentials: 'omit', signal: ctl.signal,
+    });
+    if (!res.ok) return null;
+    return shareOf(await res.json());
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// Returns the release key, or throws an Error with a user-facing message.
+async function releaseKey(status) {
+  if (!status.k) return c.unb64((await api.get('release')).rk);
+  const k = status.k;
+  const got = new Map();
+  try {
+    const own = shareOf(await api.get('release'));
+    if (own && validX(own.x)) got.set(own.x, own);
+  } catch { /* counted as missing */ }
+  const others = (status.nodes || []).filter((n) => {
+    try { return new URL(n.url).origin !== location.origin; } catch { return false; }
+  });
+  for (const n of others) {
+    if (got.size >= k) break;
+    const s = await remoteShare(n.url);
+    if (s && validX(s.x) && !got.has(s.x)) got.set(s.x, s);
+  }
+  if (got.size < k) {
+    throw new Error(`Only ${got.size} of the ${k} needed nodes answered. The vault cannot be opened yet. Try again later.`);
+  }
+  return combine([...got.values()].slice(0, k));
+}
+
 async function open() {
   const status = await api.get('status');
   if (!status.released) return show(el('p', 'Nothing has been released.'));
@@ -130,7 +177,7 @@ async function open() {
     btn.disabled = true;
     try {
       const view = await api.get('public');
-      const rk = c.unb64((await api.get('release')).rk);
+      const rk = await releaseKey(status);
       let result;
       try {
         result = await flows.unlockRecipient(view, rk, secret.input.value);

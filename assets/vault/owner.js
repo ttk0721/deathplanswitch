@@ -4,6 +4,7 @@ import { client } from './api.js';
 import { b64 } from './crypto.js';
 import { createVault, openOwner, newRecipient } from './flows.js';
 import { renderPackages, h } from './owner-packages.js';
+import { renderShares } from './owner-shares.js';
 
 const MIN = 12;
 
@@ -14,6 +15,10 @@ function mount(el) {
   const vaultUrl = el.dataset.vaultUrl || '';
   let contacts = [];
   try { contacts = JSON.parse(el.dataset.contacts || '[]'); } catch { contacts = []; }
+  let cluster = null;
+  if (el.dataset.cluster) {
+    try { cluster = JSON.parse(el.dataset.cluster); } catch { cluster = null; }
+  }
 
   const status = h('p', { role: 'status', 'aria-live': 'polite', class: 'help' });
   const body = h('div', {});
@@ -91,10 +96,13 @@ function mount(el) {
       draw(fresh);
     };
     const draw = (d) => {
-      body.replaceChildren(
+      body.replaceChildren(...[
         h('section', { class: 'vault' },
           h('h2', {}, 'Recipients'), recipients(d), h('div', { id: 'vault-card-slot' })),
-        h('section', { class: 'vault' }, h('h2', {}, 'Packages'), h('div', { id: 'vault-packages' })));
+        cluster ? h('section', { class: 'vault' }, h('h2', {}, 'Key shares'), h('div', { id: 'vault-shares' })) : null,
+        h('section', { class: 'vault' }, h('h2', {}, 'Packages'), h('div', { id: 'vault-packages' })),
+      ].filter(Boolean));
+      if (cluster) renderShares({ api, rk, doc: d, cluster, reload });
       renderPackages({ api, ownerKey, rk, doc: d, reload });
     };
 

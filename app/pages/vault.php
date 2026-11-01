@@ -45,6 +45,25 @@ $people = array_map(
 );
 $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 
+// Federation: the owner's browser needs each node's share key to split the release key.
+$clusterAttr = '';
+if (Cluster::enabled(store())) {
+    $cluster = Cluster::read(store());
+    $clusterData = [
+        'k' => $cluster['k'],
+        'version' => $cluster['version'],
+        'nodes' => array_map(
+            static fn (array $n): array => [
+                'id' => (string) $n['id'],
+                'name' => (string) $n['name'],
+                'share_pk' => (string) $n['share_pk'],
+            ],
+            $cluster['nodes']
+        ),
+    ];
+    $clusterAttr = ' data-cluster="' . e(json_encode($clusterData, $flags)) . '"';
+}
+
 Web::$title = 'Vault: Death Plan Switch';
 ?>
 <h1>Vault</h1>
@@ -55,6 +74,6 @@ Web::$title = 'Vault: Death Plan Switch';
      data-csrf="<?= e(Web::csrf()) ?>"
      data-contacts="<?= e(json_encode($people, $flags)) ?>"
      data-owner-name="<?= e((string) ($config['owner_name'] ?? '')) ?>"
-     data-vault-url="<?= e($engine->url($config, 'vault.php')) ?>"></div>
+     data-vault-url="<?= e($engine->url($config, 'vault.php')) ?>"<?= $clusterAttr ?>></div>
 <noscript><p class="notice notice-warn">The vault needs JavaScript. Turn it on for this page.</p></noscript>
 <script type="module" src="assets/vault/owner.js?v=<?= e(VERSION) ?>"></script>

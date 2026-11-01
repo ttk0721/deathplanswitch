@@ -192,6 +192,12 @@ final class Sync
             $this->store->write('config', $config);
             $this->store->write('contacts', ['contacts' => $contacts]);
             $this->store->write('vault', $vault);
+            if (isset($vault['shares'])) {
+                // A secondary never holds the full release key.
+                $rel = $this->store->path('release');
+                @unlink($rel);
+                @unlink($rel . '.bak');
+            }
 
             $listsMe = false;
             foreach ((array) ($b['cluster']['nodes'] ?? []) as $n) {
@@ -243,7 +249,18 @@ final class Sync
             foreach ($packages as $p) {
                 $vault->savePackage(is_array($p) ? $p : []);
             }
-            return $vault->read();
+            $shares = $in['shares'] ?? null;
+            if ($shares !== null) {
+                if (!is_array($shares)) {
+                    throw new \RuntimeException('the bundle has no valid vault: shares');
+                }
+                $vault->saveShares($shares);
+            }
+            $doc = $vault->read();
+            if ($shares !== null && is_int($shares['version'] ?? null) && $shares['version'] > 0) {
+                $doc['shares']['version'] = $shares['version'];
+            }
+            return $doc;
         } catch (\InvalidArgumentException $e) {
             throw new \RuntimeException('the bundle has no valid vault: ' . $e->getMessage());
         } finally {

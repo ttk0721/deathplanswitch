@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const files = ['api.js', 'owner.js', 'owner-packages.js', 'recipient.js'];
+const files = ['api.js', 'owner.js', 'owner-packages.js', 'recipient.js', 'shamir.js', 'sharebox.js', 'owner-shares.js'];
 const banned = /\b(innerHTML|insertAdjacentHTML|outerHTML|document\.write|eval|localStorage|sessionStorage|console\.\w+)\b|new Function|setTimeout\(\s*['"`]/;
 
 for (const f of files) {

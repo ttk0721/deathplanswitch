@@ -328,6 +328,76 @@ final class Vault
         return ['recipients' => $recipients, 'packages' => $packages];
     }
 
+    public function shares(): ?array
+    {
+        $s = $this->read()['shares'] ?? null;
+        return is_array($s) ? $s : null;
+    }
+
+    /** Stores the key-share boxes and deletes the plain release key. */
+    public function saveShares(array $in): void
+    {
+        $k = $in['k'] ?? null;
+        $n = $in['n'] ?? null;
+        $cv = $in['cluster_version'] ?? null;
+        $boxesIn = $in['boxes'] ?? null;
+        if (!is_int($n) || !is_int($k) || $k < 1 || $n > 9 || $k > $n) {
+            throw new \InvalidArgumentException('Shares need 1 <= k <= n <= 9.');
+        }
+        if (!is_int($cv) || $cv < 0) {
+            throw new \InvalidArgumentException('The cluster version is not valid.');
+        }
+        if (!is_array($boxesIn) || count($boxesIn) !== $n) {
+            throw new \InvalidArgumentException('There must be one box per share.');
+        }
+        $boxes = [];
+        foreach ($boxesIn as $nodeId => $box) {
+            if (!preg_match('/^n_[0-9a-f]{8}$/D', (string) $nodeId) || !is_array($box)) {
+                throw new \InvalidArgumentException('A box must belong to a node id.');
+            }
+            $clean = [
+                'epk' => $this->b64($box['epk'] ?? null, null, 'epk', 300),
+                'iv' => $this->b64($box['iv'] ?? null, 12, 'share iv'),
+                'ct' => $this->b64($box['ct'] ?? null, null, 'share ct', 200),
+            ];
+            if (strlen($clean['epk']) < 80 || strlen($clean['ct']) < 24) {
+                throw new \InvalidArgumentException('A box is too short.');
+            }
+            $boxes[(string) $nodeId] = $clean;
+        }
+        $this->store->locked(function () use ($k, $n, $cv, $boxes): void {
+            $v = $this->read();
+            $version = (int) ($v['shares']['version'] ?? 0) + 1;
+            $v['shares'] = ['version' => $version, 'k' => $k, 'n' => $n, 'cluster_version' => $cv, 'boxes' => $boxes];
+            $this->store->write('vault', $v);
+            $path = $this->store->path('release');
+            @unlink($path);
+            @unlink($path . '.bak');
+            clearstatcache();
+            if (file_exists($path) || file_exists($path . '.bak')) {
+                throw new \RuntimeException('The plain release key could not be deleted.');
+            }
+        });
+    }
+
+    /** This node's share as {x, y: b64url}, or null when it has none or cannot open it. */
+    public function myShare(string $nodeId): ?array
+    {
+        $box = $this->shares()['boxes'][$nodeId] ?? null;
+        if (!is_array($box)) {
+            return null;
+        }
+        try {
+            $raw = ShareBox::open($this->store, $nodeId, $box);
+        } catch (\Throwable) {
+            return null;
+        }
+        if (strlen($raw) !== 33) {
+            return null;
+        }
+        return ['x' => ord($raw[0]), 'y' => rtrim(strtr(base64_encode(substr($raw, 1)), '+/', '-_'), '=')];
+    }
+
     public function releaseKey(): ?string
     {
         $rk = $this->store->read('release', [])['rk'] ?? null;

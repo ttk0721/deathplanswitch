@@ -26,6 +26,36 @@ $respond = static function (int $status, array $json): never {
 try {
     $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
     $body = '';
+    // Cross-origin reads of the public routes, for the cluster's own public origins only.
+    $corsA = is_string($_GET['a'] ?? null) ? $_GET['a'] : '';
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? null;
+    // A damaged cluster.json or node.json must not stop a recipient: fall back to no cluster.
+    try {
+        $cluster = DPS\Cluster::read(DPS\store());
+        $origins = DPS\Cluster::publicOrigins(DPS\store());
+    } catch (Throwable $e) {
+        $cluster = null;
+        $origins = [];
+    }
+    try {
+        $nodeId = DPS\Node::publicIdentity(DPS\store())['id'] ?? null;
+    } catch (Throwable $e) {
+        $nodeId = null;
+    }
+    $corsOk = is_string($origin) && in_array($corsA, ['status', 'public', 'release', 'chunk'], true)
+        && in_array($method, ['GET', 'OPTIONS'], true)
+        && in_array($origin, $origins, true);
+    if ($corsOk) {
+        header('Access-Control-Allow-Origin: ' . $origin);
+        header('Vary: Origin');
+    }
+    if ($method === 'OPTIONS') {
+        if ($corsOk) {
+            header('Access-Control-Allow-Methods: GET');
+        }
+        http_response_code(204);
+        exit;
+    }
     if ($method === 'POST' || $method === 'PUT') {
         $max = 4194304 + 64;
         $h = fopen('php://input', 'rb');
@@ -47,7 +77,7 @@ try {
     if (session_status() === PHP_SESSION_ACTIVE) {
         session_write_close();
     }
-    $result = (new DPS\VaultApi(new DPS\Vault(DPS\store())))->handle([
+    $result = (new DPS\VaultApi(new DPS\Vault(DPS\store()), $nodeId, $cluster))->handle([
         'method' => $method,
         'a' => $a,
         'query' => $_GET,

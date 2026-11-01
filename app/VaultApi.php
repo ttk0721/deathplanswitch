@@ -26,12 +26,13 @@ final class VaultApi
         'PUT chunk' => ['owner', true],
         'GET chunk' => ['owner_or_released', false],
         'GET public' => ['released', false],
+        'POST shares' => ['owner', true],
         'GET release' => ['released', false],
         'GET invite' => ['any', false],
         'POST password' => ['any', false],
     ];
 
-    public function __construct(private Vault $vault)
+    public function __construct(private Vault $vault, private ?string $nodeId = null, private ?array $cluster = null)
     {
     }
 
@@ -80,7 +81,19 @@ final class VaultApi
         $v = $this->vault;
         switch ($route) {
             case 'GET status':
-                return $this->ok(['initialised' => $v->read()['owner'] !== null, 'released' => $released]);
+                $status = ['initialised' => $v->read()['owner'] !== null, 'released' => $released];
+                $shares = $v->shares();
+                if ($shares !== null) {
+                    $status['k'] = $shares['k'];
+                    $status['nodes'] = [];
+                    foreach (($this->cluster['nodes'] ?? []) as $node) {
+                        if (is_array($node) && is_string($node['id'] ?? null)
+                            && is_string($node['public_url'] ?? null) && $node['public_url'] !== '') {
+                            $status['nodes'][] = ['id' => $node['id'], 'url' => $node['public_url']];
+                        }
+                    }
+                }
+                return $this->ok($status);
             case 'GET owner':
                 return $this->ok($v->read());
             case 'POST init':
@@ -117,7 +130,17 @@ final class VaultApi
                 return $path === null ? $this->err(404, 'not found') : ['status' => 200, 'file' => $path];
             case 'GET public':
                 return $this->ok($v->publicView());
+            case 'POST shares':
+                $v->saveShares($this->json($req));
+                return $this->ok(['ok' => true]);
             case 'GET release':
+                $shares = $v->shares();
+                if ($shares !== null) {
+                    $mine = $this->nodeId === null ? null : $v->myShare($this->nodeId);
+                    return $mine === null
+                        ? $this->err(404, 'no share')
+                        : $this->ok(['share' => $mine, 'k' => $shares['k'], 'node' => $this->nodeId]);
+                }
                 $rk = $v->releaseKey();
                 return $rk === null ? $this->err(404, 'not found') : $this->ok(['rk' => $rk]);
             case 'GET invite':

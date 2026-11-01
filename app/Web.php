@@ -39,13 +39,31 @@ final class Web
         exit;
     }
 
-    public static function headers(): void
+    /** Extra connect-src origins; set by headers() and kept for Web::page(). */
+    private static array $connectOrigins = [];
+
+    /** The Content-Security-Policy value; only well-formed http(s) origins are added to connect-src. */
+    public static function csp(array $connectOrigins = []): string
     {
+        $extra = '';
+        foreach ($connectOrigins as $o) {
+            if (is_string($o) && preg_match('/^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/D', $o)) {
+                $extra .= ' ' . $o;
+            }
+        }
+        return "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
+            . "connect-src 'self'" . $extra . "; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+    }
+
+    public static function headers(array $connectOrigins = []): void
+    {
+        if ($connectOrigins !== []) {
+            self::$connectOrigins = $connectOrigins;
+        }
         if (headers_sent()) {
             return;
         }
-        header("Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
-            . "connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+        header('Content-Security-Policy: ' . self::csp(self::$connectOrigins));
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         // Emailed links carry tokens in the address. Never pass them on.

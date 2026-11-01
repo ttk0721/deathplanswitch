@@ -323,6 +323,39 @@ test('bundle schema: unknown config keys are dropped, bad contacts or vault refu
     }
 });
 
+function sharesDoc(SW $w): array
+{
+    $pk = $w->store->read('node')['share_pk'];
+    $box = \DPS\ShareBox::sealForTests($pk, $w->id, str_repeat("\x05", 33));
+    return ['version' => 4, 'k' => 1, 'n' => 1, 'cluster_version' => 2, 'boxes' => [$w->id => $box]];
+}
+
+test('a bundle with shares keeps them and leaves no release key', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $w->store->write('release', ['rk' => 'secret']);
+    $b = bundleFrom($w, 31);
+    $b['vault']['shares'] = sharesDoc($w);
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->sync->run();
+    $v = $w->store->read('vault');
+    same([$w->id], array_keys($v['shares']['boxes']), 'boxes kept');
+    same(1, $v['shares']['k'], 'k kept');
+    check(!file_exists($w->store->path('release')), 'no release.json');
+    check((new \DPS\Vault($w->store))->myShare($w->id) !== null, 'share opens');
+});
+
+test('invalid shares refuse the whole bundle', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $b = bundleFrom($w, 32);
+    $b['vault']['shares'] = ['k' => 5, 'n' => 1, 'cluster_version' => 1, 'boxes' => []];
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $log = $w->sync->run();
+    same('Local', $w->store->read('config')['owner_name'], 'not applied');
+    check((bool) array_filter($log, fn ($l) => str_contains($l, 'no valid')), 'logged');
+});
+
 test('Sync::bundle is for the primary, and unchanged on the same version', function (): void {
     $w = new SW(SW::P1);
     try {

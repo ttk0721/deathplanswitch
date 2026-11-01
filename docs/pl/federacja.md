@@ -63,9 +63,22 @@ Ranga mówi, kto działa pierwszy. Węzeł główny ma zwykle rangę 0, kolejne 
 
 Przy tylko dwóch węzłach, gdy jeden z nich padnie, drugi uznaje się za odcięty. Opóźnia wtedy pytanie do bliskiej osoby i uruchomienie przełącznika, każde o czas izolacji (domyślnie 48 godzin, razem około czterech dni później). Możesz skrócić ten czas w zakładce Nodes (od 12 do 168 godzin) albo dodać trzeci węzeł.
 
-## 6. Liczba K i udziały klucza: w kolejnej wersji
+## 6. Udziały klucza (K z N)
 
-Na stronie Nodes jest ustawienie **K**: ile węzłów musi się zgodzić, by otworzyć sejf. W tej wersji węzły kopiują zaszyfrowany sejf, ale **podział klucza na udziały (K z N) pojawi się dopiero w kolejnej aktualizacji**. Do tego czasu sejf otwiera się tak jak dotąd, a K nie zmienia jego zabezpieczeń.
+Sejf jest zaszyfrowany kluczem, który serwer wydaje dopiero po uruchomieniu przełącznika. Bez udziałów ten klucz leży w całości na węźle głównym, więc kto włamie się na ten jeden węzeł po uruchomieniu przełącznika, dostaje klucz.
+
+Udziały klucza to temu zapobiegają. **N** to liczba węzłów, między które dzielony jest klucz. **K** to liczba udziałów potrzebnych do jego odtworzenia (ustawienie K jest na stronie Nodes). Każdy węzeł dostaje jeden udział, a udział jednego węzła nie ujawnia nic o kluczu. Dopiero K udziałów razem otwiera sejf. Udziały są szyfrowane w Twojej przeglądarce kluczem danego węzła, więc nawet węzeł główny nie widzi cudzych udziałów. Udział wychodzi z węzła dopiero wtedy, gdy przełącznik na tym węźle został uruchomiony.
+
+**Adresy publiczne.** Bliska osoba otwiera sejf w przeglądarce, a ta zbiera udziały z K węzłów. Dlatego każdy węzeł musi mieć adres publiczny z **HTTPS**, np. osobną nazwę z Cloudflare Tunnel dla każdego węzła. Wpisz go w polu `public_url` węzła na stronie Nodes (bez nazwy użytkownika, bez znaku `?` i `#`). Węzły bez adresu publicznego nie mogą wydać udziału odbiorcy.
+
+**Jak wybrać K.** Przykład: NAS, Pi w domu i Pi u przyjaciela.
+- **K = 2.** Kradzież lub włamanie na jeden węzeł nic nie daje. Ale jeśli dom spłonie, zostaje tylko węzeł przyjaciela, czyli jeden udział, a sejf **pozostaje zamknięty**.
+- Dlatego albo ustaw **K = 1** (wtedy każdy węzeł sam wystarcza, ale też jeden przejęty węzeł otwiera sejf), albo dodaj **czwarty węzeł w innym miejscu**, tak aby po utracie domu zostały co najmniej dwa.
+- Zasada: K musi być mniejsze lub równe liczbie węzłów, które przetrwają najgorszy dla Ciebie scenariusz.
+
+**Rozdawanie udziałów.** Na stronie Sejf, w sekcji z udziałami, kliknij **Rozdaj udziały klucza** (do czasu tłumaczenia interfejsu przycisk nazywa się "Distribute key shares"). Trzeba to zrobić po każdej zmianie węzłów, ich adresów lub wartości K. Strona ostrzega, gdy lista węzłów lub K zmieniły się po ostatnim rozdaniu.
+
+**Klucz pełny znika.** Gdy tylko udziały zostaną zapisane, węzeł główny kasuje swój pełny klucz. Od tego momentu sejf da się otworzyć wyłącznie z K udziałów. Bez udziałów (jeden węzeł) sejf działa jak dotąd.
 
 ## 7. Gdy coś nie działa
 

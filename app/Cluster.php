@@ -76,6 +76,41 @@ final class Cluster
         return $p === null || $p === $nodeId;
     }
 
+    /** @return list<string> unique scheme://host[:port] of every node's public_url */
+    public static function publicOrigins(Store $store): array
+    {
+        $out = [];
+        foreach (self::read($store)['nodes'] as $n) {
+            $pub = $n['public_url'] ?? null;
+            $o = is_string($pub) ? self::originOf($pub) : null;
+            if ($o !== null && !in_array($o, $out, true)) {
+                $out[] = $o;
+            }
+        }
+        return $out;
+    }
+
+    /** The origin of a public URL, or null when the URL is not acceptable. */
+    private static function originOf(string $url): ?string
+    {
+        if (!filter_var($url, FILTER_VALIDATE_URL) || str_contains($url, '@') || str_contains($url, '?') || str_contains($url, '#')) {
+            return null;
+        }
+        $p = parse_url($url);
+        if (!is_array($p) || isset($p['user']) || isset($p['pass']) || isset($p['query']) || isset($p['fragment'])) {
+            return null;
+        }
+        $scheme = strtolower((string)($p['scheme'] ?? ''));
+        $host = strtolower((string)($p['host'] ?? ''));
+        if ($host === '' || !preg_match('/^[a-z0-9.-]+$/D', $host)) {
+            return null;
+        }
+        if ($scheme !== 'https' && !($scheme === 'http' && getenv('DPS_TEST_ALLOW_HTTP_PUBLIC') === '1')) {
+            return null;
+        }
+        return $scheme . '://' . $host . (isset($p['port']) ? ':' . $p['port'] : '');
+    }
+
     private static function validate(array $c): array
     {
         $nodes = [];
@@ -114,7 +149,15 @@ final class Cluster
                 throw new \InvalidArgumentException("Rank $rank is used twice.");
             }
             $ranks[$rank] = true;
-            $nodes[] = ['id' => $id, 'name' => $name, 'url' => $url, 'sign_pk' => $n['sign_pk'], 'share_pk' => $sh, 'rank' => $rank];
+            $entry = ['id' => $id, 'name' => $name, 'url' => $url, 'sign_pk' => $n['sign_pk'], 'share_pk' => $sh, 'rank' => $rank];
+            $pub = $n['public_url'] ?? null;
+            if ($pub !== null && $pub !== '') {
+                if (!is_string($pub) || self::originOf($pub) === null) {
+                    throw new \InvalidArgumentException('Public address must be https, without a user name, query or fragment.');
+                }
+                $entry['public_url'] = $pub;
+            }
+            $nodes[] = $entry;
         }
         $k = $c['k'] ?? 1;
         if (!is_int($k) || $k < 1 || $k > max(1, count($nodes))) {

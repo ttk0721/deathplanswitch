@@ -114,6 +114,14 @@ for f in $(printf '%s\n' "$expected" | grep -v SHA256SUMS); do
 done
 [ "$missing" -eq 0 ] && ok "release notes name every asset" || bad "release notes miss assets"
 
+anchors="$(printf '%s\n' "$notes" | grep -o 'instalacja\.md#[A-Za-z0-9_-]*' | sed 's/.*#//' | sort -u)"
+missing=0
+[ -n "$anchors" ] || missing=1
+for a in $anchors; do
+    grep -qF "<a id=\"$a\"></a>" "$COPY/docs/pl/instalacja.md" || { missing=1; echo "guide misses anchor $a"; }
+done
+[ "$missing" -eq 0 ] && ok "every release-notes anchor exists in the guide" || bad "release-notes anchors missing in the guide"
+
 # Package metadata and permissions (inspected without installing).
 deb="$OUT/deathplanswitch-$V-linux-debian-ubuntu.deb"
 if docker run --rm -v "$OUT:/out:ro" debian:bookworm-slim sh -c "dpkg-deb -c /out/${deb##*/}" > "$TMP/deb.list" 2>&1; then

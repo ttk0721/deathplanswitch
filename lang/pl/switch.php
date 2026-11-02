@@ -37,9 +37,6 @@ return [
     '{names} have been told it was a false alarm.' => 'Osoby, które dostały informację o fałszywym alarmie: {names}.',
     'Your next of kin' => 'Twoja najbliższa osoba',
 
-    // dashboard: date formats
-    'l j F \a\t g:ia' => 'l j F, G:i',
-    'D j M, g:ia' => 'D j M, G:i',
 
     // dashboard: pilot light
     'Not armed' => 'Nieuzbrojony',

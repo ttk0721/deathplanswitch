@@ -31,11 +31,14 @@ Web::session();
 $errors = [];
 if ($config === []) {
     // No config yet, so no saved language: use the one picked on step 1.
-    if (Web::posted() && in_array(Web::post('language'), ['pl', 'en'], true)) {
+    if (Web::posted() && isset(I18n::available()[Web::post('language')])) {
         $_SESSION['install_lang'] = Web::post('language');
     }
-    I18n::setLanguage((string) ($_SESSION['install_lang'] ?? 'pl'));
+    // First visit: the browser's language when we have it, else Polish.
+    $_SESSION['install_lang_default'] ??= I18n::fromAcceptLanguage((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '')) ?? 'pl';
+    I18n::setLanguage((string) ($_SESSION['install_lang'] ?? $_SESSION['install_lang_default']));
 }
+$installLang = (string) ($_SESSION['install_lang'] ?? $_SESSION['install_lang_default'] ?? 'pl');
 $outbox = new Outbox($store, new SmtpTransport());
 $requirements = Setup::requirements();
 $requirementsOk = array_filter($requirements, static fn (array $r): bool => !$r['ok']) === [];
@@ -103,7 +106,7 @@ if (Web::posted()) {
         $dow = (int) Web::post('slot_dow', '1');
         $hour = (int) Web::post('slot_hour', '9');
         $baseUrl = rtrim(Web::post('base_url'), '/');
-        $language = (string) ($_SESSION['install_lang'] ?? 'pl');
+        $language = $installLang;
 
         if ($name === '') {
             $errors[] = t('Enter your name.');
@@ -300,8 +303,9 @@ Web::$title = t('Install Death Plan Switch');
   <div class="field">
     <label for="language">Język / Language</label>
     <select id="language" name="language">
-      <option value="pl"<?= ($_SESSION['install_lang'] ?? 'pl') === 'pl' ? ' selected' : '' ?>>Polski</option>
-      <option value="en"<?= ($_SESSION['install_lang'] ?? 'pl') === 'en' ? ' selected' : '' ?>>English</option>
+      <?php foreach (I18n::available() as $code => $info): ?>
+      <option value="<?= e($code) ?>"<?= $installLang === $code ? ' selected' : '' ?>><?= e($info['name']) ?></option>
+      <?php endforeach; ?>
     </select>
     <span class="help"><?= e(t('Used for the pages and the emails. You can change it later in Settings.')) ?></span>
   </div>

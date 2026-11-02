@@ -36,7 +36,7 @@ Web::$title = t('Yearly review: Death Plan Switch');
 <h1><?= e(t('Yearly review')) ?></h1>
 <p class="lede"><?= e(t('Things drift. A password gets changed, a document moves, someone gets a new phone. Check with each person, then tick them off.')) ?></p>
 <?php if ($state['review_at']): ?>
-<p class="muted"><?= e(t('Last completed on {date}.', ['date' => when($state['review_at'], (string) $config['timezone'], 'j F Y')])) ?></p>
+<p class="muted"><?= e(t('Last completed on {date}.', ['date' => when($state['review_at'], (string) $config['timezone'], 'date')])) ?></p>
 <?php endif ?>
 
 <?php if ($contacts === []): ?>
@@ -50,7 +50,7 @@ Web::$title = t('Yearly review: Death Plan Switch');
     <label for="has-<?= e($contact['id']) ?>"><?= e(t('{name} still has what they need', ['name' => $contact['name']])) ?></label>
     <span class="help"><?= e($contact['role_label']) ?>, <?= e($contact['email']) ?><?= $contact['phone'] !== '' ? ', ' . e($contact['phone']) : '' ?>.
       <?= $contact['status'] !== 'confirmed' ? e(t('Not confirmed, so not written to.')) : '' ?>
-      <?= !empty($contact['has_needs_at']) ? e(t('Last ticked {date}.', ['date' => when($contact['has_needs_at'], (string) $config['timezone'], 'j F Y')])) : e(t('Never ticked.')) ?>
+      <?= !empty($contact['has_needs_at']) ? e(t('Last ticked {date}.', ['date' => when($contact['has_needs_at'], (string) $config['timezone'], 'date')])) : e(t('Never ticked.')) ?>
       <a href="index.php?p=contact&amp;id=<?= e($contact['id']) ?>"><?= e(t('Read their message')) ?></a></span>
   </div>
 <?php endforeach ?>

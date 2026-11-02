@@ -9,16 +9,16 @@ Pliki są na stronie [wydań](https://github.com/ttk0721/deathplanswitch/release
 | Plik | Dla kogo | Sekcja |
 |---|---|---|
 | `deathplanswitch-X.Y.Z-docker-compose.zip` | Docker, Synology Container Manager, Portainer, TrueNAS, Unraid, CasaOS | [Docker](#docker) |
-| `deathplanswitch-X.Y.Z-linux-debian-ubuntu.deb` | Debian, Ubuntu, Mint, Raspberry Pi OS | [Debian i Ubuntu](#debian-i-ubuntu-deb) |
-| `deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm` | Fedora, RHEL, Alma, Rocky, openSUSE | [Fedora, RHEL i openSUSE](#fedora-rhel-i-opensuse-rpm) |
-| `deathplanswitch-X.Y.Z-linux-arch.pkg.tar.zst` | Arch, Manjaro, EndeavourOS | [Arch](#arch-linux-manjaro-endeavouros-pkgtarzst) |
-| `deathplanswitch-X.Y.Z-linux-alpine.apk` | Alpine | [Alpine](#alpine-apk) |
-| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | inne systemy Linux | [Inne linuksy](#inne-linuksy-archiwum-i-installsh) |
+| `deathplanswitch-X.Y.Z-linux-debian-ubuntu.deb` | Debian, Ubuntu, Mint, Raspberry Pi OS | [Debian i Ubuntu](#deb) |
+| `deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm` | Fedora, RHEL, Alma, Rocky, openSUSE | [Fedora, RHEL i openSUSE](#rpm) |
+| `deathplanswitch-X.Y.Z-linux-arch.pkg.tar.zst` | Arch, Manjaro, EndeavourOS | [Arch](#arch) |
+| `deathplanswitch-X.Y.Z-linux-alpine.apk` | Alpine | [Alpine](#alpine) |
+| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | inne systemy Linux | [Inne linuksy](#other) |
 | `deathplanswitch-X.Y.Z-freebsd.tar.gz` | FreeBSD | [FreeBSD](#freebsd) |
 | `deathplanswitch-X.Y.Z-macos.tar.gz` | macOS | [macOS](#macos) |
 | `deathplanswitch-X.Y.Z-windows.zip` | Windows 10 i 11, Windows Server | [Windows](#windows) |
-| `deathplanswitch-X.Y.Z-solaris-illumos.tar.gz` | Solaris, OpenIndiana, OmniOS | [Solaris i illumos](#solaris-i-illumos) |
-| `SHA256SUMS` | wszyscy | [Sprawdzenie pliku](#sprawdzenie-pobranego-pliku) |
+| `deathplanswitch-X.Y.Z-solaris-illumos.tar.gz` | Solaris, OpenIndiana, OmniOS | [Solaris i illumos](#solaris) |
+| `SHA256SUMS` | wszyscy | [Sprawdzenie pliku](#sha256) |
 
 ## Co dostajesz po instalacji
 
@@ -42,6 +42,8 @@ Zachowaj tylko folder z danymi. Aktualizacja podmienia aplikację i nie rusza da
 
 Po instalacji otwórz `http://127.0.0.1:8080/install.php` i przejdź instalator w przeglądarce. Z innego komputera użyj adresu serwera, o ile ustawisz `DPS_LISTEN` inaczej niż domyślnie.
 
+<a id="docker"></a>
+
 ## Docker
 
 Pasuje do Synology, Portainera, TrueNAS-a, Unraida, CasaOS i zwykłego serwera z Dockerem.
@@ -56,6 +58,8 @@ Obraz działa na linux/amd64 i linux/arm64 (Raspberry Pi także). Dane trafiają
 Aktualizacja: zmień numer w `DPS_IMAGE` (albo wgraj nowy plik compose) i uruchom `docker compose pull && docker compose up -d`.
 
 Szczegóły dla Synology i Raspberry Pi, w tym zasilanie awaryjne i monitoring: [synology.md](synology.md).
+
+<a id="deb"></a>
 
 ## Debian i Ubuntu (.deb)
 
@@ -81,6 +85,8 @@ sudo systemctl restart deathplanswitch-web deathplanswitch-scheduler
 
 Stan i logi sprawdzisz przez `systemctl status deathplanswitch-web` oraz `journalctl -u deathplanswitch-scheduler`. Aktualizacja to ta sama komenda `apt install` z nowym plikiem. Usunięcie pakietu (`sudo apt remove deathplanswitch`) zostawia dane.
 
+<a id="rpm"></a>
+
 ## Fedora, RHEL i openSUSE (.rpm)
 
 ```
@@ -88,6 +94,8 @@ sudo dnf install ./deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm
 ```
 
 W openSUSE użyj `sudo zypper install ./plik.rpm`. Reszta jak w Debianie: te same usługi systemd, ten sam plik `/etc/default/deathplanswitch`, te same ścieżki. Aktualizacja to ta sama komenda z nowym plikiem.
+
+<a id="arch"></a>
 
 ## Arch Linux, Manjaro, EndeavourOS (.pkg.tar.zst)
 
@@ -99,6 +107,8 @@ Pakiet sam dociągnie `php` (8.1 lub nowszy) i `php-sodium`. Rozszerzenie sodium
 
 Usługi systemd, plik `/etc/default/deathplanswitch` i ścieżki są takie same jak w pakiecie `.deb`. Pakiet nie jest podpisany, więc sprawdź go przez `SHA256SUMS`. Jeśli systemd działa, pakiet od razu włącza i uruchamia usługi. Jeśli nie, wypisze, co zrobić ręcznie. Aktualizacja to ta sama komenda z nowym plikiem.
 
+<a id="alpine"></a>
+
 ## Alpine (.apk)
 
 ```
@@ -108,6 +118,8 @@ apk add --allow-untrusted ./deathplanswitch-X.Y.Z-linux-alpine.apk
 Opcja `--allow-untrusted` jest potrzebna, bo pakiet nie jest podpisany kluczem Alpine. Zamiast podpisu sprawdź plik przez `SHA256SUMS`. Pakiet sam dociągnie `php83` i potrzebne rozszerzenia.
 
 Usługi działają pod OpenRC (`deathplanswitch-web` i `deathplanswitch-scheduler`). Jeśli OpenRC działa, pakiet dodaje je do poziomu `default` i uruchamia. Jeśli nie, wypisze komendy `rc-update add` i `rc-service ... start` do wykonania ręcznie. Ustawienia są w `/etc/default/deathplanswitch`, dane w `/var/lib/deathplanswitch`, logi w `/var/log/deathplanswitch-web.log` i `/var/log/deathplanswitch-scheduler.log`. Aktualizacja to ta sama komenda z nowym plikiem.
+
+<a id="other"></a>
 
 ## Inne linuksy (archiwum i install.sh)
 
@@ -120,6 +132,8 @@ sudo ./install.sh
 ```
 
 Skrypt rozpoznaje systemd lub OpenRC, tworzy konto i foldery, kopiuje aplikację i włącza usługi. Przy aktualizacji uruchom go ponownie: nie psuje istniejących danych ani ustawień. Układ folderów i ustawienia są takie same jak w pakietach `.deb` i `.rpm`.
+
+<a id="freebsd"></a>
 
 ## FreeBSD
 
@@ -147,6 +161,8 @@ Ręczny start: `service deathplanswitch_web start` i `service deathplanswitch_sc
 
 Usunięcie: `sudo ./install.sh uninstall`. Dane zostają w `/var/db/deathplanswitch`; z opcją `--remove-data` są usuwane razem z użytkownikiem.
 
+<a id="macos"></a>
+
 ## macOS
 
 Usługi w tle działają przez launchd, który jest częścią systemu. Nie potrzebujesz App Store ani konta Apple.
@@ -169,6 +185,8 @@ Na Macu z Intelem Homebrew oddaje `/usr/local/share` swojemu użytkownikowi. Wte
 Usunięcie: `sudo ./install.sh uninstall`. Dane zostają w `/var/db/deathplanswitch`; z opcją `--remove-data` są usuwane razem z rolą. Skrypt kasuje tylko te stałe katalogi i nie idzie za dowiązaniami. Dane z wcześniejszej wersji w `/usr/local/var/deathplanswitch` nie są używane; skopiuj je do `/var/db/deathplanswitch` ręcznie, jeśli ich potrzebujesz.
 
 Stan sprawdzisz poleceniem `sudo launchctl print system/pl.ttk0721.deathplanswitch.web`. Żeby Mac wstawał po awarii prądu, włącz w ustawieniach systemu automatyczny start po utracie zasilania (komputery stacjonarne) i wyłącz usypianie.
+
+<a id="windows"></a>
 
 ## Windows
 
@@ -197,6 +215,8 @@ Skrypt sprawdza wersję PHP i rozszerzenia, kopiuje aplikację do `%ProgramFiles
 Istniejący folder `%ProgramData%\DeathPlanSwitch` instalator użyje tylko wtedy, gdy należy do SYSTEM lub administratorów i nie ma w nim dowiązań (junction, link symboliczny) ani plików innych właścicieli (konto LOCAL SERVICE jest dozwolone). W przeciwnym razie odmawia: sprawdź zawartość, usuń folder i uruchom skrypt ponownie. Odinstalowanie też zatrzyma się na takim dowiązaniu i nigdy nie idzie za nim.
 
 Usunięcie: `.\uninstall.ps1`. Dane zostają w `%ProgramData%\DeathPlanSwitch`; z opcją `-RemoveData` są usuwane. Opis opcji jest w `README.txt` w archiwum.
+
+<a id="solaris"></a>
 
 ## Solaris i illumos
 
@@ -254,6 +274,8 @@ server {
 **Cloudflare Tunnel** (nie otwiera portów w routerze). Utwórz tunel w panelu Cloudflare Zero Trust, dodaj nazwę publiczną `deadman.example.pl` i wskaż usługę `http://127.0.0.1:8080`. Wystarczy, że `cloudflared` działa na tym samym komputerze.
 
 Aplikacja ufa nagłówkowi `X-Forwarded-For` tylko z sieci prywatnych, więc proxy na tym samym komputerze działa poprawnie.
+
+<a id="sha256"></a>
 
 ## Sprawdzenie pobranego pliku
 

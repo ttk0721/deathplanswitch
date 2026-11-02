@@ -16,16 +16,16 @@ cat <<NOTES
 
 | I use | Download | Guide |
 |---|---|---|
-| Docker, Synology Container Manager, Portainer, TrueNAS, Unraid, CasaOS | \`deathplanswitch-${v}-docker-compose.zip\` | [Docker](${guide}) |
-| Debian, Ubuntu, Mint, Raspberry Pi OS | \`deathplanswitch-${v}-linux-debian-ubuntu.deb\` | [.deb](${guide}) |
-| Fedora, RHEL, Alma, Rocky, openSUSE | \`deathplanswitch-${v}-linux-fedora-rhel-suse.rpm\` | [.rpm](${guide}) |
-| Arch, Manjaro, EndeavourOS | \`deathplanswitch-${v}-linux-arch.pkg.tar.zst\` | [Arch](${guide}) |
-| Alpine | \`deathplanswitch-${v}-linux-alpine.apk\` | [Alpine](${guide}) |
-| Other Linux | \`deathplanswitch-${v}-linux-other.tar.gz\` | [tarball](${guide}) |
-| FreeBSD | \`deathplanswitch-${v}-freebsd.tar.gz\` | [FreeBSD](${guide}) |
-| macOS | \`deathplanswitch-${v}-macos.tar.gz\` | [macOS](${guide}) |
-| Windows 10/11, Server | \`deathplanswitch-${v}-windows.zip\` | [Windows](${guide}) |
-| Solaris, OpenIndiana, OmniOS | \`deathplanswitch-${v}-solaris-illumos.tar.gz\` | [Solaris](${guide}) |
+| Docker, Synology Container Manager, Portainer, TrueNAS, Unraid, CasaOS | \`deathplanswitch-${v}-docker-compose.zip\` | [Docker](${guide}#docker) |
+| Debian, Ubuntu, Mint, Raspberry Pi OS | \`deathplanswitch-${v}-linux-debian-ubuntu.deb\` | [.deb](${guide}#deb) |
+| Fedora, RHEL, Alma, Rocky, openSUSE | \`deathplanswitch-${v}-linux-fedora-rhel-suse.rpm\` | [.rpm](${guide}#rpm) |
+| Arch, Manjaro, EndeavourOS | \`deathplanswitch-${v}-linux-arch.pkg.tar.zst\` | [Arch](${guide}#arch) |
+| Alpine | \`deathplanswitch-${v}-linux-alpine.apk\` | [Alpine](${guide}#alpine) |
+| Other Linux | \`deathplanswitch-${v}-linux-other.tar.gz\` | [tarball](${guide}#other) |
+| FreeBSD | \`deathplanswitch-${v}-freebsd.tar.gz\` | [FreeBSD](${guide}#freebsd) |
+| macOS | \`deathplanswitch-${v}-macos.tar.gz\` | [macOS](${guide}#macos) |
+| Windows 10/11, Server | \`deathplanswitch-${v}-windows.zip\` | [Windows](${guide}#windows) |
+| Solaris, OpenIndiana, OmniOS | \`deathplanswitch-${v}-solaris-illumos.tar.gz\` | [Solaris](${guide}#solaris) |
 
 Check downloads against \`SHA256SUMS\`. The Docker image is
 \`ghcr.io/ttk0721/deathplanswitch:${v}\` (linux/amd64, linux/arm64).

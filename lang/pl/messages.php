@@ -24,9 +24,6 @@ return [
     // Placeholder values
     'an unknown date' => 'nieznana data',
     '(nobody else is listed)' => '(nikogo więcej nie wpisano)',
-    'l j F Y' => 'j.m.Y',
-    'l j F' => 'j.m.Y',
-    'l j F \a\t g:ia' => 'l j F, G:i',
 
     // Owner emails
     'Death Plan Switch: your confirmation code is {code}' => 'Death Plan Switch: twój kod potwierdzenia to {code}',

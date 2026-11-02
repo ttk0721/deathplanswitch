@@ -646,7 +646,7 @@ final class Engine
             $state['last_checkin_via'] = 'pausing the switch';
             $state['paused_until'] = $now + $days * Schedule::DAY;
             $this->saveState($state);
-            $this->store->log('pause.started', t('The switch was paused for {days} days.', ['days' => lang() === 'pl' ? $days . ' ' . plPlural($days, 'dzień', 'dni', 'dni') : $days]));
+            $this->store->log('pause.started', t('The switch was paused for {duration}.', ['duration' => tn('{n} day', '{n} days', $days)]));
             return ['until' => $state['paused_until'], 'told' => $told];
         });
     }

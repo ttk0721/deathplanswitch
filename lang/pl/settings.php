@@ -6,7 +6,7 @@ return [
     // Flashes and errors
     'Enter your name, and choose a timezone, a day and an hour.' => 'Wpisz swoje imię i wybierz strefę czasową, dzień oraz godzinę.',
     'Saved.' => 'Zapisano.',
-    'Choose Polski or English.' => 'Wybierz Polski albo English.',
+    'Choose one of the listed languages.' => 'Wybierz jeden z języków z listy.',
     'Enter a valid email address.' => 'Wpisz poprawny adres e-mail.',
     'Your two addresses have to be different, ideally with different providers.' => 'Oba adresy muszą się różnić, najlepiej niech należą do różnych dostawców.',
     'A code has been emailed to {address}. Enter it below to confirm the address.' => 'Kod wysłaliśmy na adres {address}. Wpisz go poniżej, żeby potwierdzić adres.',

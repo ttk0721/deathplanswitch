@@ -46,8 +46,8 @@ if (Web::posted()) {
 
         case 'language_save':
             $language = Web::post('language');
-            if ($language !== 'pl' && $language !== 'en') {
-                Web::flash(t('Choose Polski or English.'), 'bad');
+            if (!isset(I18n::available()[$language])) {
+                Web::flash(t('Choose one of the listed languages.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $language): void {
@@ -279,8 +279,9 @@ Web::$title = t('Settings: Death Plan Switch');
   <div class="field">
     <label for="language">Język / Language</label>
     <select id="language" name="language">
-      <option value="pl"<?= lang() === 'pl' ? ' selected' : '' ?>>Polski</option>
-      <option value="en"<?= lang() === 'en' ? ' selected' : '' ?>>English</option>
+      <?php foreach (I18n::available() as $code => $info): ?>
+      <option value="<?= e($code) ?>"<?= lang() === $code ? ' selected' : '' ?>><?= e($info['name']) ?></option>
+      <?php endforeach; ?>
     </select>
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>

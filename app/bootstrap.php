@@ -97,14 +97,23 @@ function t(string $en, array $vars = []): string
     return I18n::t($en, $vars);
 }
 
-/** The interface language: 'pl' or 'en'. */
+/** A counted phrase: tn('{n} hour', '{n} hours', $n). The first form is the key in the lang files. */
+function tn(string $one, string $other, int $n, array $vars = []): string
+{
+    return I18n::tn($one, $other, $n, $vars);
+}
+
+/** The interface language: any registered code with a lang/<code>/ folder, else 'en'. */
 function lang(): string
 {
     return I18n::lang();
 }
 
-/** Format a UTC timestamp in the owner's timezone. */
-function when(?int $ts, string $tz = 'UTC', string $format = 'l j F Y, g:ia'): string
+/**
+ * Format a UTC timestamp in the owner's timezone.
+ * $format is a name from the language's dates.php ('full', 'date', 'time', ...) or a date() pattern.
+ */
+function when(?int $ts, string $tz = 'UTC', string $format = 'full'): string
 {
     if (!$ts) {
         return t('never');
@@ -115,29 +124,35 @@ function when(?int $ts, string $tz = 'UTC', string $format = 'l j F Y, g:ia'): s
         $zone = new \DateTimeZone('UTC');
     }
     $date = (new \DateTimeImmutable('@' . $ts))->setTimezone($zone);
-    return lang() === 'pl' ? whenPl($date, $format) : $date->format($format);
+    $dates = I18n::dates();
+    return formatDate($date, $dates['formats'][$format] ?? $format, $dates);
 }
 
-/** Polish date text: nominative weekdays, genitive months, 24-hour clock, no am/pm. */
-function whenPl(\DateTimeImmutable $date, string $format): string
+/**
+ * Format a date with a language's dates data: names for l D F M, its am/pm text for a A, and
+ * the 24-hour letters G H in place of g h when the language has no 12-hour clock.
+ * A backslash makes the next character literal.
+ */
+function formatDate(\DateTimeImmutable $date, string $format, array $dates): string
 {
-    $days = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
-    $daysShort = ['niedz.', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.'];
-    $months = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
-    $monthsShort = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+    $weekday = (int) $date->format('w');
+    $month = (int) $date->format('n') - 1;
+    $hour12 = !empty($dates['hour12']);
+    $half = (int) $date->format('G') < 12 ? 'am' : 'pm';
     $out = '';
     $len = strlen($format);
     for ($i = 0; $i < $len; $i++) {
         $c = $format[$i];
         $out .= match ($c) {
             '\\' => $format[++$i] ?? '',
-            'l' => $days[(int) $date->format('w')],
-            'D' => $daysShort[(int) $date->format('w')],
-            'F' => $months[(int) $date->format('n') - 1],
-            'M' => $monthsShort[(int) $date->format('n') - 1],
-            'g' => $date->format('G'),
-            'h' => $date->format('H'),
-            'a', 'A' => '',
+            'l' => $dates['weekdays'][$weekday],
+            'D' => $dates['weekdays_short'][$weekday],
+            'F' => ($dates['months_genitive'] ?? $dates['months'])[$month],
+            'M' => $dates['months_short'][$month],
+            'g' => $hour12 ? $date->format('g') : $date->format('G'),
+            'h' => $hour12 ? $date->format('h') : $date->format('H'),
+            'a' => $hour12 ? (string) $dates[$half] : '',
+            'A' => $hour12 ? mb_strtoupper((string) $dates[$half]) : '',
             default => $date->format($c),
         };
     }
@@ -148,44 +163,30 @@ function whenPl(\DateTimeImmutable $date, string $format): string
 function duration(int $seconds): string
 {
     $seconds = abs($seconds);
-    $pl = lang() === 'pl';
     if ($seconds < 90) {
         return t('a minute');
     }
     if ($seconds < 3600 * 1.5) {
-        $n = (int) round($seconds / 60);
-        return $pl ? $n . ' ' . plPlural($n, 'minuta', 'minuty', 'minut') : $n . ' minutes';
+        return tn('{n} minute', '{n} minutes', (int) round($seconds / 60));
     }
     if ($seconds < 86400 * 2) {
-        $n = (int) round($seconds / 3600);
-        return $pl ? $n . ' ' . plPlural($n, 'godzina', 'godziny', 'godzin') : $n . ' hours';
+        return tn('{n} hour', '{n} hours', (int) round($seconds / 3600));
     }
-    $n = (int) round($seconds / 86400);
-    return $pl ? $n . ' ' . plPlural($n, 'dzień', 'dni', 'dni') : $n . ' days';
+    return tn('{n} day', '{n} days', (int) round($seconds / 86400));
 }
 
-/** Polish plural form: 1, 2-4 (not 12-14), 5+. */
-function plPlural(int $n, string $one, string $few, string $many): string
-{
-    if ($n === 1) {
-        return $one;
-    }
-    $mod10 = $n % 10;
-    $mod100 = $n % 100;
-    return ($mod10 >= 2 && $mod10 <= 4 && ($mod100 < 12 || $mod100 > 14)) ? $few : $many;
-}
-
-/** "in 3 hours" or "3 hours ago". */
+/** "in 3 hours" or "3 hours ago", worded by the language's dates.php. */
 function relative(?int $ts): string
 {
     if (!$ts) {
         return t('never');
     }
+    $words = I18n::dates()['relative'];
     $diff = $ts - Clock::now();
     if (abs($diff) < 60) {
-        return t('just now');
+        return (string) $words['now'];
     }
-    return t($diff >= 0 ? 'in {duration}' : '{duration} ago', ['duration' => duration($diff)]);
+    return strtr((string) $words[$diff >= 0 ? 'future' : 'past'], ['{duration}' => duration($diff)]);
 }
 
 /** True inside the Docker image, where DPS_DOCKER=1 is set. */
@@ -194,10 +195,11 @@ function inDocker(): bool
     return getenv('DPS_DOCKER') === '1';
 }
 
-/** 9 becomes "9:00am". */
+/** 9 becomes "9:00am", or "9:00" in a 24-hour language. */
 function hourLabel(int $hour): string
 {
-    $at = gmmktime(min(23, max(0, $hour)), 0, 0, 1, 1, 2026);
+    $at = new \DateTimeImmutable('@' . gmmktime(min(23, max(0, $hour)), 0, 0, 1, 1, 2026));
+    $dates = I18n::dates();
 
-    return gmdate(lang() === 'pl' ? 'G:i' : 'g:ia', $at);
+    return formatDate($at, (string) $dates['formats']['time'], $dates);
 }

@@ -239,7 +239,7 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
 <?php if (!$isNew): ?>
 <div class="panel">
 <?php if ($contact['status'] === 'confirmed'): ?>
-  <p><span class="tag tag-ok"><?= e(t('Confirmed')) ?></span> <?= e(t('on {date}. They will be asked to reconfirm once a year.', ['date' => when($contact['reconfirmed_at'] ?? $contact['confirmed_at'], (string) $engine->config()['timezone'], 'j F Y')])) ?></p>
+  <p><span class="tag tag-ok"><?= e(t('Confirmed')) ?></span> <?= e(t('on {date}. They will be asked to reconfirm once a year.', ['date' => when($contact['reconfirmed_at'] ?? $contact['confirmed_at'], (string) $engine->config()['timezone'], 'date')])) ?></p>
 <?php if (!empty($contact['pending_email'])): ?>
   <p><?= e(t('Waiting for them to confirm {new}. Until they do, the switch keeps using {old}.', ['new' => $contact['pending_email'], 'old' => $contact['email']])) ?></p>
   <form method="post" action="<?= e($self) ?>"><?= Web::csrfField() ?><input type="hidden" name="action" value="send"><button class="button-quiet" type="submit"><?= e(t('Send the confirmation email again')) ?></button></form>

@@ -86,8 +86,8 @@ $nokName = $nok['name'] ?? t('Your next of kin');
 $warnings = array_values(array_filter($engine->warnings(), static fn (array $w): bool => $w['level'] === 'warn'));
 $checklist = $engine->checklist();
 $canArm = array_filter($checklist, static fn (array $i): bool => !$i['ok'] && $i['blocking']) === [];
-$long = t('l j F \a\t g:ia');
-$short = t('D j M, g:ia');
+$long = 'long';
+$short = 'brief';
 
 // How far along the six-day track we are, in nominal hours (0 to 144).
 $progress = 0.0;

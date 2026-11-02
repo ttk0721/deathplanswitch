@@ -46,7 +46,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font: 1rem/1.55 var(--sans);
-  text-align: left;
+  text-align: start;
 }
 
 /* ---------- frame ---------- */
@@ -109,12 +109,12 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
 .pilot, .state {
   --pilot: var(--muted);
   margin: 0 0 1.75rem;
-  padding: 0 0 0 1.75rem;
+  padding: 0; padding-inline-start: 1.75rem;
   position: relative;
 }
 .pilot-dot, .state::before {
   position: absolute;
-  left: 4px;
+  inset-inline-start: 4px;
   top: .95rem;
   width: 14px;
   height: 14px;
@@ -154,16 +154,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
 .track progress::-webkit-progress-value { background: var(--ink); }
 .track progress::-moz-progress-bar { background: var(--ink); }
 
-.track ol { list-style: none; margin: 0 0 1rem 6px; padding: 0; border-left: 2px solid var(--line); }
+.track ol { list-style: none; margin: 0 0 1rem; margin-inline-start: 6px; padding: 0; border-inline-start: 2px solid var(--line); }
 .track li {
   position: relative;
-  padding: 0 0 1rem 1.25rem;
+  padding: 0 0 1rem; padding-inline-start: 1.25rem;
   font-size: .875rem; line-height: 1.35; color: var(--muted);
   max-width: none;
 }
 .track li:last-child { padding-bottom: 0; }
 .track li::before {
-  content: ""; position: absolute; left: -8px; top: 3px;
+  content: ""; position: absolute; inset-inline-start: -8px; top: 3px;
   width: 14px; height: 14px; border-radius: 50%;
   background: var(--paper); border: 2px solid var(--muted);
 }
@@ -173,16 +173,16 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
 
 @media (min-width: 40rem) {
   .track progress { display: block; }
-  .track ol { position: relative; height: 5rem; margin: 0 0 .75rem; border-left: 0; }
+  .track ol { position: relative; height: 5rem; margin: 0 0 .75rem; border-inline-start: 0; }
   .track li { position: absolute; top: 0; width: 15.5%; padding: 1.1rem 0 0; }
-  .track li::before { left: 0; top: -10px; }
-  .track .t0 { left: 0; }
-  .track .t24 { left: 16.667%; }
-  .track .t48 { left: 33.333%; }
-  .track .t72 { left: 50%; width: 31%; }
+  .track li::before { inset-inline-start: 0; top: -10px; }
+  .track .t0 { inset-inline-start: 0; }
+  .track .t24 { inset-inline-start: 16.667%; }
+  .track .t48 { inset-inline-start: 33.333%; }
+  .track .t72 { inset-inline-start: 50%; width: 31%; }
   .track .t120 { display: none; }
-  .track .t144 { right: 0; width: 26%; text-align: right; }
-  .track .t144::before { left: auto; right: 0; }
+  .track .t144 { inset-inline-end: 0; width: 26%; text-align: end; }
+  .track .t144::before { inset-inline-start: auto; inset-inline-end: 0; }
 }
 
 /* ---------- notices ---------- */
@@ -191,14 +191,14 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
   --tone: var(--muted);
   margin: 0 0 1rem;
   padding: .75rem 1rem;
-  border-left: 4px solid var(--tone);
+  border-inline-start: 4px solid var(--tone);
   background: color-mix(in srgb, var(--tone) 8%, var(--paper));
 }
 .notice p:last-child, .notice ul:last-child { margin-bottom: 0; }
 .notice-ok { --tone: var(--armed); }
 .notice-warn { --tone: var(--overdue); }
 .notice-bad { --tone: var(--fired); }
-.notice ul { padding-left: 1.1rem; }
+.notice ul { padding-inline-start: 1.1rem; }
 .notice li + li { margin-top: .3rem; }
 
 /* ---------- lists of things ---------- */
@@ -222,7 +222,7 @@ hr { border: 0; border-top: 1px solid var(--line); margin: 2rem 0; }
 .row h3 { margin: 0 0 .1rem; }
 .row .role { color: var(--muted); font-size: .9rem; }
 .row p { margin: 0; }
-.row .side { text-align: right; }
+.row .side { text-align: end; }
 
 .tag { display: inline-block; font-size: .875rem; font-weight: 600; white-space: nowrap; }
 .tag-ok { color: var(--ok); }
@@ -237,7 +237,7 @@ dl.facts dt { color: var(--muted); }
 dl.facts dd { margin: 0; }
 
 table.log { width: 100%; border-collapse: collapse; font-size: .92rem; }
-table.log td { padding: .5rem .75rem .5rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.log td { padding: .5rem 0; padding-inline: 0 .75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
 table.log td:first-child { white-space: nowrap; color: var(--muted); width: 1%; }
 
 /* ---------- forms ---------- */
@@ -328,7 +328,7 @@ pre.cron {
   .masthead nav { gap: 0 1rem; }
   .masthead nav a { padding-block: .8rem; }
   .row { grid-template-columns: 1fr; }
-  .row .side { text-align: left; }
+  .row .side { text-align: start; }
   dl.facts { grid-template-columns: 1fr; gap: 0; }
   dl.facts dd { margin-bottom: .6rem; }
   .actions .button, .actions button { flex: 1 1 100%; min-height: 3rem; }
@@ -379,7 +379,7 @@ pre.cron {
   body * { visibility: hidden; }
   .vault-card, .vault-card * { visibility: visible; }
   .vault-card {
-    position: absolute; left: 0; top: 0; width: 100%;
+    position: absolute; inset-inline-start: 0; top: 0; width: 100%;
     border-color: #000; background: none; color: #000;
   }
 }

@@ -17,10 +17,10 @@ for f in "${files[@]}"; do
     fi
     case "$f" in
         *.php)
-            docker run --rm -v "$PWD":/app -w /app "${PHP_IMAGE:-php:8.4-cli}" php "$f" || status=1
+            docker run --rm -e DPS_I18N_ONLY -v "$PWD":/app -w /app "${PHP_IMAGE:-php:8.4-cli}" php "$f" || status=1
             ;;
         *.mjs)
-            docker run --rm -v "$PWD":/app -w /app node:22-alpine node --test "$f" || status=1
+            docker run --rm -e DPS_I18N_ONLY -v "$PWD":/app -w /app node:22-alpine node --test "$f" || status=1
             ;;
         *.e2e.sh)
             bash "$f" || status=1

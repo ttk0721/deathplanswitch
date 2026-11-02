@@ -22,7 +22,7 @@ Web::$title = t('History: Death Plan Switch');
   <tbody>
 <?php foreach ($rows as $row): ?>
     <tr>
-      <td><?= e(when((int) ($row['at'] ?? 0), $tz, 'j M Y, g:ia')) ?></td>
+      <td><?= e(when((int) ($row['at'] ?? 0), $tz, 'stamp')) ?></td>
       <td><?= e((string) ($row['text'] ?? '')) ?></td>
     </tr>
 <?php endforeach ?>

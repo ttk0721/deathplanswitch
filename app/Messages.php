@@ -116,7 +116,7 @@ final class Messages
             '{owner_name}' => (string) ($config['owner_name'] ?? ''),
             '{your_name}' => (string) ($recipient['name'] ?? ''),
             '{days}' => (string) $days,
-            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), t('l j F Y')) : t('an unknown date'),
+            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), 'letter_date') : t('an unknown date'),
             '{nok_details}' => Contacts::details($nok),
             '{technical_details}' => Contacts::details($technical),
             '{contacts_list}' => $others ? implode("\n", $others) : t('(nobody else is listed)'),
@@ -154,7 +154,7 @@ final class Messages
 
         if ($number === 0) {
             // The date keeps each week's email distinct, so mail apps do not fold it into last week's.
-            $email = (new Email(t('Check in with Death Plan Switch: {date}', ['date' => when(Clock::now(), $tz, t('l j F'))])))
+            $email = (new Email(t('Check in with Death Plan Switch: {date}', ['date' => when(Clock::now(), $tz, 'letter_day')])))
                 ->p(t('This is your weekly check-in. Open the page and press the button to confirm you are here.'))
                 ->link(t('Open the check-in page'), $url)
                 ->p(t('Opening the page is not enough: press the button. If you have not checked in by {deadline}, {who} will be asked whether everything is all right.', $vars));
@@ -343,7 +343,7 @@ final class Messages
     /** A date and time for the owner's emails. Polish uses numbers, so no English day or month names appear. */
     private static function at(int $ts, string $tz): string
     {
-        return when($ts, $tz, t('l j F \a\t g:ia'));
+        return when($ts, $tz, 'long');
     }
 
     private static function zoneLabel(string $tz): string

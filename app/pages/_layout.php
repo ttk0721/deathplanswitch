@@ -50,7 +50,7 @@ if ($admin) {
 }
 ?>
 <!doctype html>
-<html lang="<?= e(lang()) ?>">
+<html lang="<?= e(lang()) ?>" dir="<?= e(I18n::dir()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">

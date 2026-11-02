@@ -33,7 +33,7 @@ return [
     'The pause ended. The switch is active again.' => 'Pauza się skończyła. Przełącznik znów działa.',
     'The switch was armed.' => 'Przełącznik został uzbrojony.',
     'The switch was disarmed. {reason}' => 'Przełącznik został rozbrojony. {reason}',
-    'The switch was paused for {days} days.' => 'Przełącznik wstrzymano na {days}.',
+    'The switch was paused for {duration}.' => 'Przełącznik wstrzymano na {duration}.',
     'The pause was ended early.' => 'Pauzę zakończono wcześniej.',
     'Yearly review completed.' => 'Coroczny przegląd zakończony.',
     'The data folder can be read from the web.' => 'Folder z danymi można odczytać z internetu.',

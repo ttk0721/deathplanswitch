@@ -109,34 +109,45 @@ jobs:
             Write-Host "::error::Failed suites: $($failed -join ', ')"
             exit 1
           }
-      - name: Tighten the PHP folder permissions (as README.txt tells users)
+      - name: Copy PHP to an administrators-only folder (as install.ps1 advises)
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
-          # The installer refuses a PHP folder that ordinary users can write to. setup-php puts PHP
-          # under C:\tools, which inherits write access for Authenticated Users from C:\.
-          $phpDir = Split-Path -Parent (Get-Command php).Source
-          $grant = '*S-1-5-18:(OI)(CI)F', '*S-1-5-32-544:(OI)(CI)F', '*S-1-5-32-545:(OI)(CI)RX'
-          # Same commands install.ps1 prints: the PHP folder recursively, a parent folder only itself.
-          & icacls $phpDir /setowner '*S-1-5-32-544' /T /C /L
-          if ($LASTEXITCODE -ne 0) { throw "icacls setowner failed on $phpDir" }
-          & icacls $phpDir /reset /T /C /L
-          if ($LASTEXITCODE -ne 0) { throw "icacls reset failed on $phpDir" }
-          & icacls $phpDir /inheritance:r /grant:r $grant
-          if ($LASTEXITCODE -ne 0) { throw "icacls failed on $phpDir" }
-          $parent = Split-Path -Parent $phpDir
-          if ($parent -ieq "$env:SystemDrive\tools") {
-            & icacls $parent /setowner '*S-1-5-32-544'
-            if ($LASTEXITCODE -ne 0) { throw "icacls setowner failed on $parent" }
-            & icacls $parent /inheritance:r /grant:r $grant
-            if ($LASTEXITCODE -ne 0) { throw "icacls failed on $parent" }
+          # setup-php leaves symlinks/shims in C:\tools\php, which install.ps1 refuses. Copy only regular
+          # files and directories into Program Files, which is administrators-only by default.
+          $src = Split-Path -Parent (Get-Command php).Source
+          $dst = Join-Path $env:ProgramFiles 'PHP'
+          if (Test-Path $dst) { Remove-Item -Recurse -Force $dst }
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          function Copy-Plain($from, $to) {
+            foreach ($item in Get-ChildItem -LiteralPath $from -Force) {
+              if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { Write-Host "skip (reparse point): $($item.FullName)"; continue }
+              $target = Join-Path $to $item.Name
+              if ($item.PSIsContainer) {
+                New-Item -ItemType Directory -Force -Path $target | Out-Null
+                Copy-Plain $item.FullName $target
+              } else {
+                Copy-Item -LiteralPath $item.FullName -Destination $target -Force
+              }
+            }
           }
+          Copy-Plain $src $dst
+          if (-not (Test-Path (Join-Path $dst 'php.ini')) -and (Test-Path (Join-Path $src 'php.ini'))) {
+            Copy-Item -LiteralPath (Join-Path $src 'php.ini') -Destination (Join-Path $dst 'php.ini') -Force
+          }
+          $php = Join-Path $dst 'php.exe'
+          $mods = & $php -m
+          foreach ($m in 'curl', 'mbstring', 'openssl', 'sodium') {
+            if (-not ($mods | Where-Object { $_ -ieq $m })) { throw "copied PHP lacks extension $m" }
+          }
+          "DPS_PHP=$php" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Installer refuses a writable PHP folder
         shell: pwsh
         run: |
           # A PHP copy in a world-writable folder must be rejected before any php.exe runs.
           $bad = Join-Path $env:RUNNER_TEMP 'php-writable'
           New-Item -ItemType Directory -Force -Path $bad | Out-Null
-          Copy-Item (Get-Command php).Source $bad
+          Copy-Item $env:DPS_PHP $bad
           & icacls $bad /grant '*S-1-5-11:(OI)(CI)M' | Out-Null
           $refused = $false
           try { ./packaging/windows/install.ps1 -PhpPath (Join-Path $bad 'php.exe') -Listen 127.0.0.1:8081 }
@@ -146,7 +157,7 @@ jobs:
         if: ${{ !cancelled() }}
         shell: pwsh
         run: |
-          ./packaging/windows/install.ps1 -PhpPath (Get-Command php).Source -Listen 127.0.0.1:8080
+          ./packaging/windows/install.ps1 -PhpPath $env:DPS_PHP -Listen 127.0.0.1:8080
       - name: Check the running server
         if: ${{ !cancelled() }}
         shell: pwsh

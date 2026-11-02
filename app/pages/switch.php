@@ -320,7 +320,7 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <h2><?= e(t('Details')) ?></h2>
 <dl class="facts">
   <dt><?= e(t('Last check-in')) ?></dt>
-  <dd><?= e($state['last_checkin_at'] ? t('{when}, by {via}', ['when' => when($state['last_checkin_at'], $tz), 'via' => (string) $state['last_checkin_via']]) : t('None yet')) ?></dd>
+  <dd><?= e($state['last_checkin_at'] ? t('{when}, by {via}', ['when' => when($state['last_checkin_at'], $tz), 'via' => \DPS\Engine::viaLabel((string) $state['last_checkin_via'])]) : t('None yet')) ?></dd>
   <dt><?= e(t('Weekly email')) ?></dt>
   <dd><?= e(t('{day}s at {hour} ({tz})', ['day' => $dayNames[(int) ($config['slot_dow'] ?? 1)] ?? '', 'hour' => hourLabel((int) ($config['slot_hour'] ?? 9)), 'tz' => $tz])) ?></dd>
   <dt><?= e(t('Scheduler last ran')) ?></dt>
@@ -348,7 +348,7 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <section class="card">
 <h2><?= e(t('Disarm')) ?></h2>
 <details>
-  <summary><?= e(t('Turn the switch off')) ?></summary>
+  <summary><?= e(t('Disarm the switch')) ?></summary>
   <p><?= e(t('A disarmed switch sends no check-in emails and contacts nobody. It stays off until you arm it again. If you only need a break, pause it instead.')) ?></p>
   <form method="post" action="index.php">
     <?= Web::csrfField() ?>

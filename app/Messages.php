@@ -316,7 +316,8 @@ final class Messages
             ->prose(self::fill((string) $message['body'], $vars))
             ->link(t('All fine'), $fineUrl)
             ->link(t('Something\'s wrong'), $wrongUrl)
-            ->p(t('Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.', ['owner' => $owner, 'deadline' => $deadline]));
+            ->p(t('Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.', ['owner' => $owner, 'deadline' => $deadline]))
+            ->p(t('You can use this link until the matter is settled.'));
 
         return $email->note(self::footer($config, $vars));
     }

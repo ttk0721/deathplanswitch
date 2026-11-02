@@ -93,6 +93,7 @@ return [
     'All fine' => 'Wszystko w porządku',
     'Something\'s wrong' => 'Coś jest nie tak',
     'Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.' => 'Każdy link otwiera stronę, na której potwierdzasz odpowiedź. Jeśli do {deadline} nie odpowie ani ty, ani {owner}, pozostałe osoby wskazane przez {owner} dostaną swoje instrukcje.',
+    'You can use this link until the matter is settled.' => 'Z tego linku możesz skorzystać, dopóki sprawa się nie wyjaśni.',
     '{owner} asks you to set a password for their vault' => '{owner} prosi o ustawienie hasła do sejfu',
     '{owner} left some things for you in a private vault. You can set a password of your own, so you do not have to rely on the code card you were given.' => '{owner} zostawiła lub zostawił dla ciebie rzeczy w prywatnym sejfie. Możesz ustawić własne hasło, żeby nie polegać na karcie z kodem, którą dostałeś(-aś).',
     'You will need the code on that card once, to set the password.' => 'Kod z tej karty będzie potrzebny jeden raz, do ustawienia hasła.',

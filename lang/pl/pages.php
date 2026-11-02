@@ -74,7 +74,7 @@ return [
     'Triggered' => 'Uruchomiony',
     'This switch has been triggered.' => 'Przełącznik został uruchomiony.',
     'Open the vault' => 'Otwórz sejf',
-    'Armed' => 'Czuwa',
+    'Armed' => 'Uzbrojony',
     'Not active' => 'Nieaktywny',
     'Owner sign-in' => 'Logowanie właściciela',
     'This switch is being set up.' => 'Ten przełącznik jest w trakcie konfiguracji.',

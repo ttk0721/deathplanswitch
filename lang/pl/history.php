@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 return [
     // Check-in methods (also stored as the way the last check-in came in)
-    'the dashboard' => 'pulpit',
+    'the dashboard' => 'panel',
     'the emailed link' => 'link z e-maila',
     'another node' => 'inny węzeł',
+    'another node ({via})' => 'inny węzeł ({via})',
     'arming the switch' => 'uzbrojenie przełącznika',
     'pausing the switch' => 'wstrzymanie przełącznika',
     'ending the pause' => 'zakończenie pauzy',

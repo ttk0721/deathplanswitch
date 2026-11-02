@@ -887,6 +887,15 @@ final class Engine
      *
      * @return array{stage: ?string, told: string[], next_due_at: ?int, armed: bool, paused_until: ?int}
      */
+    /** How a stored check-in method reads to the owner. The stored values stay English. */
+    public static function viaLabel(string $via): string
+    {
+        if (preg_match('/^another node \((.*)\)$/Ds', $via, $m)) {
+            return t('another node ({via})', ['via' => t($m[1])]);
+        }
+        return t($via);
+    }
+
     public function checkIn(string $via): array
     {
         return $this->store->locked(function () use ($via): array {
@@ -901,7 +910,7 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($now, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => self::viaLabel($via)])
                 . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
@@ -935,7 +944,7 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($at, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => self::viaLabel($via)])
                 . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
@@ -1835,7 +1844,7 @@ final class Engine
                 $state['last_checkin_via'] = 'another node (' . $latest['via'] . ')';
                 $state['next_due_at'] = $this->nextSlot($config, max($latest['at'], (int) $state['paused_until']));
                 $this->saveState($state);
-                $this->store->log('checkin', t('Checked in by another node ({via}).', ['via' => t((string) $latest['via'])])
+                $this->store->log('checkin', t('Checked in by another node ({via}).', ['via' => self::viaLabel((string) $latest['via'])])
                     . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
                 $did[] = 'A check-in on another node ended the cycle.';
             }
@@ -1931,7 +1940,7 @@ final class Engine
             $state['trusted_clear_queue'][(string) $other] = $byName;
         }
         $this->saveState($state);
-        $this->store->log('cycle.vouched', t('The next of kin answered "All fine" ({via}). Nobody else was contacted.', ['via' => t($via)]));
+        $this->store->log('cycle.vouched', t('The next of kin answered "All fine" ({via}). Nobody else was contacted.', ['via' => self::viaLabel($via)]));
         if ($others !== []) {
             $this->sendAllClears($state, $config);
         }

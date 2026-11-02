@@ -8,7 +8,7 @@ Przełącznik ma sens tylko wtedy, gdy działa nieprzerwanie. Ten poradnik ustaw
 2. Wgraj do niego `docker-compose.yml` oraz plik `.env` (skopiuj `.env.example` i uzupełnij).
 3. W Container Manager otwórz sekcję **Projekt**, wybierz utworzenie projektu, wskaż folder `/volume1/docker/deadman` i użyj istniejącego pliku compose.
 4. Uruchom projekt. Powstaną dwa kontenery: `web` i `scheduler`.
-5. Otwórz `http://ADRES-NAS:8080/install.php` i przejdź instalację. Na początku instalator prosi o kod instalacji. Znajdziesz go w Container Manager: kontener `web`, zakładka **Dziennik**, linia `Setup code: …` (w SSH: `docker logs <kontener web>`). Kod znika po zakończeniu instalacji.
+5. Otwórz `http://ADRES-NAS:8080/install.php` i przejdź instalację. Na początku instalator prosi o kod instalacji. Znajdziesz go w Container Manager: kontener `web`, zakładka **Dziennik**, linia `Setup code: …` (w SSH: `docker logs <kontener web>`). Ważny jest ostatni kod w logu (każdy start kontenera tworzy nowy), a nowy kod utworzysz też poleceniem `php cli/setup-code.php`. Kod znika po zakończeniu instalacji.
 
 Dane trafiają do podfolderu `data/` obok pliku compose. To jedyne, co trzeba zachować.
 

@@ -47,7 +47,6 @@ $requirementsOk = array_filter($requirements, static fn (array $r): bool => !$r[
 // ---------------------------------------------------------------- which step?
 
 if ($config === []) {
-    SetupCode::ensure($store);
     $step = empty($_SESSION['install_code_ok']) ? -1 : (!empty($_SESSION['install_checked']) ? 2 : 1);
 } elseif (!Web::signedIn()) {
     $step = 0; // half-finished install: ask for the owner password

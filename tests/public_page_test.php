@@ -70,12 +70,33 @@ test('overdue and verify are never shown to the public', function (): void {
     foreach ([['stage' => 'checkin', 'reminders' => [1700000000]], ['stage' => 'verify', 'reminders' => [1, 2]]] as $cycle) {
         setState($cycle);
         $html = render();
-        check(str_contains($html, 'This switch is armed.'), 'calm wording');
-        check(!str_contains($html, 'All is well'), 'no all-well claim');
+        check(str_contains($html, 'This switch is armed. All is well.'), 'same calm wording');
         foreach (['overdue', 'verify', 'late', 'check-in', 'reminder', 'next of kin', 'pilot-overdue', 'pilot-verify'] as $word) {
             check(stripos($html, $word) === false, "leaks '$word'");
         }
     }
+});
+test('while armed and not fired the page is byte-identical in every stage', function (): void {
+    setState(null);
+    $quiet = render();
+    check(str_contains($quiet, 'This switch is armed. All is well.'), 'wording');
+    foreach ([
+        ['stage' => 'checkin', 'reminders' => []],
+        ['stage' => 'checkin', 'reminders' => [1700000000]],
+        ['stage' => 'checkin', 'reminders' => [1700000000, 1700086400]],
+        ['stage' => 'verify', 'reminders' => []],
+        ['stage' => 'verify', 'reminders' => [1, 2]],
+    ] as $cycle) {
+        setState($cycle);
+        same($quiet, render(), 'stage ' . $cycle['stage'] . ' with ' . count($cycle['reminders']) . ' reminders');
+    }
+    \DPS\I18n::setLanguage('pl');
+    setState(['stage' => 'checkin', 'reminders' => []]);
+    $pl = render();
+    check(str_contains($pl, 'Przełącznik czuwa. Wszystko w porządku.'), 'Polish wording');
+    setState(['stage' => 'verify', 'reminders' => [1]]);
+    same($pl, render(), 'Polish, verify');
+    \DPS\I18n::setLanguage('en');
 });
 test('the quote, its attribution and the status come in that order, then the paragraphs', function (): void {
     setState(null);

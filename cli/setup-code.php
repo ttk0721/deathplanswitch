@@ -4,9 +4,10 @@
  *
  *   php cli/setup-code.php
  *
- * The code is made on first use and removed when the install finishes.
- * With --if-needed (used by the Docker entrypoint) it prints nothing once
- * the install is finished.
+ * Each run makes a NEW code (the old one stops working), prints it once and
+ * clears the failed-attempt limits. Only a hash is stored. It is removed when
+ * the install finishes. With --if-needed (used by the Docker entrypoint) it
+ * prints nothing once the install is finished.
  */
 declare(strict_types=1);
 
@@ -26,7 +27,7 @@ if (in_array('--if-needed', $argv, true)) {
     SetupCode::announce($store);
     exit(0);
 }
-$code = SetupCode::ensure($store);
+$code = SetupCode::rotate($store);
 if ($code === null) {
     echo "This install is already set up. No setup code is needed.\n";
     exit(0);

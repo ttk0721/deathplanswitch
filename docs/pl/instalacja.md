@@ -44,12 +44,12 @@ Po instalacji otwórz `http://127.0.0.1:8080/install.php` i przejdź instalator 
 
 ### Kod instalacji
 
-Instalator pyta na początku o jednorazowy kod instalacji (20 znaków w pięciu grupach, na przykład `7QK2-M9XT-0HVB-D4RN-Z8PE`). Dzięki niemu nikt przypadkowy, kto trafi na świeży serwer, nie zainstaluje przełącznika za ciebie. Kod pojawia się przy pierwszym starcie i znika po zakończeniu instalacji. Znajdziesz go tak:
+Instalator pyta na początku o jednorazowy kod instalacji (20 znaków w pięciu grupach, na przykład `7QK2-M9XT-0HVB-D4RN-Z8PE`). Dzięki niemu nikt przypadkowy, kto trafi na świeży serwer, nie zainstaluje przełącznika za ciebie. Kod jest wypisywany do logu przy każdym starcie kontenera `web` i harmonogramu, dopóki instalacja nie jest zakończona. Na dysku w folderze danych zostaje tylko jego skrót (hash), więc nie da się go stamtąd odczytać. Każdy start (i każde uruchomienie polecenia poniżej) tworzy nowy kod, a poprzedni przestaje działać: ważny jest ostatni kod w logu. Po 10 błędnych próbach z jednego adresu ten adres czeka 15 minut; inni nie są blokowani. Po zakończeniu instalacji kod znika. Znajdziesz go tak:
 
 - **Docker:** `docker logs <kontener web>` (linia `Setup code: …`),
 - **Linux z systemd:** `journalctl -u deathplanswitch-scheduler`,
 - **FreeBSD, macOS, Windows:** w logu usługi harmonogramu (na Windows w logu zadania harmonogramu),
-- **wszędzie:** `php cli/setup-code.php` w folderze aplikacji, uruchomione jako użytkownik, do którego należą dane.
+- **wszędzie:** `php cli/setup-code.php` w folderze aplikacji, uruchomione jako użytkownik, do którego należą dane. Polecenie tworzy nowy kod, wypisuje go i zdejmuje blokady po błędnych próbach.
 
 Do tego czasu strona główna pokazuje odwiedzającym komunikat „Ten przełącznik jest w trakcie konfiguracji” i przycisk przejścia do instalatora.
 

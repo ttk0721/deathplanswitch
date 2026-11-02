@@ -30,10 +30,9 @@ $state = 'setup';
 if ($installed) {
     $released = engine()->released();
     $armed = !$released && (bool) (engine()->state()['armed'] ?? false);
-    $cycle = $released ? null : engine()->state()['cycle'] ?? null;
-    // A fresh weekly check-in is a normal week. Anything later (reminders, the next of kin asked) is not shown.
-    $quiet = !is_array($cycle) || ($cycle['stage'] ?? '') === 'checkin' && empty($cycle['reminders']);
-    $state = $released ? 'fired' : ($armed ? ($quiet ? 'armed' : 'watching') : 'off');
+    // While armed and not fired every stage looks the same: the weekly check-in,
+    // reminders and verification never change a byte of the page.
+    $state = $released ? 'fired' : ($armed ? 'armed' : 'off');
 }
 $hasRecipients = $state === 'fired' && (new Vault(store()))->read()['recipients'] !== [];
 
@@ -70,8 +69,6 @@ Web::$title = $title;
       <p class="landing-state"><?= e(t('This switch is not active.')) ?> <?= e(t('All is well.')) ?></p>
 <?php elseif ($state === 'armed'): ?>
       <p class="landing-state"><?= e(t('This switch is armed.')) ?> <?= e(t('All is well.')) ?></p>
-<?php else: ?>
-      <p class="landing-state"><?= e(t('This switch is armed.')) ?></p>
 <?php endif ?>
     </section>
 <?php if ($hasRecipients): ?>

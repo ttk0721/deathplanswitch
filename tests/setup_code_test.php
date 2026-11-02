@@ -52,41 +52,62 @@ function page(string $dir, string &$sid, ?array $post = null, bool $owner = fals
     return $out;
 }
 
-test('a code is made once, in groups of Crockford base32, readable only by the owner', function (): void {
+test('a code is made fresh each time; only a salted hash is stored, readable only by the owner', function (): void {
     $store = new Store(fresh());
-    $code = SetupCode::ensure($store);
+    $code = SetupCode::rotate($store);
     check(preg_match('/^[0-9A-HJKMNP-TV-Z]{4}(-[0-9A-HJKMNP-TV-Z]{4}){4}$/D', (string) $code) === 1, 'format: ' . $code);
-    same($code, SetupCode::ensure($store), 'second call keeps the same code');
-    same($code, SetupCode::read($store), 'read');
+    $raw = (string) file_get_contents(SetupCode::path($store));
+    check(!str_contains($raw, (string) $code) && !str_contains($raw, str_replace('-', '', (string) $code)), 'the plain code is not on disk');
+    check(preg_match('/^v1:[0-9a-f]{32}:[0-9a-f]{64}$/D', trim($raw)) === 1, 'salted sha-256 only');
     same('0600', substr(sprintf('%o', fileperms(SetupCode::path($store))), -4), 'mode');
+    $second = SetupCode::rotate($store);
+    check($second !== $code, 'a new code each time');
+    same(false, SetupCode::matches($store, (string) $code), 'the old code stops working');
+    same(true, SetupCode::matches($store, (string) $second), 'the new code works');
     check(SetupCode::generate() !== SetupCode::generate(), 'random');
+    check(!is_file(SetupCode::path($store) . '.tmp'), 'no leftovers');
 });
 test('no code is made once the install is finished', function (): void {
     $store = new Store(fresh());
     $store->write('config', ['installed_at' => 1700000000]);
-    same(null, SetupCode::ensure($store), 'installed');
+    same(null, SetupCode::rotate($store), 'installed');
     check(!is_file(SetupCode::path($store)), 'no file');
 });
 test('the right code is accepted however it is typed; a wrong one is refused', function (): void {
     $store = new Store(fresh());
-    $code = (string) SetupCode::ensure($store);
-    same(true, SetupCode::attempt($store, $code), 'exact');
-    same(true, SetupCode::attempt($store, strtolower(str_replace('-', ' ', $code))), 'lower case, spaces');
-    check(is_string(SetupCode::attempt($store, 'AAAA-BBBB-CCCC-DDDD-EEEE')), 'wrong refused');
-    check(is_string(SetupCode::attempt($store, '')), 'empty refused');
+    $code = (string) SetupCode::rotate($store);
+    same(true, SetupCode::attempt($store, $code, 'A'), 'exact');
+    same(true, SetupCode::attempt($store, strtolower(str_replace('-', ' ', $code)), 'A'), 'lower case, spaces');
+    check(is_string(SetupCode::attempt($store, 'AAAA-BBBB-CCCC-DDDD-EEEE', 'A')), 'wrong refused');
+    check(is_string(SetupCode::attempt($store, '', 'A')), 'empty refused');
 });
-test('wrong codes are rate limited, then even the right one waits', function (): void {
+test('a client that fails 10 times is locked, but another client is not, and its right code works', function (): void {
     $store = new Store(fresh());
-    $code = (string) SetupCode::ensure($store);
-    for ($i = 0; $i < 5; $i++) {
-        SetupCode::attempt($store, 'WRONG');
+    $code = (string) SetupCode::rotate($store);
+    for ($i = 0; $i < 10; $i++) {
+        $r = SetupCode::attempt($store, 'WRONG', '203.0.113.1');
+        check(is_string($r) && !str_contains($r, 'Too many'), "attempt $i is a plain refusal");
     }
-    $result = SetupCode::attempt($store, $code);
-    check(is_string($result) && str_contains($result, 'Too many'), 'locked: ' . var_export($result, true));
+    $locked = SetupCode::attempt($store, $code, '203.0.113.1');
+    check(is_string($locked) && str_contains($locked, 'Too many'), 'client A is locked, even with the right code: ' . var_export($locked, true));
+    $r = SetupCode::attempt($store, 'WRONG', '203.0.113.2');
+    check(is_string($r) && !str_contains($r, 'Too many'), 'client B is not locked');
+    same(true, SetupCode::attempt($store, $code, '203.0.113.2'), 'client B with the right code gets in');
+    $locked = SetupCode::attempt($store, $code, '203.0.113.1');
+    check(is_string($locked) && str_contains($locked, 'Too many'), 'client A stays locked');
+});
+test('rotating the code clears every limit', function (): void {
+    $store = new Store(fresh());
+    SetupCode::rotate($store);
+    for ($i = 0; $i < 10; $i++) {
+        SetupCode::attempt($store, 'WRONG', '203.0.113.1');
+    }
+    $code = (string) SetupCode::rotate($store);
+    same(true, SetupCode::attempt($store, $code, '203.0.113.1'), 'client A can try again');
 });
 test('the installer asks for the code and refuses without it', function (): void {
     $dir = fresh();
-    $code = (string) SetupCode::ensure(new Store($dir));
+    $code = (string) SetupCode::rotate(new Store($dir));
     $sid = bin2hex(random_bytes(8));
     $html = page($dir, $sid);
     check(str_contains($html, 'name="setup_code"'), 'code form');
@@ -103,7 +124,7 @@ test('the installer asks for the code and refuses without it', function (): void
 test('the code file is deleted when the install finishes', function (): void {
     $dir = fresh();
     $store = new Store($dir);
-    SetupCode::ensure($store);
+    SetupCode::rotate($store);
     $store->write('config', ['install_step' => 4, 'installed_at' => null, 'owner_email' => 'a@example.com', 'timezone' => 'UTC',
         'password_hash' => password_hash('correct horse', PASSWORD_DEFAULT)]);
     check(is_file(SetupCode::path($store)), 'present before');
@@ -112,7 +133,7 @@ test('the code file is deleted when the install finishes', function (): void {
     check(!empty($store->read('config')['installed_at']), 'installed');
     check(!is_file(SetupCode::path($store)), 'code file deleted');
 });
-test('the CLI prints the code, and says nothing is needed once installed', function (): void {
+test('the CLI makes and prints a new code each run, and says nothing is needed once installed', function (): void {
     $dir = fresh();
     $run = static function (array $args) use ($dir): string {
         $proc = proc_open(array_merge([PHP_BINARY, realpath(ROOT) . '/cli/setup-code.php'], $args), [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, ['DPS_DATA' => $dir, 'PATH' => getenv('PATH') ?: '']);
@@ -120,11 +141,22 @@ test('the CLI prints the code, and says nothing is needed once installed', funct
         proc_close($proc);
         return $out;
     };
+    $store = new Store($dir);
+    $grab = static fn (string $out): string => preg_match('/Setup code: ([0-9A-Z]{4}(-[0-9A-Z]{4}){4})/', $out, $m) === 1 ? $m[1] : '';
     $out = $run([]);
-    $code = (string) SetupCode::read(new Store($dir));
-    check($code !== '' && str_contains($out, "Setup code: $code") && str_contains($out, '/install.php'), 'prints: ' . $out);
-    same($out, $run(['--if-needed']), 'the container variant prints the same');
-    (new Store($dir))->write('config', ['installed_at' => 1700000000]);
+    $first = $grab($out);
+    check($first !== '' && str_contains($out, '/install.php'), 'prints: ' . $out);
+    check(SetupCode::matches($store, $first), 'the printed code is the valid one');
+    for ($i = 0; $i < 10; $i++) {
+        SetupCode::attempt($store, 'WRONG', '203.0.113.1');
+    }
+    $second = $grab($run(['--if-needed']));
+    check($second !== '' && $second !== $first, 'the container variant makes a fresh code');
+    check(!SetupCode::matches($store, $first) && SetupCode::matches($store, $second), 'only the newest works');
+    same(true, SetupCode::attempt($store, $second, '203.0.113.1'), 'the CLI cleared the limits');
+    $third = $grab($run([]));
+    check($third !== '' && $third !== $second && SetupCode::matches($store, $third), 'every run rotates');
+    $store->write('config', ['installed_at' => 1700000000]);
     check(str_contains($run([]), 'already set up'), 'installed message');
     same('', $run(['--if-needed']), 'silent once installed');
 });

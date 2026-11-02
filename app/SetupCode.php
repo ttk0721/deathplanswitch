@@ -6,14 +6,25 @@ namespace DPS;
 /**
  * The one-time setup code. Before the first install nobody has a password, so
  * the installer asks for a code that only someone who can read the server's
- * logs or files can know. It sits in <data>/setup-code and is deleted when
- * the install finishes.
+ * logs can know. Only a salted SHA-256 hash of the code is kept in
+ * <data>/setup-code, so a data folder served by mistake does not give it
+ * away. The code itself exists in memory when it is made and is printed once
+ * (container or service log, or the CLI). Every start of the web container or
+ * the scheduler, and every run of cli/setup-code.php, makes a fresh code: the
+ * newest one printed is the valid one. The file is deleted when the install
+ * finishes.
+ *
+ * Wrong codes are limited per client (REMOTE_ADDR): 10 attempts per 15
+ * minutes. There is no global lock, so one client cannot lock out another.
  *
  * Format: 20 Crockford base32 characters in groups of four, for example
  * 7QK2-M9XT-0HVB-D4RN-Z8PE.
  */
 final class SetupCode
 {
+    public const MAX_ATTEMPTS = 10;
+    public const WINDOW = 900;
+    private const MAX_CLIENTS = 2000;
     private const ALPHABET = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
     private const DOCUMENT = 'setup_auth';
 
@@ -50,45 +61,78 @@ final class SetupCode
         return (string) preg_replace('/[^0-9A-Z]/', '', $s);
     }
 
-    /** The current code, or null when there is none. */
-    public static function read(Store $store): ?string
+    /** The stored salt and hash, or null when there is no valid file. */
+    private static function stored(Store $store): ?array
     {
         $raw = @file_get_contents(self::path($store));
-        $code = is_string($raw) ? trim($raw) : '';
-        return preg_match('/^[0-9A-Z]{4}(-[0-9A-Z]{4}){4}$/D', $code) === 1 ? $code : null;
+        if (!is_string($raw) || preg_match('/^v1:([0-9a-f]{32}):([0-9a-f]{64})$/D', trim($raw), $m) !== 1) {
+            return null;
+        }
+        return ['salt' => $m[1], 'hash' => $m[2]];
+    }
+
+    private static function digest(string $salt, string $typed): string
+    {
+        return hash('sha256', $salt . ':' . self::normalise($typed));
+    }
+
+    /** True when a hash is stored (not whether any given code matches). */
+    public static function exists(Store $store): bool
+    {
+        return self::stored($store) !== null;
+    }
+
+    /** True when $typed matches the stored hash. Constant-time comparison. */
+    public static function matches(Store $store, string $typed): bool
+    {
+        $stored = self::stored($store);
+        if ($stored === null) {
+            return false;
+        }
+        return hash_equals($stored['hash'], self::digest($stored['salt'], $typed));
     }
 
     /**
-     * The code for an install that is not finished: made on first use, then kept.
-     * Returns null once the install is finished.
+     * Make a fresh code for an install that is not finished, store only its
+     * hash (replacing any earlier one) and clear the rate limits. Returns the
+     * plain code, which exists nowhere else, or null once the install is
+     * finished or the hash cannot be written.
      */
-    public static function ensure(Store $store): ?string
+    public static function rotate(Store $store): ?string
     {
         if (self::installed($store)) {
             return null;
         }
-        $existing = self::read($store);
-        if ($existing !== null) {
-            return $existing;
-        }
         if (!is_dir($store->dir()) && !@mkdir($store->dir(), 0700, true) && !is_dir($store->dir())) {
             return null;
         }
-        // "x" fails if another process got there first; then we read theirs.
-        $handle = @fopen(self::path($store), 'x');
-        if ($handle === false) {
-            return self::read($store);
-        }
-        @chmod(self::path($store), 0600);
         $code = self::generate();
-        fwrite($handle, $code . "\n");
-        fclose($handle);
+        $salt = bin2hex(random_bytes(16));
+        $tmp = self::path($store) . '.tmp.' . bin2hex(random_bytes(6));
+        if (@file_put_contents($tmp, 'v1:' . $salt . ':' . self::digest($salt, $code) . "\n") === false) {
+            @unlink($tmp);
+            return null;
+        }
+        @chmod($tmp, 0600);
+        if (!@rename($tmp, self::path($store))) {
+            @unlink($tmp);
+            return null;
+        }
+        self::clearLimits($store);
         return $code;
+    }
+
+    /** Forget every client's failed attempts. */
+    public static function clearLimits(Store $store): void
+    {
+        @unlink($store->path(self::DOCUMENT));
+        @unlink($store->path(self::DOCUMENT) . '.bak');
     }
 
     public static function delete(Store $store): void
     {
         @unlink(self::path($store));
+        self::clearLimits($store);
     }
 
     /** The two lines that tell the owner where to type it. */
@@ -97,11 +141,11 @@ final class SetupCode
         return "Setup code: {$code}\nOpen /install.php and enter it.\n";
     }
 
-    /** Print the announcement when a code is due; used by the container, the scheduler and the CLI. */
+    /** Make a fresh code and print it when the install is not finished; used by the container, the scheduler and the CLI. */
     public static function announce(Store $store): void
     {
         try {
-            $code = self::ensure($store);
+            $code = self::rotate($store);
         } catch (\Throwable) {
             return;
         }
@@ -110,31 +154,48 @@ final class SetupCode
         }
     }
 
+    /** The limiter key for the current request: the address Apache resolved as the client. */
+    private static function client(): string
+    {
+        return (string) ($_SERVER['REMOTE_ADDR'] ?? '');
+    }
+
     /**
-     * Check a typed code, with the same growing delay as the sign-in.
+     * Check a typed code. Each client (REMOTE_ADDR) gets 10 wrong attempts per
+     * 15 minutes; a client that is not over its own limit is never refused
+     * because of anyone else's failures.
      *
      * @return true|string true, or the reason it is refused
      */
-    public static function attempt(Store $store, string $typed): bool|string
+    public static function attempt(Store $store, string $typed, ?string $client = null): bool|string
     {
-        return $store->locked(static function () use ($store, $typed): bool|string {
+        $key = substr(hash('sha256', $client ?? self::client()), 0, 24);
+        return $store->locked(static function () use ($store, $typed, $key): bool|string {
             $now = Clock::now();
-            $auth = $store->read(self::DOCUMENT) + ['failures' => 0, 'locked_until' => 0];
-            if ($auth['locked_until'] > $now) {
-                return t('Too many wrong codes. Try again {when}.', ['when' => relative((int) $auth['locked_until'])]);
+            $auth = $store->read(self::DOCUMENT);
+            $clients = [];
+            foreach ((array) ($auth['clients'] ?? []) as $k => $c) {
+                if (is_array($c) && (int) ($c['since'] ?? 0) + self::WINDOW > $now) {
+                    $clients[(string) $k] = ['n' => (int) ($c['n'] ?? 0), 'since' => (int) $c['since']];
+                }
             }
-            $code = self::read($store);
-            if ($code !== null && hash_equals(self::normalise($code), self::normalise($typed))) {
-                if ($auth['failures'] > 0) {
-                    $store->write(self::DOCUMENT, ['failures' => 0, 'locked_until' => 0]);
+            $mine = $clients[$key] ?? null;
+            if ($mine !== null && $mine['n'] >= self::MAX_ATTEMPTS) {
+                return t('Too many wrong codes. Try again {when}.', ['when' => relative($mine['since'] + self::WINDOW)]);
+            }
+            if (self::matches($store, $typed)) {
+                if ($mine !== null) {
+                    unset($clients[$key]);
+                    $store->write(self::DOCUMENT, ['clients' => $clients]);
                 }
                 return true;
             }
-            $auth['failures']++;
-            if ($auth['failures'] >= 5) {
-                $auth['locked_until'] = $now + min(3600, 60 * 2 ** ($auth['failures'] - 5));
+            $clients[$key] = ['n' => ($mine['n'] ?? 0) + 1, 'since' => $mine['since'] ?? $now];
+            if (count($clients) > self::MAX_CLIENTS) {
+                uasort($clients, static fn (array $a, array $b): int => $a['since'] <=> $b['since']);
+                $clients = array_slice($clients, -self::MAX_CLIENTS, null, true);
             }
-            $store->write(self::DOCUMENT, $auth);
+            $store->write(self::DOCUMENT, ['clients' => $clients]);
             return t('That setup code is not right.');
         });
     }

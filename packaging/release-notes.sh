@@ -19,7 +19,9 @@ cat <<NOTES
 | Docker, Synology Container Manager, Portainer, TrueNAS, Unraid, CasaOS | \`deathplanswitch-${v}-docker-compose.zip\` | [Docker](${guide}) |
 | Debian, Ubuntu, Mint, Raspberry Pi OS | \`deathplanswitch-${v}-linux-debian-ubuntu.deb\` | [.deb](${guide}) |
 | Fedora, RHEL, Alma, Rocky, openSUSE | \`deathplanswitch-${v}-linux-fedora-rhel-suse.rpm\` | [.rpm](${guide}) |
-| Arch, Alpine, other Linux | \`deathplanswitch-${v}-linux-other.tar.gz\` | [tarball](${guide}) |
+| Arch, Manjaro, EndeavourOS | \`deathplanswitch-${v}-linux-arch.pkg.tar.zst\` | [Arch](${guide}) |
+| Alpine | \`deathplanswitch-${v}-linux-alpine.apk\` | [Alpine](${guide}) |
+| Other Linux | \`deathplanswitch-${v}-linux-other.tar.gz\` | [tarball](${guide}) |
 | FreeBSD | \`deathplanswitch-${v}-freebsd.tar.gz\` | [FreeBSD](${guide}) |
 | macOS | \`deathplanswitch-${v}-macos.tar.gz\` | [macOS](${guide}) |
 | Windows 10/11, Server | \`deathplanswitch-${v}-windows.zip\` | [Windows](${guide}) |

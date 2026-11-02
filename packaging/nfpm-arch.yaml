@@ -1,0 +1,58 @@
+# nfpm config for the Arch Linux package (pacman -U). Same work directory as
+# nfpm.yaml: ./stage, ./linux and ./arch, with VERSION and SOURCE_DATE_EPOCH exported.
+# Arch's php package already carries ctype, curl, mbstring, openssl, posix and
+# session; only sodium is a separate package.
+name: deathplanswitch
+arch: all
+platform: linux
+version: ${VERSION}
+maintainer: ttk0721 <ttk0721@protonmail.com>
+# One line: .PKGINFO holds one key per line.
+description: Death Plan Switch, a dead man's switch that runs as two background services (web on 127.0.0.1:8080 by default; put an HTTPS proxy in front)
+homepage: https://github.com/ttk0721/deathplanswitch
+license: MIT
+depends:
+  - php>=8.1
+  - php-sodium
+contents:
+  # build.sh replaces the next line with one entry per staged file. Not a
+  # "tree": nfpm 2.46 puts the directory flag into the mode of the tree's
+  # directories, and pacman then warns about "permissions differ" on upgrade.
+  # @STAGE_FILES@
+  # Owned by the service user, which preinstall.sh creates before unpacking;
+  # this is the final state, so pacman has nothing to warn about on upgrade.
+  - dst: /var/lib/deathplanswitch
+    type: dir
+    file_info:
+      mode: 0700
+      owner: deathplanswitch
+      group: deathplanswitch
+  - src: ./linux/deathplanswitch-web.service
+    dst: /usr/lib/systemd/system/deathplanswitch-web.service
+    file_info:
+      mode: 0644
+  - src: ./linux/deathplanswitch-scheduler.service
+    dst: /usr/lib/systemd/system/deathplanswitch-scheduler.service
+    file_info:
+      mode: 0644
+  - src: ./linux/deathplanswitch.default
+    dst: /etc/default/deathplanswitch
+    type: config|noreplace
+    file_info:
+      mode: 0600
+      owner: root
+      group: root
+  # Switches the sodium extension on (it is off by default on Arch).
+  - src: ./arch/deathplanswitch-sodium.ini
+    dst: /etc/php/conf.d/deathplanswitch-sodium.ini
+    type: config|noreplace
+    file_info:
+      mode: 0644
+scripts:
+  preinstall: ./arch/preinstall.sh
+  postinstall: ./linux/postinstall.sh
+  preremove: ./linux/preremove.sh
+archlinux:
+  scripts:
+    preupgrade: ./arch/preinstall.sh
+    postupgrade: ./linux/postinstall.sh

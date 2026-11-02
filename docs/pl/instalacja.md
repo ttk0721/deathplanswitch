@@ -11,7 +11,9 @@ Pliki są na stronie [wydań](https://github.com/ttk0721/deathplanswitch/release
 | `deathplanswitch-X.Y.Z-docker-compose.zip` | Docker, Synology Container Manager, Portainer, TrueNAS, Unraid, CasaOS | [Docker](#docker) |
 | `deathplanswitch-X.Y.Z-linux-debian-ubuntu.deb` | Debian, Ubuntu, Mint, Raspberry Pi OS | [Debian i Ubuntu](#debian-i-ubuntu-deb) |
 | `deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm` | Fedora, RHEL, Alma, Rocky, openSUSE | [Fedora, RHEL i openSUSE](#fedora-rhel-i-opensuse-rpm) |
-| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | Arch, Alpine i inne systemy Linux | [Arch, Alpine i inne](#arch-alpine-i-inne-linuksy-archiwum-i-installsh) |
+| `deathplanswitch-X.Y.Z-linux-arch.pkg.tar.zst` | Arch, Manjaro, EndeavourOS | [Arch](#arch-linux-manjaro-endeavouros-pkgtarzst) |
+| `deathplanswitch-X.Y.Z-linux-alpine.apk` | Alpine | [Alpine](#alpine-apk) |
+| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | inne systemy Linux | [Inne linuksy](#inne-linuksy-archiwum-i-installsh) |
 | `deathplanswitch-X.Y.Z-freebsd.tar.gz` | FreeBSD | [FreeBSD](#freebsd) |
 | `deathplanswitch-X.Y.Z-macos.tar.gz` | macOS | [macOS](#macos) |
 | `deathplanswitch-X.Y.Z-windows.zip` | Windows 10 i 11, Windows Server | [Windows](#windows) |
@@ -87,9 +89,29 @@ sudo dnf install ./deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm
 
 W openSUSE użyj `sudo zypper install ./plik.rpm`. Reszta jak w Debianie: te same usługi systemd, ten sam plik `/etc/default/deathplanswitch`, te same ścieżki. Aktualizacja to ta sama komenda z nowym plikiem.
 
-## Arch, Alpine i inne linuksy (archiwum i install.sh)
+## Arch Linux, Manjaro, EndeavourOS (.pkg.tar.zst)
 
-Potrzebujesz PHP 8.1+ z rozszerzeniami curl, mbstring, openssl i sodium. Na Archu: `sudo pacman -S php`. Na Alpine: `apk add php83 php83-curl php83-mbstring php83-openssl php83-sodium` (nazwy pakietów zależą od wydania).
+```
+sudo pacman -U ./deathplanswitch-X.Y.Z-linux-arch.pkg.tar.zst
+```
+
+Pakiet sam dociągnie `php` (8.1 lub nowszy) i `php-sodium`. Rozszerzenie sodium jest na Archu domyślnie wyłączone, więc pakiet dodaje plik `/etc/php/conf.d/deathplanswitch-sodium.ini`, który je włącza. Jeśli włączysz sodium sam w `php.ini`, usuń ten plik.
+
+Usługi systemd, plik `/etc/default/deathplanswitch` i ścieżki są takie same jak w pakiecie `.deb`. Pakiet nie jest podpisany, więc sprawdź go przez `SHA256SUMS`. Jeśli systemd działa, pakiet od razu włącza i uruchamia usługi. Jeśli nie, wypisze, co zrobić ręcznie. Aktualizacja to ta sama komenda z nowym plikiem.
+
+## Alpine (.apk)
+
+```
+apk add --allow-untrusted ./deathplanswitch-X.Y.Z-linux-alpine.apk
+```
+
+Opcja `--allow-untrusted` jest potrzebna, bo pakiet nie jest podpisany kluczem Alpine. Zamiast podpisu sprawdź plik przez `SHA256SUMS`. Pakiet sam dociągnie `php83` i potrzebne rozszerzenia.
+
+Usługi działają pod OpenRC (`deathplanswitch-web` i `deathplanswitch-scheduler`). Jeśli OpenRC działa, pakiet dodaje je do poziomu `default` i uruchamia. Jeśli nie, wypisze komendy `rc-update add` i `rc-service ... start` do wykonania ręcznie. Ustawienia są w `/etc/default/deathplanswitch`, dane w `/var/lib/deathplanswitch`, logi w `/var/log/deathplanswitch-web.log` i `/var/log/deathplanswitch-scheduler.log`. Aktualizacja to ta sama komenda z nowym plikiem.
+
+## Inne linuksy (archiwum i install.sh)
+
+Ten plik jest dla systemów, które nie mają własnego pakietu powyżej. Potrzebujesz PHP 8.1+ z rozszerzeniami curl, mbstring, openssl i sodium.
 
 ```
 tar xzf deathplanswitch-X.Y.Z-linux-other.tar.gz
@@ -97,7 +119,7 @@ cd deathplanswitch-X.Y.Z
 sudo ./install.sh
 ```
 
-Skrypt rozpoznaje systemd lub OpenRC (Alpine), tworzy konto i foldery, kopiuje aplikację i włącza usługi. Przy aktualizacji uruchom go ponownie: nie psuje istniejących danych ani ustawień. Układ folderów i ustawienia są takie same jak w pakietach `.deb` i `.rpm`.
+Skrypt rozpoznaje systemd lub OpenRC, tworzy konto i foldery, kopiuje aplikację i włącza usługi. Przy aktualizacji uruchom go ponownie: nie psuje istniejących danych ani ustawień. Układ folderów i ustawienia są takie same jak w pakietach `.deb` i `.rpm`.
 
 ## FreeBSD
 

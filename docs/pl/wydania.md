@@ -31,7 +31,9 @@ Pliki do pobrania, każdy z platformą w nazwie:
 | `deathplanswitch-X.Y.Z-docker-compose.zip` | Docker, Synology, Portainer, TrueNAS, Unraid, CasaOS |
 | `deathplanswitch-X.Y.Z-linux-debian-ubuntu.deb` | Debian, Ubuntu, Mint, Raspberry Pi OS |
 | `deathplanswitch-X.Y.Z-linux-fedora-rhel-suse.rpm` | Fedora, RHEL, Alma, Rocky, openSUSE |
-| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | Arch, Alpine i inne systemy Linux |
+| `deathplanswitch-X.Y.Z-linux-arch.pkg.tar.zst` | Arch, Manjaro, EndeavourOS |
+| `deathplanswitch-X.Y.Z-linux-alpine.apk` | Alpine |
+| `deathplanswitch-X.Y.Z-linux-other.tar.gz` | inne systemy Linux |
 | `deathplanswitch-X.Y.Z-freebsd.tar.gz` | FreeBSD |
 | `deathplanswitch-X.Y.Z-macos.tar.gz` | macOS |
 | `deathplanswitch-X.Y.Z-windows.zip` | Windows 10 i 11, Windows Server |

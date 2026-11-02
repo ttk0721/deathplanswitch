@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds every release asset.
 # Usage: bash packaging/build.sh X.Y.Z <outdir>
-# Needs: bash, tar, gzip, zip, sha256sum (or shasum), and docker for the .deb/.rpm.
+# Needs: bash, tar, gzip, zip, sha256sum (or shasum), and docker for the .deb, .rpm, Arch and Alpine packages.
 set -euo pipefail
 
 # nfpm, pinned by digest (tag v2.46.0).
@@ -30,7 +30,9 @@ need() {
         [ -e "$ROOT/$p" ] || die "missing $p (needed for this release)"
     done
 }
-need packaging/stage-list.txt packaging/nfpm.yaml packaging/release-notes.sh \
+need packaging/stage-list.txt packaging/nfpm.yaml packaging/nfpm-arch.yaml packaging/nfpm-apk.yaml \
+     packaging/arch/deathplanswitch-sodium.ini packaging/arch/preinstall.sh packaging/alpine/preinstall.sh packaging/alpine/postinstall.sh packaging/alpine/preremove.sh \
+     packaging/release-notes.sh \
      packaging/solaris/INSTALL-solaris.txt packaging/docker/README.txt \
      docker-compose.yml .env.example
 need packaging/linux/install.sh packaging/linux/postinstall.sh packaging/linux/preremove.sh \
@@ -137,25 +139,52 @@ find "$d" -type f -exec chmod 644 {} +
 find "$d" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 zip_it "$WORK/v-compose" "$OUT/deathplanswitch-$VERSION-docker-compose.zip"
 
-# 3. .deb and .rpm, from nfpm in its pinned container (runs as the calling user).
-command -v docker >/dev/null 2>&1 || die "docker is required for the .deb and .rpm"
+# 3. .deb, .rpm, Arch and Alpine packages, from nfpm in its pinned container (runs as the calling user).
+command -v docker >/dev/null 2>&1 || die "docker is required for the .deb, .rpm, Arch and Alpine packages"
 NF="$WORK/nfpm"
-mkdir -p "$NF/out" "$NF/linux"
+mkdir -p "$NF/out" "$NF/linux" "$NF/arch" "$NF/alpine" "$NF/openrc"
 cp -R "$WORK/stage/deathplanswitch-$VERSION" "$NF/stage"
 cp "$ROOT/packaging/linux/postinstall.sh" "$ROOT/packaging/linux/preremove.sh" \
    "$ROOT/packaging/linux/deathplanswitch-web.service" "$ROOT/packaging/linux/deathplanswitch-scheduler.service" \
    "$ROOT/packaging/linux/deathplanswitch.default" "$NF/linux/"
 chmod 755 "$NF/linux/postinstall.sh" "$NF/linux/preremove.sh"
-cp "$ROOT/packaging/nfpm.yaml" "$NF/nfpm.yaml"
-run_nfpm() { # run_nfpm <packager> <outfile name>
+cp "$ROOT/packaging/arch/deathplanswitch-sodium.ini" "$ROOT/packaging/arch/preinstall.sh" "$NF/arch/"
+chmod 755 "$NF/arch/preinstall.sh"
+cp "$ROOT/packaging/alpine/preinstall.sh" "$ROOT/packaging/alpine/postinstall.sh" "$ROOT/packaging/alpine/preremove.sh" "$NF/alpine/"
+chmod 755 "$NF/alpine/preinstall.sh" "$NF/alpine/postinstall.sh" "$NF/alpine/preremove.sh"
+# Alpine's php83 package provides /usr/bin/php83 (and /usr/bin/php only as a link).
+for f in deathplanswitch-web deathplanswitch-scheduler; do
+    sed 's#/usr/bin/php#/usr/bin/php83#g' "$ROOT/packaging/openrc/$f" > "$NF/openrc/$f"
+    grep -q '/usr/bin/php83' "$NF/openrc/$f" || die "could not set the PHP path in the OpenRC script $f"
+done
+cp "$ROOT/packaging/nfpm.yaml" "$NF/"
+# The Arch and apk configs list the staged files one by one (see nfpm-apk.yaml).
+# Names go into YAML and nfpm reads src as a glob: allow plain names only, no symlinks.
+[ -z "$(find "$NF/stage" -type l | head -1)" ] || die "the staged tree holds a symlink; the file list cannot take it"
+bad="$(cd "$NF" && find stage | LC_ALL=C grep -v '^[A-Za-z0-9._/@+-]*$' | head -1 || true)"
+[ -z "$bad" ] || die "staged file name outside [A-Za-z0-9._/@+-]: $bad"
+( cd "$NF" && find stage -type f | LC_ALL=C sort | while IFS= read -r f; do
+    printf '  - src: "./%s"\n    dst: "/usr/share/deathplanswitch/%s"\n' "$f" "${f#stage/}"
+done ) > "$NF/apk-files.yaml"
+[ -s "$NF/apk-files.yaml" ] || die "no staged files for the apk"
+for y in nfpm-arch.yaml nfpm-apk.yaml; do
+    awk -v list="$NF/apk-files.yaml" '/@STAGE_FILES@/ { while ((getline l < list) > 0) print l; next } { print }' \
+        "$ROOT/packaging/$y" > "$NF/$y"
+    grep -q 'stage/' "$NF/$y" || die "the file list did not reach $y"
+done
+run_nfpm() { # run_nfpm <packager> <config> <outfile name>
     docker run --rm --user "$(id -u):$(id -g)" \
         -e VERSION -e SOURCE_DATE_EPOCH -v "$NF:/work" -w /work \
-        "$NFPM_IMAGE" package --packager "$1" --config /work/nfpm.yaml --target "/work/out/$2"
+        "$NFPM_IMAGE" package --packager "$1" --config "/work/$2" --target "/work/out/$3"
 }
-run_nfpm deb "deathplanswitch-$VERSION-linux-debian-ubuntu.deb"
-run_nfpm rpm "deathplanswitch-$VERSION-linux-fedora-rhel-suse.rpm"
+run_nfpm deb nfpm.yaml "deathplanswitch-$VERSION-linux-debian-ubuntu.deb"
+run_nfpm rpm nfpm.yaml "deathplanswitch-$VERSION-linux-fedora-rhel-suse.rpm"
+run_nfpm archlinux nfpm-arch.yaml "deathplanswitch-$VERSION-linux-arch.pkg.tar.zst"
+run_nfpm apk nfpm-apk.yaml "deathplanswitch-$VERSION-linux-alpine.apk"
 cp "$NF/out/deathplanswitch-$VERSION-linux-debian-ubuntu.deb" \
-   "$NF/out/deathplanswitch-$VERSION-linux-fedora-rhel-suse.rpm" "$OUT/"
+   "$NF/out/deathplanswitch-$VERSION-linux-fedora-rhel-suse.rpm" \
+   "$NF/out/deathplanswitch-$VERSION-linux-arch.pkg.tar.zst" \
+   "$NF/out/deathplanswitch-$VERSION-linux-alpine.apk" "$OUT/"
 
 # 4. Checksums.
 if command -v sha256sum >/dev/null 2>&1; then SUM=(sha256sum); else SUM=(shasum -a 256); fi

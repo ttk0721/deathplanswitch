@@ -1,5 +1,5 @@
 #!/bin/sh
-# Package post-install (deb and rpm). Runs as root.
+# Package post-install (deb, rpm and Arch). Runs as root.
 set -eu
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 export PATH

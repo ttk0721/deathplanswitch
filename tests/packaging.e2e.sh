@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Builds every release asset and checks names, contents, checksums and a real
-# .deb install in debian:bookworm-slim.
+# .deb install in debian:bookworm-slim, plus real Arch and Alpine installs.
 # Runs from a temporary copy of the repo; install files that other packaging
 # work has not delivered yet are replaced by placeholders there (never in the
 # repo), and the install steps are then skipped.
 set -u
 cd "$(dirname "$0")/.." || exit 1
 REPO="$PWD"
-V="0.0.0-test"
+V="0.0.0-rc1"  # a suffix apk accepts (_rc1)
 
 TMP="$(mktemp -d)"
 cleanup() { rm -rf "$TMP"; }
@@ -59,6 +59,8 @@ fi
 # 1. Exact file set and checksums.
 expected="deathplanswitch-$V-docker-compose.zip
 deathplanswitch-$V-freebsd.tar.gz
+deathplanswitch-$V-linux-alpine.apk
+deathplanswitch-$V-linux-arch.pkg.tar.zst
 deathplanswitch-$V-linux-debian-ubuntu.deb
 deathplanswitch-$V-linux-fedora-rhel-suse.rpm
 deathplanswitch-$V-linux-other.tar.gz
@@ -67,9 +69,9 @@ deathplanswitch-$V-solaris-illumos.tar.gz
 deathplanswitch-$V-windows.zip
 SHA256SUMS"
 actual="$(ls "$OUT" | LC_ALL=C sort)"
-if [ "$actual" = "$(printf '%s\n' "$expected" | LC_ALL=C sort)" ]; then ok "exactly the 9 expected files"; else bad "file set: $actual"; fi
+if [ "$actual" = "$(printf '%s\n' "$expected" | LC_ALL=C sort)" ]; then ok "exactly the 11 expected files"; else bad "file set: $actual"; fi
 check "SHA256SUMS verifies" bash -c "cd '$OUT' && sha256sum -c SHA256SUMS"
-check "SHA256SUMS lists 8 assets" test "$(wc -l < "$OUT/SHA256SUMS")" -eq 8
+check "SHA256SUMS lists 10 assets" test "$(wc -l < "$OUT/SHA256SUMS")" -eq 10
 
 # 2. Contents.
 lin="$(tar -tzf "$OUT/deathplanswitch-$V-linux-other.tar.gz")"
@@ -187,6 +189,154 @@ INSIDE
         ok "deb install and serve"
     else
         bad "deb install and serve"
+    fi
+fi
+
+# 5. Arch and Alpine: inspect, then install for real.
+arch="$OUT/deathplanswitch-$V-linux-arch.pkg.tar.zst"
+apk="$OUT/deathplanswitch-$V-linux-alpine.apk"
+check "arch package is a zstd tar" bash -c "zstd -dc '$arch' | tar -t >/dev/null || docker run --rm -v '$OUT:/out:ro' archlinux:latest sh -c 'zstd -dc /out/${arch##*/} | tar -t'"
+check "alpine package is a gzip tar" bash -c "tar -tzf '$apk'"
+
+# Common checks, run inside the container after the package is installed.
+# Expects $UNITCMD (the web service command line) and a login-less service user.
+cat > "$TMP/common.sh" <<'COMMON'
+id deathplanswitch >/dev/null && echo "ok - user deathplanswitch exists" || { echo "not ok - user"; exit 1; }
+owner="$(stat -c %U:%G:%a /var/lib/deathplanswitch)"
+[ "$owner" = "deathplanswitch:deathplanswitch:700" ] && echo "ok - data dir is $owner" || { echo "not ok - data dir $owner"; exit 1; }
+smode="$(stat -c %a:%U:%G /etc/default/deathplanswitch)"
+[ "$smode" = "600:root:root" ] && echo "ok - settings file is 0600 root:root" || { echo "not ok - settings file $smode"; exit 1; }
+[ -n "${ENV_LOADED:-}" ] || { set -a; . /etc/default/deathplanswitch; set +a; }
+su -s /bin/sh deathplanswitch -c "exec $UNITCMD" >/tmp/web.log 2>&1 &
+listen="${DPS_LISTEN:-127.0.0.1:8080}"
+i=0
+while [ $i -lt 30 ]; do
+    curl -s -o /dev/null "http://$listen/health.php" && break
+    i=$((i+1)); sleep 1
+done
+c1="$(curl -s -o /dev/null -w '%{http_code}' "http://$listen/install.php")"
+c2="$(curl -s -o /dev/null -w '%{http_code}' "http://$listen/app/x")"
+[ "$c1" = 200 ] && echo "ok - /install.php 200" || { echo "not ok - /install.php $c1"; cat /tmp/web.log; exit 1; }
+[ "$c2" = 403 ] && echo "ok - /app/x 403" || { echo "not ok - /app/x $c2"; exit 1; }
+want_uid="$(id -u deathplanswitch)"
+found=0
+for d in /proc/[0-9]*; do
+    [ -r "$d/cmdline" ] || continue
+    args="$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null || true)"
+    argv0="${args%% *}"
+    case "${argv0##*/}" in
+        php|php[0-9]*) ;;
+        *) continue ;;
+    esac
+    case " $args" in
+        *" -S "*) ;;
+        *) continue ;;
+    esac
+    found=$((found+1))
+    uid="$(awk '/^Uid:/{print $2}' "$d/status" 2>/dev/null || true)"
+    if [ "$uid" != "$want_uid" ]; then
+        echo "not ok - php pid ${d#/proc/} runs as uid $uid, want $want_uid ($args)"; exit 1
+    fi
+done
+[ "$found" -ge 1 ] && echo "ok - php runs as deathplanswitch (uid $want_uid, $found process(es))" || { echo "not ok - no php -S process found"; exit 1; }
+COMMON
+
+if [ "$placeholders" -ne 0 ]; then
+    echo "skip - Arch and Alpine installs (install files or bin/router.php not delivered yet)"
+else
+    cat > "$TMP/inside-arch.sh" <<'INSIDE'
+set -eu
+pacman -Sy --noconfirm >/dev/null 2>&1
+pacman -S --noconfirm --needed curl >/dev/null 2>&1
+pacman -U --noconfirm /pkg.pkg.tar.zst >/dev/null
+# An upgrade must not warn about the data dir (owner and mode are the package's).
+pacman -U --noconfirm /pkg.pkg.tar.zst >/tmp/upgrade.log 2>&1
+if grep -qi 'warning: directory' /tmp/upgrade.log; then
+    echo "not ok - pacman warns on upgrade"; cat /tmp/upgrade.log; exit 1
+fi
+echo "ok - no pacman warning on upgrade"
+[ "$(stat -c %U:%G:%a /var/lib/deathplanswitch)" = "deathplanswitch:deathplanswitch:700" ] \
+    && echo "ok - data dir still deathplanswitch 0700 after upgrade" || { echo "not ok - data dir after upgrade"; exit 1; }
+for u in web scheduler; do
+    f=/usr/lib/systemd/system/deathplanswitch-$u.service
+    test -f "$f" && grep -qx 'User=deathplanswitch' "$f" && grep -qx 'NoNewPrivileges=yes' "$f" \
+        && echo "ok - unit $u installed with User= and NoNewPrivileges=yes" || { echo "not ok - unit $u"; exit 1; }
+done
+test -f /etc/php/conf.d/deathplanswitch-sodium.ini && echo "ok - sodium drop-in installed" || { echo "not ok - sodium drop-in"; exit 1; }
+php -m | grep -qx sodium && echo "ok - php loads sodium" || { echo "not ok - php lacks sodium"; exit 1; }
+for m in ctype curl filter hash json mbstring openssl posix random session sodium; do
+    php -m | grep -qix "$m" || { echo "not ok - php lacks $m"; exit 1; }
+done
+echo "ok - php has every extension the app needs"
+UNITCMD="$(sed -n 's/^ExecStart=//p' /usr/lib/systemd/system/deathplanswitch-web.service | head -1)"
+export UNITCMD
+. /common.sh
+INSIDE
+    if docker run --rm -v "$arch:/pkg.pkg.tar.zst:ro" -v "$TMP/inside-arch.sh:/inside.sh:ro" -v "$TMP/common.sh:/common.sh:ro" archlinux:latest sh /inside.sh; then
+        ok "arch install and serve"
+    else
+        bad "arch install and serve"
+    fi
+
+    cat > "$TMP/inside-alpine.sh" <<'INSIDE'
+set -eu
+apk add -q curl >/dev/null
+apk add --allow-untrusted /pkg.apk >/dev/null
+for u in web scheduler; do
+    test -x /etc/init.d/deathplanswitch-$u && grep -q '^command=/usr/bin/php83$' /etc/init.d/deathplanswitch-$u \
+        && echo "ok - OpenRC script $u installed with /usr/bin/php83" || { echo "not ok - OpenRC script $u"; exit 1; }
+done
+for m in ctype curl filter hash json mbstring openssl posix random session sodium; do
+    php83 -m | grep -qix "$m" || { echo "not ok - php83 lacks $m"; exit 1; }
+done
+echo "ok - php83 has every extension the app needs"
+# The OpenRC scripts read /etc/default/deathplanswitch as data. Stubs stand in for openrc-run.
+eerror() { echo "eerror: $*" >&2; }
+checkpath() { :; }
+cp /etc/default/deathplanswitch /tmp/default.orig
+setting() { # setting KEY VALUE: replace the KEY= line, keeping the file's mode
+    { grep -v "^$1=" /tmp/default.orig; printf '%s=%s\n' "$1" "$2"; } > /etc/default/deathplanswitch
+}
+# A value with command substitution: nothing runs and the service refuses to start.
+for u in web scheduler; do
+    for k in HEARTBEAT_URL DPS_APPRISE_URL; do
+        setting $k 'https://x.example/p?a=1&b=$(touch /tmp/pwned)'
+        if ( . /etc/init.d/deathplanswitch-$u; start_pre ) 2>/dev/null; then
+            echo "not ok - $u starts with a command substitution in $k"; exit 1
+        fi
+        test ! -e /tmp/pwned || { echo "not ok - $u ran a command from $k"; exit 1; }
+    done
+done
+echo "ok - command substitution in the settings is neither run nor started"
+setting DPS_LISTEN '127.0.0.1:8080; touch /tmp/pwned'
+if ( . /etc/init.d/deathplanswitch-web; start_pre ) 2>/dev/null; then echo "not ok - web starts with a bad DPS_LISTEN"; exit 1; fi
+test ! -e /tmp/pwned && echo "ok - a bad DPS_LISTEN is refused" || { echo "not ok - DPS_LISTEN ran"; exit 1; }
+# A URL with & and ? must reach php's environment intact.
+HB='https://kuma.example/api/push/abc?status=up&msg=OK&ping='
+setting HEARTBEAT_URL "$HB"
+. /etc/init.d/deathplanswitch-web
+start_pre && echo "ok - start_pre accepts a URL with & and ?" || { echo "not ok - start_pre refuses a good URL"; exit 1; }
+UNITCMD="$command $command_args"
+export UNITCMD ENV_LOADED=1
+. /common.sh
+# Read the environment as the service user (root lacks ptrace rights in a container).
+cat > /tmp/envcheck.sh <<'ENVCHECK'
+found=0
+for d in /proc/[0-9]*; do
+    args="$(tr '\0' ' ' < "$d/cmdline" 2>/dev/null || true)"
+    case "$args" in */php*" -S "*) ;; *) continue ;; esac
+    tr '\0' '\n' < "$d/environ" | grep -qxF "HEARTBEAT_URL=$HB" || { echo "not ok - php pid ${d#/proc/} lacks HEARTBEAT_URL"; exit 1; }
+    found=$((found+1))
+done
+[ "$found" -ge 1 ] && echo "ok - php has HEARTBEAT_URL with & and ? in its environment" || { echo "not ok - no php -S process"; exit 1; }
+ENVCHECK
+export HB
+su -s /bin/sh deathplanswitch -c "sh /tmp/envcheck.sh"
+INSIDE
+    if docker run --rm -v "$apk:/pkg.apk:ro" -v "$TMP/inside-alpine.sh:/inside.sh:ro" -v "$TMP/common.sh:/common.sh:ro" alpine:3.20 sh /inside.sh; then
+        ok "alpine install and serve"
+    else
+        bad "alpine install and serve"
     fi
 fi
 

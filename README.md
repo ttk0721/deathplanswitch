@@ -189,7 +189,7 @@ Made by [Tecky](https://tecky.au).
 
 ## Install from a release
 
-Every merge into `main` of this fork produces a release. It holds a Docker image and one download per platform, each named after its platform: Docker Compose, `.deb`, `.rpm`, Linux tarball, FreeBSD, macOS, Windows and Solaris/illumos. Native installs run the web page and the scheduler as background services, with no Docker and no Apache.
+Every merge into `main` of this fork produces a release. It holds a Docker image and one download per platform, each named after its platform: Docker Compose, `.deb`, `.rpm`, Arch package, Alpine package, Linux tarball, FreeBSD, macOS, Windows and Solaris/illumos. Native installs run the web page and the scheduler as background services, with no Docker and no Apache.
 
 - Which file to download and how to install it (Polish): [docs/pl/instalacja.md](docs/pl/instalacja.md)
 - How releases and version numbers are made (Polish): [docs/pl/wydania.md](docs/pl/wydania.md)

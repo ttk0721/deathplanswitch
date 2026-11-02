@@ -21,7 +21,7 @@ return [
     'A test email with a code has been sent to {email}.' => 'Wysłaliśmy wiadomość testową z kodem na adres {email}.',
     'unknown error' => 'nieznany błąd',
     'The test email could not be sent. The mail server said: {reason}' => 'Nie udało się wysłać wiadomości testowej. Serwer poczty odpowiedział: {reason}',
-    'Installed. Next: add your next of kin and your technical 2IC.' => 'Zainstalowano. Teraz dodaj osoby bliskie i zaufaną osobę techniczną.',
+    'Installed. Next: add your next of kin, and a technical helper if you like.' => 'Zainstalowano. Teraz dodaj najbliższą osobę, a jeśli chcesz, także pomocnika technicznego.',
     'This install was started but not finished. Enter the owner password to carry on.' => 'Ta instalacja została rozpoczęta, ale nie dokończona. Wpisz hasło właściciela, żeby kontynuować.',
     'Owner password' => 'Hasło właściciela',
     'Continue the install' => 'Kontynuuj instalację',

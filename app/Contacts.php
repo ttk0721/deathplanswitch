@@ -6,7 +6,7 @@ namespace DPS;
 /**
  * The people the switch can write to, stored in contacts.json.
  *
- * Kinds: exactly one next of kin, at least one technical contact, and any
+ * Kinds: exactly one next of kin, an optional technical helper, and any
  * number of legal or other contacts. Every contact carries an editable role
  * label, so the list can match how a particular business is handed over.
  */
@@ -14,7 +14,7 @@ final class Contacts
 {
     public const KINDS = [
         'nok' => 'Next of kin',
-        'technical' => 'Technical 2IC',
+        'technical' => 'Technical helper',
         'legal' => 'Legal contact',
         'other' => 'Other contact',
     ];
@@ -137,13 +137,13 @@ final class Contacts
         return null;
     }
 
-    /** The role label as it reads mid-sentence: "next of kin", "technical 2IC", or whatever the owner typed. */
+    /** The role label as it reads mid-sentence: "next of kin", "technical helper", or whatever the owner typed. */
     public static function role(array $contact): string
     {
         $label = trim((string) ($contact['role_label'] ?? ''));
         return match ($label) {
             'Next of kin' => t('next of kin'),
-            'Technical 2IC' => t('technical 2IC'),
+            'Technical helper', 'Technical 2IC' => t('technical helper'),
             'Legal contact' => t('legal contact'),
             'Other contact', '' => t('contact'),
             default => $label,
@@ -155,7 +155,7 @@ final class Contacts
     {
         return match ($label) {
             'Next of kin' => t('Next of kin'),
-            'Technical 2IC' => t('Technical 2IC'),
+            'Technical helper', 'Technical 2IC' => t('Technical helper'),
             'Legal contact' => t('Legal contact'),
             'Other contact' => t('Other contact'),
             default => $label,

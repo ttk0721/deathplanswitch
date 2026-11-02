@@ -316,6 +316,8 @@ Web::$title = t('Settings: Death Plan Switch');
 ?>
 <h1><?= e(t('Settings')) ?></h1>
 
+<div class="masonry">
+<section class="card">
 <h2>Język / Language</h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -330,7 +332,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('You, and your weekly email')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -367,7 +371,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Your email addresses')) ?></h2>
 <p><?= e(t('Check-in emails go to your main address. Reminders also go to the backup, so one failed mailbox cannot set the switch off. Use a different provider for the backup.')) ?></p>
 <?php if ($pending): ?>
@@ -412,7 +418,9 @@ Web::$title = t('Settings: Death Plan Switch');
   <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="backup_remove"><button class="link" type="submit"><?= e(t('Remove the backup address')) ?></button></form>
 <?php endif ?>
 </details>
+</section>
 
+<section class="card">
 <h2><?= e(t('Notification channels')) ?></h2>
 <p><?= e(t('Every email to you can also arrive on a channel such as Discord, Telegram, ntfy, SMS or a webhook. The message carries the subject and the link only, never the text of the email. A step counts as delivered when the email or any channel gets through.')) ?></p>
 <?php $channels = array_values(array_filter((array) ($config['channels'] ?? []), 'is_array')); $self = 'index.php?p=settings'; require __DIR__ . '/_channels.php' ?>
@@ -437,7 +445,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Mail server')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -446,7 +456,9 @@ Web::$title = t('Settings: Death Plan Switch');
   <div class="actions"><button type="submit"><?= e(t('Test and save')) ?></button></div>
   <p class="small muted"><?= e(t('The new settings are saved only if a test email to {address} is accepted.', ['address' => $config['owner_email']])) ?></p>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Scheduler')) ?></h2>
 <p><?= e(t('The switch does nothing by itself. Every 15 minutes, something has to run it.')) ?> <?= e($state['last_tick_at']
     ? ($state['last_tick_source'] === 'cron'
@@ -473,7 +485,9 @@ Web::$title = t('Settings: Death Plan Switch');
 <p><?= t('Set {variable} in {file} to have every run reported to Healthchecks.io.', ['variable' => '<code>HEARTBEAT_URL</code>', 'file' => '<code>.env</code>']) ?></p>
 <?php endif ?>
 <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="rekey"><button class="link" type="submit" data-confirm="<?= e(t('Make new addresses? The current ones will stop working.')) ?>"><?= e(t('Make new secret addresses')) ?></button></form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Data folder')) ?></h2>
 <p><?= t('Your contacts and their messages are stored as files in {folder}. They must not be readable from the web. The switch tests this every day by requesting one of its own files.', ['folder' => '<code>' . e($store->dir()) . '</code>']) ?></p>
 <dl class="facts">
@@ -502,7 +516,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </form>
 <?php endif ?>
 </div>
+</section>
 
+<section class="card">
 <h2><?= e(t('Public page')) ?></h2>
 <?php
 $landingSaved = (array) ($config['landing'] ?? []);
@@ -561,7 +577,9 @@ $hasOwnImage = Landing::imagePath($store, $landingSaved['image'] ?? null) !== nu
     <a class="button button-quiet" href="index.php?p=public" target="_blank" rel="noopener"><?= e(t('Preview the page')) ?></a>
   </div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Address of this install')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -573,7 +591,9 @@ $hasOwnImage = Landing::imagePath($store, $landingSaved['image'] ?? null) !== nu
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Password')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -589,3 +609,5 @@ $hasOwnImage = Landing::imagePath($store, $landingSaved['image'] ?? null) !== nu
   </div>
   <div class="actions"><button type="submit"><?= e(t('Change password')) ?></button></div>
 </form>
+</section>
+</div>

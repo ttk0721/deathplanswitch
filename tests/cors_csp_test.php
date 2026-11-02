@@ -59,6 +59,10 @@ function anyStarting(array $headers, string $prefix): bool {
     return false;
 }
 
+test('csp lets the page load its own fonts and nothing else', function (): void {
+    check(str_contains(Web::csp(), "font-src 'self';"), 'fonts from the same origin');
+    check(!str_contains(Web::csp(), 'font-src *'), 'not from anywhere');
+});
 test('csp adds validated origins to connect-src', function (): void {
     check(str_contains(Web::csp(['https://a.example']), "connect-src 'self' https://a.example;"), 'added');
     check(str_contains(Web::csp(), "connect-src 'self';"), 'default unchanged');

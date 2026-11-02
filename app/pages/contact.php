@@ -40,12 +40,11 @@ $self = 'index.php?p=contact' . ($isNew ? '&kind=' . $kind : '&id=' . $contact['
 $errors = [];
 
 /** Would removing this contact leave an armed switch without a required role? */
-$isLoadBearing = static function (array $contact) use ($book, $state): bool {
+$isLoadBearing = static function (array $contact) use ($state): bool {
     if (!$state['armed'] || $contact['status'] !== 'confirmed') {
         return false;
     }
-    return $contact['kind'] === 'nok'
-        || ($contact['kind'] === 'technical' && count($book->confirmedOfKind('technical')) === 1);
+    return $contact['kind'] === 'nok';
 };
 
 if (Web::posted()) {
@@ -222,20 +221,22 @@ if (Web::posted()) {
 $previews = $isNew ? [] : $engine->preview($contact);
 $needsHelp = [
     'nok' => t('For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.'),
-    'technical' => t('For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.'),
-    'legal' => t('For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.'),
+    'technical' => t('For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.'),
+    'legal' => t('For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.'),
     'other' => t('Whatever this person would need in order to act on the message below.'),
 ][$kind];
 
 Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contact') : $contact['name']]);
 ?>
-<p class="small"><a href="index.php?p=contacts"><?= e(t('All contacts')) ?></a></p>
-<h1><?= $isNew ? e(['nok' => t('Add your next of kin'), 'technical' => t('Add a technical contact'), 'legal' => t('Add a legal contact'), 'other' => t('Add a contact')][$kind]) : e($contact['name']) ?></h1>
+<p class="back"><a href="index.php?p=contacts"><?= e(t('All contacts')) ?></a></p>
+<h1><?= $isNew ? e(['nok' => t('Add your next of kin'), 'technical' => t('Add a technical helper'), 'legal' => t('Add a legal contact'), 'other' => t('Add a contact')][$kind]) : e($contact['name']) ?></h1>
 
 <?php if ($errors): ?>
 <div class="notice notice-bad" role="alert"><ul><?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach ?></ul></div>
 <?php endif ?>
 
+<div class="split">
+<div class="split-main">
 <?php if (!$isNew): ?>
 <div class="panel">
 <?php if ($contact['status'] === 'confirmed'): ?>
@@ -256,7 +257,7 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
 </div>
 <?php endif ?>
 
-<form method="post" action="<?= e($self) ?>">
+<form class="card" method="post" action="<?= e($self) ?>">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="save">
 
@@ -339,15 +340,20 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
     <a class="button button-quiet" href="index.php?p=contacts"><?= e(t('Cancel')) ?></a>
   </div>
 </form>
+</div>
+<div class="split-side">
 
 <?php if (!$isNew): ?>
+<section class="card">
 <h2><?= e(t('Channels')) ?></h2>
 <p><?= e(t('Emails to {name} can also arrive on a channel. The message carries the subject and the link only.', ['name' => $contact['name']])) ?></p>
 <p class="small muted"><?= e(t('SMS goes to the phone number above when an SMS address is set in Settings.')) ?></p>
 <?php $channels = array_values(array_filter((array) ($contact['channels'] ?? []), 'is_array')); $channelsWho = (string) $contact['name']; require __DIR__ . '/_channels.php' ?>
+</section>
 <?php endif ?>
 
 <?php if ($previews): ?>
+<section class="card">
 <h2><?= e(t('What {name} would receive', ['name' => $contact['name']])) ?></h2>
 <p><?= e(t('As saved. Names are filled in now; the number of days and the date are worked out when the message is sent.')) ?> <?= $contact['status'] !== 'confirmed' ? e(t('Until they confirm, they receive nothing.')) : '' ?></p>
 <?php foreach ($previews as $label => $email): ?>
@@ -356,9 +362,11 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
   <pre><?= e($email->text()) ?></pre>
 </div>
 <?php endforeach ?>
+</section>
 <?php endif ?>
 
 <?php if (!$isNew): ?>
+<section class="card">
 <h2><?= e(t('Delete')) ?></h2>
 <details>
   <summary><?= e(t('Remove {name} from your switch', ['name' => $contact['name']])) ?></summary>
@@ -369,4 +377,7 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
     <button class="button-danger" type="submit"><?= e(t('Delete this contact')) ?></button>
   </form>
 </details>
+</section>
 <?php endif ?>
+</div>
+</div>

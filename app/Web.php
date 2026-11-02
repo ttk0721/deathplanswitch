@@ -51,7 +51,7 @@ final class Web
                 $extra .= ' ' . $o;
             }
         }
-        return "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
+        return "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; font-src 'self'; "
             . "connect-src 'self'" . $extra . "; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
     }
 

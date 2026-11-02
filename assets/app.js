@@ -1,6 +1,7 @@
 /* Death Plan Switch
  *
- * The app works without this file. It adds four conveniences:
+ * The app works without this file. It adds five conveniences:
+ *   - closing the "More" sheet of the phone menu on a tap outside it, or Escape
  *   - asking before a few actions that are awkward to undo
  *   - guessing the timezone in the installer
  *   - noticing the first scheduler run in the installer
@@ -16,6 +17,18 @@
       event.preventDefault();
     }
   });
+
+  // Phone menu: the "More" sheet is a <details>, so it works without script.
+  // This only closes it when the visitor taps elsewhere or presses Escape.
+  var more = document.querySelector('details.more');
+  if (more) {
+    document.addEventListener('click', function (event) {
+      if (more.open && !more.contains(event.target)) { more.open = false; }
+    });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && more.open) { more.open = false; }
+    });
+  }
 
   // Installer: preselect the visitor's timezone.
   var zone = document.querySelector('select[data-timezone-guess]');

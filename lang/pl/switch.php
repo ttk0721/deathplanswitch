@@ -11,6 +11,8 @@ return [
     'Settings' => 'Ustawienia',
     'History' => 'Historia',
     'Sign out' => 'Wyloguj się',
+    'More' => 'Więcej',
+    'Menu' => 'Menu',
     'the primary' => 'węzeł główny',
     'This node mirrors {name}. Change settings there; check-ins here count everywhere.' => 'Ten węzeł jest kopią węzła {name}. Ustawienia zmieniaj tam; potwierdzenia obecności zrobione tutaj liczą się wszędzie.',
     'Death Plan Switch {version}. Free software under the MIT licence.' => 'Death Plan Switch {version}. Wolne oprogramowanie na licencji MIT.',
@@ -89,7 +91,7 @@ return [
     // dashboard: contacts and details
     'Who is told' => 'Kto dostaje wiadomość',
     'Nobody yet.' => 'Jeszcze nikt.',
-    'Add your next of kin and your technical 2IC' => 'Dodaj najbliższą osobę i zastępcę technicznego',
+    'Add your next of kin, and a technical helper if you like' => 'Dodaj najbliższą osobę, a jeśli chcesz, także pomocnika technicznego',
     'Asked first, after you miss a check-in and 72 hours of reminders.' => 'Pytana jako pierwsza, gdy pominiesz potwierdzenie obecności i minie 72 godziny przypomnień.',
     'Sent their message if neither you nor your next of kin confirms you are well.' => 'Dostaje swoją wiadomość, jeśli ani ty, ani twoja najbliższa osoba nie potwierdzicie, że wszystko jest w porządku.',
     'Confirmed' => 'Potwierdzone',

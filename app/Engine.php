@@ -939,7 +939,8 @@ final class Engine
 
     public function requiredContactsConfirmed(): bool
     {
-        return $this->confirmedNok() !== null && $this->contacts->confirmedOfKind('technical') !== [];
+        // Only the next of kin is required. A technical helper is recommended, never blocking.
+        return $this->confirmedNok() !== null;
     }
 
     // ------------------------------------------------------------------
@@ -993,10 +994,10 @@ final class Engine
         $technical = array_values(array_filter($this->contacts->all(), static fn (array $c): bool => $c['kind'] === 'technical'));
         $items[] = [
             'key' => 'technical',
-            'label' => t('Your technical 2IC has confirmed'),
+            'label' => t('Technical helper (optional)'),
             'ok' => $this->contacts->confirmedOfKind('technical') !== [],
-            'blocking' => true,
-            'hint' => $technical === [] ? t('Add the person who would look after your clients.') : self::contactHint($technical[0]),
+            'blocking' => false,
+            'hint' => $technical === [] ? t('Someone who can keep your servers, accounts or projects running.') : self::contactHint($technical[0]),
         ];
 
         $unwritten = [];

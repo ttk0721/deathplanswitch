@@ -32,7 +32,7 @@ $contacts = $engine->contacts()->all();
 
 Web::$title = t('Yearly review: Death Plan Switch');
 ?>
-<p class="small"><a href="index.php?p=contacts"><?= e(t('All contacts')) ?></a></p>
+<p class="back"><a href="index.php?p=contacts"><?= e(t('All contacts')) ?></a></p>
 <h1><?= e(t('Yearly review')) ?></h1>
 <p class="lede"><?= e(t('Things drift. A password gets changed, a document moves, someone gets a new phone. Check with each person, then tick them off.')) ?></p>
 <?php if ($state['review_at']): ?>
@@ -42,13 +42,13 @@ Web::$title = t('Yearly review: Death Plan Switch');
 <?php if ($contacts === []): ?>
 <p><?= e(t('You have no contacts yet.')) ?> <a href="index.php?p=contacts"><?= e(t('Add them first')) ?></a>.</p>
 <?php else: ?>
-<form method="post" action="index.php?p=review">
+<form class="card" method="post" action="index.php?p=review">
   <?= Web::csrfField() ?>
 <?php foreach ($contacts as $contact): ?>
   <div class="tick">
     <input type="checkbox" id="has-<?= e($contact['id']) ?>" name="has[]" value="<?= e($contact['id']) ?>">
     <label for="has-<?= e($contact['id']) ?>"><?= e(t('{name} still has what they need', ['name' => $contact['name']])) ?></label>
-    <span class="help"><?= e($contact['role_label']) ?>, <?= e($contact['email']) ?><?= $contact['phone'] !== '' ? ', ' . e($contact['phone']) : '' ?>.
+    <span class="help"><?= e(Contacts::label((string) $contact['role_label'])) ?>, <?= e($contact['email']) ?><?= $contact['phone'] !== '' ? ', ' . e($contact['phone']) : '' ?>.
       <?= $contact['status'] !== 'confirmed' ? e(t('Not confirmed, so not written to.')) : '' ?>
       <?= !empty($contact['has_needs_at']) ? e(t('Last ticked {date}.', ['date' => when($contact['has_needs_at'], (string) $config['timezone'], 'date')])) : e(t('Never ticked.')) ?>
       <a href="index.php?p=contact&amp;id=<?= e($contact['id']) ?>"><?= e(t('Read their message')) ?></a></span>

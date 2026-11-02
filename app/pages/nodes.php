@@ -122,6 +122,8 @@ Web::$title = t('Nodes: Death Plan Switch');
 ?>
 <h1><?= e(t('Nodes')) ?></h1>
 
+<div class="cards">
+<section class="card">
 <h2><?= e(t('This node')) ?></h2>
 <?php if ($identity === null): ?>
 <p><?= t('This node has no identity yet. On the server, run {command}, then reload this page.', ['command' => '<code>php cli/node.php init --name=&lt;name&gt;</code>']) ?></p>
@@ -129,11 +131,14 @@ Web::$title = t('Nodes: Death Plan Switch');
 <p><?= e(t("Paste this on the primary node's Nodes page to add this node to the cluster.")) ?></p>
 <pre><?= e($showJson) ?></pre>
 <?php endif ?>
+</section>
 
+<section class="card card-wide">
 <h2><?= e(t('The cluster')) ?></h2>
 <?php if (count($cluster['nodes']) < 2): ?>
 <p><?= e(t('No other node is set up. With one node the switch works as before.')) ?></p>
 <?php else: ?>
+<div class="table-scroll">
 <table>
   <thead><tr><th><?= e(t('Rank')) ?></th><th><?= e(t('Name')) ?></th><th><?= e(t('Address')) ?></th><th><?= e(t('Public address')) ?></th><th><?= e(t('Role')) ?></th><th><?= e(t('Last heard')) ?></th><th></th></tr></thead>
   <tbody>
@@ -165,14 +170,17 @@ foreach ($rows as $n):
 <?php endforeach ?>
   </tbody>
 </table>
+</div>
 <dl class="facts">
   <dt><?= e(t('Key shares needed')) ?></dt><dd><?= e($cluster['k']) ?></dd>
   <dt><?= e(t('Isolation wait')) ?></dt><dd><?= e(t('{count} hours', ['count' => $cluster['isolation_hours']])) ?></dd>
   <dt><?= e(t('Delay between nodes')) ?></dt><dd><?= e(t('{count} minutes', ['count' => $cluster['step_delay_min']])) ?></dd>
 </dl>
 <?php endif ?>
+</section>
 
 <?php if ($isPrimary && $identity !== null): ?>
+<section class="card">
 <h2><?= e(t('Add a node')) ?></h2>
 <form method="post" action="index.php?p=nodes">
   <?= Web::csrfField() ?>
@@ -199,8 +207,10 @@ foreach ($rows as $n):
   </div>
   <div class="actions"><button type="submit"><?= e(t('Add node')) ?></button></div>
 </form>
+</section>
 
 <?php if (count($cluster['nodes']) >= 2): ?>
+<section class="card">
 <h2><?= e(t('Cluster settings')) ?></h2>
 <form method="post" action="index.php?p=nodes">
   <?= Web::csrfField() ?>
@@ -219,7 +229,9 @@ foreach ($rows as $n):
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 <?php endif ?>
 <?php elseif (!$isPrimary): ?>
-<p><?= e(t('This node mirrors the primary. Add or remove nodes and change these settings there.')) ?></p>
+<section class="card"><p><?= e(t('This node mirrors the primary. Add or remove nodes and change these settings there.')) ?></p></section>
 <?php endif ?>
+</div>

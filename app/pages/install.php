@@ -218,7 +218,7 @@ if (Web::posted()) {
         $store->write('config', $config);
         SetupCode::delete($store);
         $store->log('installed', t('Death Plan Switch {version} was installed.', ['version' => VERSION]));
-        Web::flash(t('Installed. Next: add your next of kin and your technical 2IC.'));
+        Web::flash(t('Installed. Next: add your next of kin, and a technical helper if you like.'));
         Web::redirect('index.php?p=contacts');
     }
 }
@@ -237,17 +237,22 @@ $ticked = $step === 4 ? $engine->state()['last_tick_at'] : null;
 $smtp = (array) ($config['smtp'] ?? []);
 $posted = static fn (string $key, string $default = ''): string => Web::isPost() ? Web::post($key, $default) : $default;
 
+Web::$layout = 'install';
 Web::$title = t('Install Death Plan Switch');
 ?>
-<h1><?= e(t('Install Death Plan Switch')) ?></h1>
-
+<div class="install">
+<aside class="install-side">
+  <div class="brand"><span class="brand-dot" aria-hidden="true">DPS</span><span class="brand-text"><span class="brand-name">Death Plan Switch</span></span></div>
+  <h1><?= e(t('Install Death Plan Switch')) ?></h1>
 <?php if ($step > 0): ?>
-<ol class="steps">
+  <ol class="steps">
 <?php foreach ($stepNames as $n => $label): ?>
-  <li<?= $n === $step ? ' aria-current="step"' : '' ?>><?= e($label) ?></li>
+    <li<?= $n === $step ? ' aria-current="step"' : ($n < $step ? ' class="done"' : '') ?>><?= e($label) ?></li>
 <?php endforeach ?>
-</ol>
+  </ol>
 <?php endif ?>
+</aside>
+<div class="install-main">
 
 <?php if ($errors): ?>
 <div class="notice notice-bad" role="alert"><ul><?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach ?></ul></div>
@@ -473,3 +478,5 @@ Web::$title = t('Install Death Plan Switch');
 </form>
 <?php endif ?>
 <?php endif ?>
+</div>
+</div>

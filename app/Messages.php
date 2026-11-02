@@ -46,7 +46,7 @@ final class Messages
             'technical' => [
                 'subject' => t('{owner_name} has stopped checking in: please read'),
                 'body' => t('{owner_name} set up Death Plan Switch so that you would be told if they became unavailable. That has now happened.')
-                    . $sep . t('They asked you to look after their clients\' websites. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what clients need first]')
+                    . $sep . t('They asked you to keep their servers, accounts or projects running. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what needs attention first]')
                     . $sep . t('Next of kin:') . ' {nok_details}',
             ],
             'legal' => [

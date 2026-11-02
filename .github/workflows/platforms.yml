@@ -1,0 +1,232 @@
+name: Platforms
+
+# The PHP suites on the systems the native installs target: Linux, macOS,
+# Windows and FreeBSD, plus a smoke test of the built-in server router.
+#
+# Skipped by name (they need Docker or a Unix shell the runner lacks):
+#   everywhere        tests/cors_csp_test.php (needs Docker), tests/docker/*.sh,
+#                     tests/*.e2e.sh (run in ci.yml)
+#   Windows only      tests/version_test.php, tests/bootstrap_test.php (use `env -u`),
+#                     tests/router_test.php (uses /dev/null; the install smoke test
+#                     below checks the router instead), tests/nodes_page_test.php and
+#                     tests/cron_federation_test.php (POSIX child processes)
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Commit to test (default: the triggering commit)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  unix:
+    name: ${{ matrix.os }} / PHP ${{ matrix.php }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        php: ['8.1', '8.4']
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: shivammathur/setup-php@34a5396826718e0013f08e3e639d1c315d5f6b23 # 2.35.0
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, mbstring, openssl, sodium
+          coverage: none
+      - name: Suites
+        shell: bash
+        run: |
+          failed=()
+          for f in tests/run.php tests/*_test.php; do
+            case "$f" in
+              tests/cors_csp_test.php) echo "== $f (skipped: needs Docker)"; continue ;;
+            esac
+            echo "== $f"
+            php "$f" || failed+=("$f")
+          done
+          if [ "${#failed[@]}" -gt 0 ]; then
+            echo "::error::Failed suites: ${failed[*]}"
+            exit 1
+          fi
+      - name: Router smoke test
+        shell: bash
+        run: |
+          php -S 127.0.0.1:8080 -t . bin/router.php >router.log 2>&1 &
+          server=$!
+          trap 'kill "$server"' EXIT
+          for _ in $(seq 1 50); do
+            curl -s -o /dev/null http://127.0.0.1:8080/assets/app.css && break
+            sleep 0.2
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)
+          case "$code" in 200 | 302 | 303) ;; *) echo "::error::/ gave $code"; cat router.log; exit 1 ;; esac
+          for path in /app/bootstrap.php /APP/x /data/ /%61pp/bootstrap.php /README.md; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --path-as-is "http://127.0.0.1:8080$path")
+            [ "$code" = 403 ] || { echo "::error::$path gave $code, expected 403"; exit 1; }
+          done
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: shivammathur/setup-php@34a5396826718e0013f08e3e639d1c315d5f6b23 # 2.35.0
+        with:
+          php-version: '8.4'
+          extensions: curl, mbstring, openssl, sodium
+          coverage: none
+      - name: Suites
+        shell: pwsh
+        run: |
+          $skip = @(
+            'cors_csp_test.php', 'version_test.php', 'bootstrap_test.php',
+            'router_test.php', 'nodes_page_test.php', 'cron_federation_test.php'
+          )
+          $files = @('tests/run.php') + (Get-ChildItem tests -Filter *_test.php | Sort-Object Name | ForEach-Object { "tests/$($_.Name)" })
+          $failed = @()
+          foreach ($f in $files) {
+            if ($skip -contains (Split-Path $f -Leaf)) { Write-Host "== $f (skipped)"; continue }
+            Write-Host "== $f"
+            php $f
+            if ($LASTEXITCODE -ne 0) { $failed += $f }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Host "::error::Failed suites: $($failed -join ', ')"
+            exit 1
+          }
+      - name: Tighten the PHP folder permissions (as README.txt tells users)
+        shell: pwsh
+        run: |
+          # The installer refuses a PHP folder that ordinary users can write to. setup-php puts PHP
+          # under C:\tools, which inherits write access for Authenticated Users from C:\.
+          $phpDir = Split-Path -Parent (Get-Command php).Source
+          $grant = '*S-1-5-18:(OI)(CI)F', '*S-1-5-32-544:(OI)(CI)F', '*S-1-5-32-545:(OI)(CI)RX'
+          # Same commands install.ps1 prints: the PHP folder recursively, a parent folder only itself.
+          & icacls $phpDir /setowner '*S-1-5-32-544' /T /C /L
+          if ($LASTEXITCODE -ne 0) { throw "icacls setowner failed on $phpDir" }
+          & icacls $phpDir /reset /T /C /L
+          if ($LASTEXITCODE -ne 0) { throw "icacls reset failed on $phpDir" }
+          & icacls $phpDir /inheritance:r /grant:r $grant
+          if ($LASTEXITCODE -ne 0) { throw "icacls failed on $phpDir" }
+          $parent = Split-Path -Parent $phpDir
+          if ($parent -ieq "$env:SystemDrive\tools") {
+            & icacls $parent /setowner '*S-1-5-32-544'
+            if ($LASTEXITCODE -ne 0) { throw "icacls setowner failed on $parent" }
+            & icacls $parent /inheritance:r /grant:r $grant
+            if ($LASTEXITCODE -ne 0) { throw "icacls failed on $parent" }
+          }
+      - name: Installer refuses a writable PHP folder
+        shell: pwsh
+        run: |
+          # A PHP copy in a world-writable folder must be rejected before any php.exe runs.
+          $bad = Join-Path $env:RUNNER_TEMP 'php-writable'
+          New-Item -ItemType Directory -Force -Path $bad | Out-Null
+          Copy-Item (Get-Command php).Source $bad
+          & icacls $bad /grant '*S-1-5-11:(OI)(CI)M' | Out-Null
+          $refused = $false
+          try { ./packaging/windows/install.ps1 -PhpPath (Join-Path $bad 'php.exe') -Listen 127.0.0.1:8081 }
+          catch { $refused = $_.Exception.Message -like 'Refusing to install*' }
+          if (-not $refused) { throw 'install.ps1 accepted a PHP folder writable by Authenticated Users' }
+      - name: Install as start-up tasks
+        shell: pwsh
+        run: |
+          ./packaging/windows/install.ps1 -PhpPath (Get-Command php).Source -Listen 127.0.0.1:8080
+      - name: Check the running server
+        shell: pwsh
+        run: |
+          function Get-Code($path) {
+            for ($i = 0; $i -lt 60; $i++) {
+              $code = & curl.exe -s -o NUL -w '%{http_code}' --path-as-is "http://127.0.0.1:8080$path"
+              if ($code -ne '000') { return $code }
+              Start-Sleep -Seconds 1
+            }
+            return '000'
+          }
+          $install = Get-Code '/install.php'
+          if ($install -ne '200') { throw "/install.php gave $install" }
+          foreach ($t in 'DeathPlanSwitch Web', 'DeathPlanSwitch Scheduler') {
+            $u = (Get-ScheduledTask -TaskName $t).Principal.UserId
+            if ($u -notlike '*LOCAL SERVICE') { throw "$t runs as '$u', expected LOCAL SERVICE" }
+          }
+          $owner = (Get-CimInstance Win32_Process -Filter "Name='php.exe'" | Where-Object { $_.CommandLine -like '*router.php*' } |
+            Select-Object -First 1 | Invoke-CimMethod -MethodName GetOwner)
+          if ($owner.User -ne 'LOCAL SERVICE') { throw "web server runs as '$($owner.User)', expected LOCAL SERVICE" }
+          foreach ($path in '/app/x', '/APP/x', '/app./x', '/%61pp/bootstrap.php') {
+            $code = Get-Code $path
+            if ($code -ne '403') { throw "$path gave $code, expected 403" }
+          }
+          $code = Get-Code '/assets/../app/bootstrap.php'
+          if ($code -ne '400') { throw "dot-dot gave $code, expected 400" }
+      - name: Uninstall
+        if: always()
+        shell: pwsh
+        run: ./packaging/windows/uninstall.ps1 -RemoveData
+
+  freebsd:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: vmactions/freebsd-vm@c46abacb49f09938ca4e1702d15d836285d694cc # v1.5.9
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y curl
+            pkg install -y php83 php83-curl php83-mbstring php83-openssl php83-sodium php83-pcntl php83-posix php83-session php83-ctype php83-filter php83-tokenizer || \
+              pkg install -y php83 php83-curl php83-mbstring php83-sodium
+          run: |
+            failed=""
+            for f in tests/run.php tests/*_test.php; do
+              case "$f" in
+                tests/cors_csp_test.php) echo "== $f (skipped: needs Docker)"; continue ;;
+              esac
+              echo "== $f"
+              php "$f" || failed="$failed $f"
+            done
+            if [ -n "$failed" ]; then
+              echo "Failed suites:$failed"
+              exit 1
+            fi
+            echo "== FreeBSD install, services and uninstall"
+            bad=""
+            sh packaging/freebsd/install.sh || bad="$bad install"
+            for s in deathplanswitch_web deathplanswitch_scheduler; do
+              service "$s" status >/dev/null 2>&1 || service "$s" start || bad="$bad start-$s"
+            done
+            sleep 5
+            code=""
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/install.php || true)
+              [ "$code" = "200" ] && break
+              sleep 2
+            done
+            [ "$code" = "200" ] || bad="$bad install.php:$code"
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/app/x || true)
+            [ "$code" = "403" ] || bad="$bad app/x:$code"
+            for pat in 'router.php' 'scheduler.php'; do
+              pid=$(pgrep -u deathplanswitch -f "php.*$pat" | head -n 1 || true)
+              if [ -z "$pid" ]; then
+                bad="$bad no-$pat-process-as-deathplanswitch"
+              else
+                echo "$pat runs as $(ps -o user= -p "$pid")"
+              fi
+            done
+            sh packaging/freebsd/install.sh uninstall || bad="$bad uninstall"
+            if [ -n "$bad" ]; then
+              echo "FreeBSD install check failed:$bad"
+              exit 1
+            fi

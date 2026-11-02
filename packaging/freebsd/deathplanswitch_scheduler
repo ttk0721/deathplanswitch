@@ -1,0 +1,81 @@
+#!/bin/sh
+#
+# PROVIDE: deathplanswitch_scheduler
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# Add these to /etc/rc.conf (install.sh does it with sysrc):
+#   deathplanswitch_scheduler_enable="YES"
+#   deathplanswitch_scheduler_data="/var/db/deathplanswitch"
+#   deathplanswitch_scheduler_php="/usr/local/bin/php"   (absolute path, no PATH lookup)
+#   deathplanswitch_scheduler_app="/usr/local/share/deathplanswitch"
+#   deathplanswitch_scheduler_runas="deathplanswitch"   (not "_user": rc.subr would then run su; daemon drops privileges itself)
+#   deathplanswitch_scheduler_heartbeat_url=""
+#   deathplanswitch_scheduler_apprise_url=""
+
+. /etc/rc.subr
+
+name="deathplanswitch_scheduler"
+rcvar="deathplanswitch_scheduler_enable"
+desc="DeathPlanSwitch scheduler"
+
+load_rc_config $name
+
+: ${deathplanswitch_scheduler_enable:="NO"}
+: ${deathplanswitch_scheduler_runas:="deathplanswitch"}
+: ${deathplanswitch_scheduler_data:="/var/db/deathplanswitch"}
+: ${deathplanswitch_scheduler_php:="/usr/local/bin/php"}
+: ${deathplanswitch_scheduler_app:="/usr/local/share/deathplanswitch"}
+: ${deathplanswitch_scheduler_heartbeat_url:=""}
+: ${deathplanswitch_scheduler_apprise_url:=""}
+
+pidfile="/var/run/${name}.pid"
+procname="/usr/sbin/daemon"
+command="/usr/sbin/daemon"
+# rc.subr evals command_args, so every value is validated in the prestart
+# (strict charset, no quote or shell metacharacter) and then single-quoted here.
+command_args="-r -u '${deathplanswitch_scheduler_runas}' -P ${pidfile} -t ${name} \
+/usr/bin/env 'DPS_DATA=${deathplanswitch_scheduler_data}' \
+'HEARTBEAT_URL=${deathplanswitch_scheduler_heartbeat_url}' \
+'DPS_APPRISE_URL=${deathplanswitch_scheduler_apprise_url}' \
+'${deathplanswitch_scheduler_php}' '${deathplanswitch_scheduler_app}/bin/scheduler.php'"
+
+start_precmd="deathplanswitch_scheduler_prestart"
+
+# Plain value (user, path): letters, digits and . _ / + - only.
+deathplanswitch_scheduler_check_plain()
+{
+	case "$2" in
+		''|*[!A-Za-z0-9._/+-]*) err 1 "invalid $1 in rc.conf: only letters, digits and . _ / + - are allowed" ;;
+	esac
+}
+
+# Optional http(s) URL: no space, quote, & ; | $ backtick, backslash, ( ) < > or newline.
+deathplanswitch_scheduler_check_url()
+{
+	[ -z "$2" ] && return 0
+	case "$2" in
+		http://?*|https://?*) ;;
+		*) err 1 "invalid $1 in rc.conf: must start with http:// or https://" ;;
+	esac
+	case "$2" in
+		*[!A-Za-z0-9._~:/?#@!%+,=-]*) err 1 "invalid $1 in rc.conf: contains a character that is not allowed (& ; | \$ quotes, spaces and brackets are rejected)" ;;
+	esac
+}
+
+deathplanswitch_scheduler_prestart()
+{
+	deathplanswitch_scheduler_check_plain deathplanswitch_scheduler_runas "${deathplanswitch_scheduler_runas}"
+	deathplanswitch_scheduler_check_plain deathplanswitch_scheduler_data "${deathplanswitch_scheduler_data}"
+	deathplanswitch_scheduler_check_plain deathplanswitch_scheduler_php "${deathplanswitch_scheduler_php}"
+	deathplanswitch_scheduler_check_plain deathplanswitch_scheduler_app "${deathplanswitch_scheduler_app}"
+	deathplanswitch_scheduler_check_url deathplanswitch_scheduler_heartbeat_url "${deathplanswitch_scheduler_heartbeat_url}"
+	deathplanswitch_scheduler_check_url deathplanswitch_scheduler_apprise_url "${deathplanswitch_scheduler_apprise_url}"
+	if [ "$(id -u "${deathplanswitch_scheduler_runas}" 2>/dev/null)" = "0" ]; then
+		err 1 "refusing to run as root"
+	fi
+	[ -x "${deathplanswitch_scheduler_php}" ] || err 1 "php not found at ${deathplanswitch_scheduler_php}"
+	[ -f "${deathplanswitch_scheduler_app}/bin/scheduler.php" ] || err 1 "app not found in ${deathplanswitch_scheduler_app}"
+}
+
+run_rc_command "$1"

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>pl.ttk0721.deathplanswitch.web</string>
+	<key>UserName</key>
+	<string>_deathplanswitch</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>@PHP@</string>
+		<string>-S</string>
+		<string>@LISTEN@</string>
+		<string>-t</string>
+		<string>@APP@</string>
+		<string>@APP@/bin/router.php</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>@APP@</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>DPS_DATA</key>
+		<string>@DATA@</string>
+		<key>DPS_LISTEN</key>
+		<string>@LISTEN@</string>
+		<key>PHP_CLI_SERVER_WORKERS</key>
+		<string>4</string>
+	</dict>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>@LOG@/web.log</string>
+	<key>StandardErrorPath</key>
+	<string>@LOG@/web.err</string>
+</dict>
+</plist>

@@ -1,0 +1,22 @@
+# Paths copied into the staged app (relative to the repo root), one per line.
+# Anything not listed is left out. build.sh also strips dotfiles (except
+# data/.htaccess) and data/*.json from the result and fails if any remain.
+app
+assets
+bin
+cli
+lang
+data/.htaccess
+data/index.html
+LICENSE
+checkin.php
+confirm.php
+cron.php
+health.php
+index.php
+install.php
+node-api.php
+respond.php
+tick.php
+vault-api.php
+vault.php

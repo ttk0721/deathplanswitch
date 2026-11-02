@@ -10,11 +10,16 @@ declare(strict_types=1);
 
 namespace DPS;
 
-const VERSION = '1.0.0';
-
 if (!defined('DPS_ROOT')) {
     define('DPS_ROOT', dirname(__DIR__));
 }
+
+// The app version: the VERSION file under DPS_ROOT when it holds X.Y.Z, else 1.0.0.
+define('DPS\VERSION', (static function (): string {
+    $file = DPS_ROOT . '/VERSION';
+    $version = is_file($file) ? trim((string) file_get_contents($file)) : '';
+    return preg_match('/^\d+\.\d+\.\d+$/D', $version) === 1 ? $version : '1.0.0';
+})());
 
 // Optional: config.local.php may define DPS_DATA to move the data folder
 // outside the web root. See README, "Moving the data folder".

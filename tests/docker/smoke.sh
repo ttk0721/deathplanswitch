@@ -78,6 +78,14 @@ if [ -z "$leaks" ]; then pass "private paths are not served"; else fail "private
 t="$(code /tests/)"
 if [ "$t" = 403 ] || [ "$t" = 404 ]; then pass "/tests/ is not served ($t)"; else fail "/tests/ is not served ($t)"; fi
 
+pk="$(code /packaging/linux/deathplanswitch-web.service)"
+web_img="$(docker inspect -f '{{.Image}}' "$(compose ps -q web)")"
+if { [ "$pk" = 403 ] || [ "$pk" = 404 ]; } && docker run --rm --entrypoint test "$web_img" ! -e /var/www/html/packaging; then
+  pass "packaging/ is not served ($pk) and not in the image"
+else
+  fail "packaging/ is not served ($pk) and not in the image"
+fi
+
 if wait_for 60 has_tick; then pass "scheduler wrote last_tick_at"; else fail "scheduler wrote last_tick_at"; fi
 
 if wait_for 60 has_ping && ! inspect "${SMOKE_DATA}-out" requests.log | grep -q '/fail'; then

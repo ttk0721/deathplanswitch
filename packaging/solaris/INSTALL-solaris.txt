@@ -1,0 +1,69 @@
+Death Plan Switch on Solaris, illumos, OpenIndiana and OmniOS
+=============================================================
+
+NOT TESTED IN CI. These are manual steps; expect to adjust paths to your
+system. The app needs PHP 8.1 or newer with the curl, mbstring, openssl and
+sodium extensions.
+
+1. Install PHP
+   - OpenCSW (Solaris):   pkgutil -y -i php8
+   - pkgsrc (illumos):    pkgin install php83 php83-curl php83-mbstring
+   Find the binary with: command -v php   (below it is /opt/local/bin/php)
+
+2. Create a user and the directories (as root)
+
+       groupadd deathplanswitch
+       useradd -g deathplanswitch -d /var/db/deathplanswitch -s /usr/bin/false deathplanswitch
+       mkdir -p /opt/deathplanswitch /var/db/deathplanswitch
+       cp -R ./* /opt/deathplanswitch/
+       chown -R root:root /opt/deathplanswitch
+       chown deathplanswitch:deathplanswitch /var/db/deathplanswitch
+       chmod 750 /var/db/deathplanswitch
+
+3. The two commands (both as user deathplanswitch, never as root)
+
+   Web (keep it on localhost, put an HTTPS proxy in front):
+
+       DPS_DATA=/var/db/deathplanswitch \
+       /opt/local/bin/php -S 127.0.0.1:8080 -t /opt/deathplanswitch /opt/deathplanswitch/bin/router.php
+
+   Scheduler:
+
+       DPS_DATA=/var/db/deathplanswitch /opt/local/bin/php /opt/deathplanswitch/bin/scheduler.php
+
+   Open http://127.0.0.1:8080/install.php to finish the setup.
+
+4. Start them at boot, either way
+
+   a) SMF. Sketch of a manifest for the web service (copy it for the scheduler
+      with the other command); import it with: svccfg import dps-web.xml
+
+       <?xml version="1.0"?>
+       <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+       <service_bundle type="manifest" name="deathplanswitch-web">
+         <service name="application/deathplanswitch-web" type="service" version="1">
+           <create_default_instance enabled="true"/>
+           <single_instance/>
+           <dependency name="network" grouping="require_all" restart_on="error" type="service">
+             <service_fmri value="svc:/milestone/network:default"/>
+           </dependency>
+           <exec_method type="method" name="start"
+             exec="/opt/local/bin/php -S 127.0.0.1:8080 -t /opt/deathplanswitch /opt/deathplanswitch/bin/router.php"
+             timeout_seconds="60">
+             <method_context>
+               <method_credential user="deathplanswitch" group="deathplanswitch"/>
+               <method_environment>
+                 <envvar name="DPS_DATA" value="/var/db/deathplanswitch"/>
+               </method_environment>
+             </method_context>
+           </exec_method>
+           <exec_method type="method" name="stop" exec=":kill" timeout_seconds="30"/>
+         </service>
+       </service_bundle>
+
+   b) cron @reboot, in the crontab of user deathplanswitch (crontab -e):
+
+       @reboot DPS_DATA=/var/db/deathplanswitch /opt/local/bin/php -S 127.0.0.1:8080 -t /opt/deathplanswitch /opt/deathplanswitch/bin/router.php
+       @reboot DPS_DATA=/var/db/deathplanswitch /opt/local/bin/php /opt/deathplanswitch/bin/scheduler.php
+
+   Cron does not restart a process that dies. SMF does.

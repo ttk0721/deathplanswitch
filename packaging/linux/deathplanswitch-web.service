@@ -1,0 +1,41 @@
+[Unit]
+Description=Death Plan Switch (web)
+Documentation=https://github.com/ttk0721/deathplanswitch
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deathplanswitch
+Group=deathplanswitch
+EnvironmentFile=/etc/default/deathplanswitch
+WorkingDirectory=/usr/share/deathplanswitch
+ExecStart=/usr/bin/php -S ${DPS_LISTEN} -t /usr/share/deathplanswitch /usr/share/deathplanswitch/bin/router.php
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/deathplanswitch
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+UMask=0077
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallArchitectures=native
+RestrictNamespaces=yes
+RestrictRealtime=yes
+ProtectClock=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectProc=invisible
+
+[Install]
+WantedBy=multi-user.target

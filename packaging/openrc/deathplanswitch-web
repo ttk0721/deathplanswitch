@@ -1,0 +1,29 @@
+#!/sbin/openrc-run
+# Death Plan Switch (web) for OpenRC. Settings: /etc/default/deathplanswitch
+
+name="Death Plan Switch web"
+description="Death Plan Switch web interface"
+
+[ -r /etc/default/deathplanswitch ] && . /etc/default/deathplanswitch
+: "${DPS_DATA:=/var/lib/deathplanswitch}"
+: "${DPS_LISTEN:=127.0.0.1:8080}"
+: "${PHP_CLI_SERVER_WORKERS:=4}"
+export DPS_DATA DPS_LISTEN HEARTBEAT_URL DPS_APPRISE_URL PHP_CLI_SERVER_WORKERS
+
+supervisor=supervise-daemon
+respawn_delay=5
+command=/usr/bin/php
+command_args="-S ${DPS_LISTEN} -t /usr/share/deathplanswitch /usr/share/deathplanswitch/bin/router.php"
+command_user=deathplanswitch:deathplanswitch
+directory=/usr/share/deathplanswitch
+output_log=/var/log/deathplanswitch-web.log
+error_log=/var/log/deathplanswitch-web.log
+
+depend() {
+	need net
+}
+
+start_pre() {
+	checkpath --directory --mode 0700 --owner deathplanswitch:deathplanswitch "$DPS_DATA"
+	checkpath --file --mode 0640 --owner deathplanswitch:deathplanswitch /var/log/deathplanswitch-web.log
+}

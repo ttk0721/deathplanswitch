@@ -1,0 +1,28 @@
+#!/sbin/openrc-run
+# Death Plan Switch (scheduler) for OpenRC. Settings: /etc/default/deathplanswitch
+
+name="Death Plan Switch scheduler"
+description="Death Plan Switch scheduler"
+
+[ -r /etc/default/deathplanswitch ] && . /etc/default/deathplanswitch
+: "${DPS_DATA:=/var/lib/deathplanswitch}"
+export DPS_DATA DPS_LISTEN HEARTBEAT_URL DPS_APPRISE_URL PHP_CLI_SERVER_WORKERS
+
+supervisor=supervise-daemon
+respawn_delay=5
+command=/usr/bin/php
+command_args="/usr/share/deathplanswitch/bin/scheduler.php"
+command_user=deathplanswitch:deathplanswitch
+directory=/usr/share/deathplanswitch
+output_log=/var/log/deathplanswitch-scheduler.log
+error_log=/var/log/deathplanswitch-scheduler.log
+
+depend() {
+	need net
+	after deathplanswitch-web
+}
+
+start_pre() {
+	checkpath --directory --mode 0700 --owner deathplanswitch:deathplanswitch "$DPS_DATA"
+	checkpath --file --mode 0640 --owner deathplanswitch:deathplanswitch /var/log/deathplanswitch-scheduler.log
+}

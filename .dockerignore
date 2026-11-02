@@ -3,6 +3,7 @@
 .*
 tests
 docs
+packaging
 data/**
 !data/index.html
 .env*

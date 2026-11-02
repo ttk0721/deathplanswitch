@@ -1,0 +1,56 @@
+# nfpm config for the .deb and .rpm. build.sh runs it in a work directory that
+# holds ./stage (the staged app) and ./linux (a copy of packaging/linux), and
+# exports VERSION and SOURCE_DATE_EPOCH.
+name: deathplanswitch
+arch: all
+platform: linux
+version: ${VERSION}
+section: web
+priority: optional
+maintainer: ttk0721 <ttk0721@protonmail.com>
+description: |
+  Death Plan Switch: a dead man's switch that runs as two background services.
+  The web service listens on 127.0.0.1:8080 by default; put an HTTPS proxy in front.
+homepage: https://github.com/ttk0721/deathplanswitch
+license: MIT
+depends:
+  - php-cli (>= 8.1)
+  - php-curl
+  - php-mbstring
+overrides:
+  rpm:
+    depends:
+      - php-cli >= 8.1
+      - php-mbstring
+      - php-process
+contents:
+  # App code: owned by root, so the service user cannot rewrite it.
+  - src: ./stage
+    dst: /usr/share/deathplanswitch
+    type: tree
+  # Data directory. postinstall creates the system user and hands this
+  # directory to it (the user does not exist yet when files are unpacked).
+  - dst: /var/lib/deathplanswitch
+    type: dir
+    file_info:
+      mode: 0750
+      owner: root
+      group: root
+  - src: ./linux/deathplanswitch-web.service
+    dst: /lib/systemd/system/deathplanswitch-web.service
+    file_info:
+      mode: 0644
+  - src: ./linux/deathplanswitch-scheduler.service
+    dst: /lib/systemd/system/deathplanswitch-scheduler.service
+    file_info:
+      mode: 0644
+  - src: ./linux/deathplanswitch.default
+    dst: /etc/default/deathplanswitch
+    type: config|noreplace
+    file_info:
+      mode: 0600
+      owner: root
+      group: root
+scripts:
+  postinstall: ./linux/postinstall.sh
+  preremove: ./linux/preremove.sh

@@ -19,9 +19,9 @@ if ($page === 'logout') {
     Web::redirect('index.php?p=login');
 }
 
-// Visitors who are not signed in see the public page, once the switch is installed.
-if ($page === '' && !empty(store()->read('config')['installed_at']) && !Web::signedIn()) {
-    Web::$layout = 'plain';
+// Visitors who are not signed in see the public page; before the install it says the switch is being set up.
+if ($page === '' && !Web::signedIn()) {
+    Web::$layout = 'landing';
     Web::page('public');
 }
 

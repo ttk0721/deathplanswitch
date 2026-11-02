@@ -59,6 +59,21 @@ compose up -d --build
 wait_for 60 is_up || true
 if is_up; then pass "install.php answers 200"; else fail "install.php answers 200"; fi
 
+# The one-time setup code reaches the container log and the data folder, and the installer is gated by it.
+logged="$(compose logs --no-color web 2>/dev/null | grep -o 'Setup code: [0-9A-Z]\{4\}\(-[0-9A-Z]\{4\}\)\{4\}' | head -n1 | sed 's/^Setup code: //')"
+stored="$(inspect "$SMOKE_DATA" setup-code | tr -d '\r\n')"
+if [ -n "$logged" ] && [ "$logged" = "$stored" ]; then
+  pass "setup code is in the web log and in /data/setup-code"
+else
+  fail "setup code is in the web log and in /data/setup-code (log='$logged' file='$stored')"
+fi
+front="$(curl -s http://127.0.0.1:18080/ || true)"
+if printf '%s' "$front" | grep -q 'landing-signin' && printf '%s' "$front" | grep -q 'install.php' && ! printf '%s' "$front" | grep -q "$logged"; then
+  pass "/ shows the public page in its setup state, without the code"
+else
+  fail "/ shows the public page in its setup state, without the code"
+fi
+
 if [ "$(code /app/bootstrap.php)" = 403 ] && [ "$(code /data/)" = 403 ]; then
   pass "/app/bootstrap.php and /data/ answer 403"
 else
@@ -66,6 +81,12 @@ else
 fi
 
 # Nothing private is served: project files, dotfiles, case/encoding tricks.
+if [ "$(code /data/setup-code)" = 403 ] && [ "$(code /data/landing/background.jpg)" = 403 ]; then
+  pass "/data/setup-code and /data/landing/ answer 403"
+else
+  fail "/data/setup-code and /data/landing/ answer 403"
+fi
+
 leaks=""
 for u in /Dockerfile /docker-compose.yml /.env /.env.example /.git/config /config.local.php /README.md \
          /DATA/ /Data/config.json /data/config.json /data/..%2Fconfig.json /data%2Fconfig.json /data./ /app./Web.php /APP/Web.php \

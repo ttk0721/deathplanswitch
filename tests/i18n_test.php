@@ -166,10 +166,13 @@ foreach (array_keys(checkedLanguages()) as $code) {
                 if (is_array($value) && count($value) !== $forms) {
                     $bad[] = $name . ': ' . $en . '  has ' . count($value) . " forms, needs $forms";
                 }
-                foreach ($list as $text) {
+                foreach ($list as $i => $text) {
+                    // CLDR "one", "two" and "zero" may say the number in words and omit {n}.
+                    $category = is_array($value) ? (\DPS\Plural::RULES[(string) checkedLanguages()[$code]['plural']][$i] ?? 'other') : 'other';
+                    $mayOmit = in_array($category, ['one', 'two', 'zero'], true);
                     if (!is_string($text) || trim($text) === '') {
                         $bad[] = $name . ': ' . $en . '  has an empty value';
-                    } elseif (placeholders((string) $en) !== placeholders($text)) {
+                    } elseif (placeholders((string) $en) !== placeholders($text) && !($mayOmit && placeholders($text) === [])) {
                         $bad[] = $name . ': ' . $en . '  =>  ' . $text;
                     }
                 }

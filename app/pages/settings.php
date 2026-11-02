@@ -118,15 +118,59 @@ if (Web::posted()) {
         case 'landing_save':
             $title = trim(Web::post('landing_title'));
             $text = trim(str_replace("\r\n", "\n", Web::post('landing_text')));
+            $quote = trim((string) preg_replace('/\s+/u', ' ', Web::post('landing_quote')));
+            $by = trim((string) preg_replace('/\s+/u', ' ', Web::post('landing_by')));
+            $background = Web::post('landing_background', Landing::DEFAULT_BACKGROUND);
             if (mb_strlen($title) > 80 || mb_strlen($text) > 2000) {
                 Web::flash(t('The title can be up to 80 characters and the text up to 2000.'), 'bad');
                 break;
             }
-            $store->locked(static function () use ($store, $title, $text): void {
+            if (mb_strlen($quote) > 280 || mb_strlen($by) > 80) {
+                Web::flash(t('The quote can be up to 280 characters and the name up to 80.'), 'bad');
+                break;
+            }
+            if ($background !== 'own' && !in_array($background, Landing::BUILT_IN, true)) {
+                $background = Landing::DEFAULT_BACKGROUND;
+            }
+            $upload = $_FILES['landing_image'] ?? null;
+            $uploaded = null;
+            if (is_array($upload) && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                if ((int) $upload['error'] === UPLOAD_ERR_INI_SIZE || (int) $upload['error'] === UPLOAD_ERR_FORM_SIZE) {
+                    Web::flash(t('The image can be up to 3 MB.'), 'bad');
+                    break;
+                }
+                if ((int) $upload['error'] !== UPLOAD_ERR_OK || !is_uploaded_file((string) $upload['tmp_name'])) {
+                    Web::flash(t('The image could not be uploaded. Try again.'), 'bad');
+                    break;
+                }
+                $uploaded = Landing::inspect((string) $upload['tmp_name']);
+                if (is_string($uploaded)) {
+                    Web::flash($uploaded, 'bad');
+                    break;
+                }
+                $background = 'own';
+            }
+            $problem = $store->locked(static function () use ($store, $title, $text, $quote, $by, $background, $upload, $uploaded): ?string {
                 $config = $store->read('config');
-                $config['landing'] = ['title' => $title, 'text' => $text];
+                $old = $config['landing']['image'] ?? null;
+                $image = is_string($old) ? $old : null;
+                if ($uploaded !== null) {
+                    $image = Landing::store($store, (string) $upload['tmp_name'], $uploaded['ext'], $image);
+                } elseif ($background === 'own' && Landing::imagePath($store, $image) === null) {
+                    return t('Choose an image to upload.');
+                }
+                $landing = ['title' => $title, 'text' => $text, 'quote' => $quote, 'by' => $by, 'background' => $background];
+                if ($image !== null) {
+                    $landing['image'] = $image;
+                }
+                $config['landing'] = $landing;
                 $store->write('config', $config);
+                return null;
             });
+            if ($problem !== null) {
+                Web::flash($problem, 'bad');
+                break;
+            }
             Web::flash(t('Saved. This is what visitors see at the front of this install.'));
             break;
 
@@ -460,19 +504,62 @@ Web::$title = t('Settings: Death Plan Switch');
 </div>
 
 <h2><?= e(t('Public page')) ?></h2>
-<form method="post" action="index.php?p=settings">
+<?php
+$landingSaved = (array) ($config['landing'] ?? []);
+$landingChoice = Landing::choice($store, $landingSaved);
+$hasOwnImage = Landing::imagePath($store, $landingSaved['image'] ?? null) !== null;
+?>
+<form method="post" action="index.php?p=settings" enctype="multipart/form-data">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="landing_save">
+  <div class="field field-wide">
+    <label for="landing_quote"><?= e(t('Quote')) ?></label>
+    <textarea id="landing_quote" name="landing_quote" rows="3" maxlength="280" class="short"><?= e($landingSaved['quote'] ?? '') ?></textarea>
+    <span class="help"><?= e(t('Shown large in the middle of the page, in your own words. Up to 280 characters.')) ?></span>
+  </div>
+  <div class="field">
+    <label for="landing_by"><?= e(t('Name under the quote')) ?></label>
+    <input type="text" id="landing_by" name="landing_by" maxlength="80" value="<?= e($landingSaved['by'] ?? '') ?>" placeholder="<?= e((string) ($config['owner_name'] ?? '')) ?>">
+  </div>
+  <fieldset class="backgrounds">
+    <legend><?= e(t('Background')) ?></legend>
+    <div class="background-grid">
+<?php foreach (Landing::builtIn() as $id => $label): ?>
+      <label class="background-card">
+        <input type="radio" name="landing_background" value="<?= e($id) ?>"<?= $landingChoice === $id ? ' checked' : '' ?>>
+        <img src="assets/landing/<?= e($id) ?>.svg" alt="" width="160" height="100" loading="lazy">
+        <span><?= e($label) ?></span>
+      </label>
+<?php endforeach ?>
+      <label class="background-card">
+        <input type="radio" name="landing_background" value="own"<?= $landingChoice === 'own' ? ' checked' : '' ?>>
+<?php if ($hasOwnImage): ?>
+        <img src="<?= e(Landing::src('own', $landingSaved)) ?>" alt="" width="160" height="100" loading="lazy">
+<?php else: ?>
+        <span class="background-empty" aria-hidden="true"></span>
+<?php endif ?>
+        <span><?= e(t('Own image')) ?></span>
+      </label>
+    </div>
+    <div class="field">
+      <label for="landing_image"><?= e(t('Upload your own image')) ?></label>
+      <input type="file" id="landing_image" name="landing_image" accept="image/jpeg,image/png,image/webp">
+      <span class="help"><?= e(t('JPEG, PNG or WebP, up to 3 MB. A calm picture works best: text is placed over it.')) ?></span>
+    </div>
+  </fieldset>
   <div class="field">
     <label for="landing_title"><?= e(t('Title')) ?></label>
-    <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($config['landing']['title'] ?? '') ?>" placeholder="Death Plan Switch">
+    <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($landingSaved['title'] ?? '') ?>" placeholder="Death Plan Switch">
   </div>
   <div class="field">
     <label for="landing_text"><?= e(t('Text')) ?></label>
-    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="<?= e(t('This switch is not active.')) ?>"><?= e($config['landing']['text'] ?? '') ?></textarea>
+    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="<?= e(t('This switch is not active.')) ?>"><?= e($landingSaved['text'] ?? '') ?></textarea>
     <span class="help"><?= e(t('What visitors see at this address before the switch has fired. Leave empty for the defaults. A blank line starts a new paragraph.')) ?></span>
   </div>
-  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
+  <div class="actions">
+    <button type="submit"><?= e(t('Save')) ?></button>
+    <a class="button button-quiet" href="index.php?p=public" target="_blank" rel="noopener"><?= e(t('Preview the page')) ?></a>
+  </div>
 </form>
 
 <h2><?= e(t('Address of this install')) ?></h2>

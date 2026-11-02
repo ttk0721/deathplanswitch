@@ -12,6 +12,7 @@ if (!isset($content)) {
 }
 
 $admin = Web::$layout === 'admin';
+$landing = Web::$layout === 'landing';
 $current = Web::get('p', 'switch');
 $nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'nodes' => 'Nodes', 'settings' => 'Settings', 'history' => 'History'];
 $navText = ['switch' => t('Switch'), 'contacts' => t('Contacts'), 'vault' => t('Vault'), 'nodes' => t('Nodes'), 'settings' => t('Settings'), 'history' => t('History')];
@@ -59,7 +60,7 @@ if ($admin) {
 <link rel="stylesheet" href="assets/app.css?v=<?= e(VERSION) ?>">
 <link rel="icon" href="data:,">
 </head>
-<body class="layout-<?= $admin ? 'admin' : 'plain' ?>">
+<body class="layout-<?= $admin ? 'admin' : ($landing ? 'landing' : 'plain') ?>">
 <?php if ($admin): ?>
 <header class="masthead">
   <a class="wordmark" href="index.php"><?php if ($logo): ?><img src="<?= e($logo) ?>" alt="Death Plan Switch"><?php else: ?>Death Plan Switch<?php endif ?></a>
@@ -87,7 +88,7 @@ if ($admin) {
     </ul>
   </div>
 <?php endif ?>
-<?php if ($admin): ?>
+<?php if ($admin || $landing): ?>
 <?= $content ?>
 <?php else: ?>
   <div class="sheet">
@@ -95,9 +96,11 @@ if ($admin) {
   </div>
 <?php endif ?>
 </main>
+<?php if (!$landing): ?>
 <footer class="colophon">
   <?= $admin ? e(t('Death Plan Switch {version}. Free software under the MIT licence.', ['version' => VERSION])) : e(t('Death Plan Switch')) ?>
 </footer>
+<?php endif ?>
 <script src="assets/app.js?v=<?= e(VERSION) ?>" defer></script>
 </body>
 </html>

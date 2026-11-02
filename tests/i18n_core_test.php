@@ -155,24 +155,60 @@ test('hour labels and named formats follow the language', function (): void {
     same('12:00pm', \DPS\hourLabel(12), 'noon');
     same('12:00am', \DPS\hourLabel(0), 'midnight');
 });
+/**
+ * Runs the language lookup in a child php whose DPS_ROOT holds a symlinked app/ and a lang/
+ * with only en, pl and a registry that also lists xx (no folder). Returns the decoded result.
+ */
+function fixtureLookup(): array
+{
+    $root = sys_get_temp_dir() . '/dps-i18n-' . bin2hex(random_bytes(6));
+    mkdir($root . '/lang', 0700, true);
+    symlink(dirname(__DIR__) . '/app', $root . '/app');
+    foreach (['en', 'pl'] as $c) {
+        if (is_dir(dirname(__DIR__) . '/lang/' . $c)) {
+            symlink(dirname(__DIR__) . '/lang/' . $c, $root . '/lang/' . $c);
+        }
+    }
+    file_put_contents($root . '/lang/languages.php', "<?php return ["
+        . "'en'=>['name'=>'English','dir'=>'ltr','plural'=>'one_other'],"
+        . "'pl'=>['name'=>'Polski','dir'=>'rtl','plural'=>'pl'],"
+        . "'xx'=>['name'=>'Nowhere','dir'=>'ltr','plural'=>'none']];");
+    $code = 'define("DPS_ROOT", "' . $root . '"); require DPS_ROOT . "/app/bootstrap.php";'
+        . ' $r = ["avail" => array_keys(DPS\I18n::available()), "name" => DPS\I18n::available()["pl"]["name"],'
+        . ' "al" => DPS\I18n::fromAcceptLanguage("pl-PL,pl;q=0.9,en;q=0.8"),'
+        . ' "unk" => DPS\I18n::fromAcceptLanguage("de;q=0.9,en;q=0.5"),'
+        . ' "none" => DPS\I18n::fromAcceptLanguage("de,fr;q=0.8"), "empty" => DPS\I18n::fromAcceptLanguage("")];'
+        . ' DPS\I18n::setLanguage("xx"); $r["xx"] = DPS\lang();'
+        . ' DPS\I18n::setLanguage("pl"); $r["dir"] = DPS\I18n::dir(); echo json_encode($r);';
+    $out = (string) shell_exec('env -u DPS_DATA -u DPS_DOCKER ' . escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code));
+    foreach (['en', 'pl'] as $c) {
+        if (is_link($root . '/lang/' . $c)) {
+            unlink($root . '/lang/' . $c);
+        }
+    }
+    unlink($root . '/lang/languages.php');
+    unlink($root . '/app');
+    rmdir($root . '/lang');
+    rmdir($root);
+    $r = json_decode($out, true);
+    return is_array($r) ? $r : [];
+}
+
 test('the registry drives language choice, direction and Accept-Language', function (): void {
-    same(['en', 'pl'], array_keys(I18n::available()), 'available');
-    same('Polski', I18n::available()['pl']['name'], 'native name');
-    same('pl', I18n::fromAcceptLanguage('pl-PL,pl;q=0.9,en;q=0.8'), 'pl');
-    same('en', I18n::fromAcceptLanguage('en-US,en;q=0.9'), 'en');
-    same('en', I18n::fromAcceptLanguage('de;q=0.9,en;q=0.5'), 'skips unknown');
-    same(null, I18n::fromAcceptLanguage('de,fr;q=0.8'), 'none');
-    same(null, I18n::fromAcceptLanguage(''), 'empty');
-    I18n::useRegistry([
-        'en' => ['name' => 'English', 'dir' => 'ltr', 'plural' => 'one_other'],
-        'pl' => ['name' => 'Polski', 'dir' => 'rtl', 'plural' => 'pl'],
-        'xx' => ['name' => 'Nowhere', 'dir' => 'ltr', 'plural' => 'none'],
-    ]);
-    same(['en', 'pl'], array_keys(I18n::available()), 'a registered language without a folder is unavailable');
-    I18n::setLanguage('xx');
-    same('en', \DPS\lang(), 'no folder means en');
-    I18n::setLanguage('pl');
-    same('rtl', I18n::dir(), 'dir from the registry');
+    $r = fixtureLookup();
+    same(['en', 'pl'], $r['avail'] ?? null, 'a registered language without a folder is not offered');
+    same('Polski', $r['name'] ?? null, 'native name');
+    same('pl', $r['al'] ?? null, 'pl');
+    same('en', $r['unk'] ?? null, 'skips unknown');
+    same(true, array_key_exists('none', $r) && $r['none'] === null, 'none');
+    same(true, array_key_exists('empty', $r) && $r['empty'] === null, 'empty');
+    same('en', $r['xx'] ?? null, 'no folder means en');
+    same('rtl', $r['dir'] ?? null, 'dir from the registry');
+});
+test('every code in the real registry has a lang folder', function (): void {
+    foreach (array_keys(require dirname(__DIR__) . '/lang/languages.php') as $code) {
+        same(true, $code === 'en' || is_dir(dirname(__DIR__) . '/lang/' . $code), "folder for $code");
+    }
     I18n::useRegistry(null);
     same('ltr', I18n::dir(), 'real registry');
 });

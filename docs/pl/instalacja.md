@@ -42,6 +42,17 @@ Zachowaj tylko folder z danymi. Aktualizacja podmienia aplikację i nie rusza da
 
 Po instalacji otwórz `http://127.0.0.1:8080/install.php` i przejdź instalator w przeglądarce. Z innego komputera użyj adresu serwera, o ile ustawisz `DPS_LISTEN` inaczej niż domyślnie.
 
+### Kod instalacji
+
+Instalator pyta na początku o jednorazowy kod instalacji (20 znaków w pięciu grupach, na przykład `7QK2-M9XT-0HVB-D4RN-Z8PE`). Dzięki niemu nikt przypadkowy, kto trafi na świeży serwer, nie zainstaluje przełącznika za ciebie. Kod pojawia się przy pierwszym starcie i znika po zakończeniu instalacji. Znajdziesz go tak:
+
+- **Docker:** `docker logs <kontener web>` (linia `Setup code: …`),
+- **Linux z systemd:** `journalctl -u deathplanswitch-scheduler`,
+- **FreeBSD, macOS, Windows:** w logu usługi harmonogramu (na Windows w logu zadania harmonogramu),
+- **wszędzie:** `php cli/setup-code.php` w folderze aplikacji, uruchomione jako użytkownik, do którego należą dane.
+
+Do tego czasu strona główna pokazuje odwiedzającym komunikat „Ten przełącznik jest w trakcie konfiguracji” i przycisk przejścia do instalatora.
+
 <a id="docker"></a>
 
 ## Docker
@@ -51,7 +62,7 @@ Pasuje do Synology, Portainera, TrueNAS-a, Unraida, CasaOS i zwykłego serwera z
 1. Pobierz `deathplanswitch-X.Y.Z-docker-compose.zip` i rozpakuj do własnego folderu.
 2. Skopiuj `.env.example` jako `.env` i uzupełnij. Plik `docker-compose.yml` wskazuje już obraz tej wersji (`ghcr.io/ttk0721/deathplanswitch:X.Y.Z`).
 3. Uruchom `docker compose up -d`.
-4. Otwórz `http://ADRES:8080/install.php`.
+4. Otwórz `http://ADRES:8080/install.php`. Instalator poprosi o kod instalacji: odczytasz go poleceniem `docker logs <kontener web>` (linia `Setup code: …`).
 
 Obraz działa na linux/amd64 i linux/arm64 (Raspberry Pi także). Dane trafiają do podfolderu `data/` obok pliku compose.
 

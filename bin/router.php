@@ -101,7 +101,7 @@ if ($deny) {
 $docroot = (string) realpath(__DIR__ . '/..');
 $entryPoints = [
     'index.php', 'install.php', 'checkin.php', 'confirm.php', 'respond.php',
-    'vault.php', 'vault-api.php', 'node-api.php', 'health.php', 'tick.php',
+    'vault.php', 'vault-api.php', 'landing-bg.php', 'node-api.php', 'health.php', 'tick.php',
 ];
 
 // Anything but the exact normal form (encoded characters, "//", trailing

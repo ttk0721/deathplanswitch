@@ -193,7 +193,8 @@ test('cluster ids cannot carry a trailing newline', function (): void {
 
 test('node.json is private and the public identity has no secrets', function (): void {
     [$a, , , $ia] = setup();
-    same('0600', substr(sprintf('%o', fileperms($a->path('node'))), -4), 'mode');
+    // Windows has no POSIX modes; its protection is the data folder ACL set by install.ps1
+    if (PHP_OS_FAMILY !== 'Windows') { same('0600', substr(sprintf('%o', fileperms($a->path('node'))), -4), 'mode'); }
     $k = array_keys($ia);
     sort($k);
     same(['id', 'name', 'share_pk', 'sign_pk'], $k, 'public keys only');

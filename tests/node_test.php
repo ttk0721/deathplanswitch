@@ -20,7 +20,8 @@ test('init gives the identity shape and a 0600 node.json', function (): void {
     same('nas', $id['name'], 'name');
     same(43, strlen($id['sign_pk']), 'sign_pk length');
     same($id, Node::publicIdentity($s), 'publicIdentity');
-    same('0600', substr(sprintf('%o', fileperms($s->path('node'))), -4), 'mode');
+    // Windows has no POSIX modes; its protection is the data folder ACL set by install.ps1
+    if (PHP_OS_FAMILY !== 'Windows') { same('0600', substr(sprintf('%o', fileperms($s->path('node'))), -4), 'mode'); }
     $raw = $s->read('node');
     same(64, strlen(base64_decode(strtr($raw['sign_sk'], '-_', '+/'))), 'sk bytes');
 });

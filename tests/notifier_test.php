@@ -7,8 +7,9 @@ require __DIR__ . '/lib.php';
 $dir = sys_get_temp_dir() . '/dps-capture-' . bin2hex(random_bytes(4));
 mkdir($dir);
 $port = 18500 + random_int(0, 400);
+$null = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
 $proc = proc_open([PHP_BINARY, '-S', "127.0.0.1:$port", __DIR__ . '/fixtures/capture.php'],
-    [1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']], $pipes, null, ['CAPTURE_DIR' => $dir] + getenv());
+    [1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']], $pipes, null, ['CAPTURE_DIR' => $dir] + getenv());
 register_shutdown_function(static fn () => proc_terminate($proc));
 for ($i = 0; $i < 50 && !@fsockopen('127.0.0.1', $port); $i++) { usleep(100000); }
 $last = static function () use ($dir): array {

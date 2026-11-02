@@ -143,10 +143,12 @@ jobs:
           catch { $refused = $_.Exception.Message -like 'Refusing to install*' }
           if (-not $refused) { throw 'install.ps1 accepted a PHP folder writable by Authenticated Users' }
       - name: Install as start-up tasks
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
           ./packaging/windows/install.ps1 -PhpPath (Get-Command php).Source -Listen 127.0.0.1:8080
       - name: Check the running server
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: |
           function Get-Code($path) {
@@ -173,7 +175,7 @@ jobs:
           $code = Get-Code '/assets/../app/bootstrap.php'
           if ($code -ne '400') { throw "dot-dot gave $code, expected 400" }
       - name: Uninstall
-        if: always()
+        if: ${{ !cancelled() }}
         shell: pwsh
         run: ./packaging/windows/uninstall.ps1 -RemoveData
 

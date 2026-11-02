@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+// Check-in, confirm, respond, history, public page and the vault pages.
+// Keys are the English source strings. Pages for family avoid gendered forms.
+return [
+    // Check-in (owner)
+    'Check in: Death Plan Switch' => 'Check-in: Death Plan Switch',
+    'Checked in' => 'Check-in berhasil',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm: {names}.' => 'Sakelar Anda sempat dijalankan. Semua orang yang dihubungi kini sudah diberi tahu bahwa itu alarm palsu: {names}.',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm.' => 'Sakelar Anda sempat dijalankan. Semua orang yang dihubungi kini sudah diberi tahu bahwa itu alarm palsu.',
+    'Your contacts have read their messages, so any pointer in them has been seen. {link} to review what needs changing.' => 'Kontak Anda sudah membaca pesan mereka, sehingga petunjuk apa pun di dalamnya sudah terlihat. {link} untuk meninjau apa yang perlu diubah.',
+    'Sign in' => 'Masuk',
+    '{names} had been asked whether you are all right, and has now been told it was a false alarm. Nobody else was contacted.' => '{names} sempat ditanya apakah Anda baik-baik saja, dan kini sudah diberi tahu bahwa itu alarm palsu. Tidak ada orang lain yang dihubungi.',
+    '{names} had been asked whether you are all right, and have now been told it was a false alarm. Nobody else was contacted.' => '{names} sempat ditanya apakah Anda baik-baik saja, dan kini sudah diberi tahu bahwa itu alarm palsu. Tidak ada orang lain yang dihubungi.',
+    'Thank you. Nobody was contacted.' => 'Terima kasih. Tidak ada yang dihubungi.',
+    'Your switch is paused until {date}.' => 'Sakelar Anda dijeda sampai {date}.',
+    'Your next check-in email arrives on {date} at {time}.' => 'Email check-in berikutnya akan tiba pada {date} pukul {time}.',
+    'Are you there, {name}?' => 'Apakah Anda di sana, {name}?',
+    'owner' => 'pemilik',
+    'Press the button to check in. Opening this page is not enough.' => 'Tekan tombol untuk check-in. Membuka halaman ini saja tidak cukup.',
+    'I am here: check in' => 'Saya di sini: check-in',
+    'This link is no longer active' => 'Tautan ini tidak lagi aktif',
+    'Each check-in link works once, and for 14 days. If you have a newer email from Death Plan Switch, use the link in that one.' => 'Setiap tautan check-in hanya berlaku satu kali, dan selama 14 hari. Jika Anda memiliki email yang lebih baru dari Death Plan Switch, gunakan tautan di email itu.',
+    'You can also {link} and check in from the dashboard.' => 'Anda juga dapat {link} dan check-in dari dasbor.',
+    'sign in' => 'masuk',
+
+    // Confirm (contact)
+    'Death Plan Switch' => 'Death Plan Switch',
+    'Confirmed' => 'Sudah konfirmasi',
+    'Thank you, {name}. {owner} has been told. There is nothing else to do.' => 'Terima kasih, {name}. {owner} sudah diberi tahu. Tidak ada lagi yang perlu dilakukan.',
+    'If {owner} ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.' => 'Jika suatu saat {owner} berhenti melakukan check-in, Anda akan menerima kabar dari alamat email yang sama dengan yang mengirim permintaan ini. Tambahkan alamat itu ke kontak Anda agar tidak dianggap spam.',
+    'Done' => 'Selesai',
+    "You will not be contacted by {owner}'s Death Plan Switch. {owner} has been told." => 'Anda tidak akan dihubungi oleh Death Plan Switch milik {owner}. {owner} sudah diberi tahu.',
+    "Still happy to be {owner}'s {role}?" => 'Apakah Anda masih bersedia menjadi {role} bagi {owner}?',
+    '{owner} has listed you as their {role}' => '{owner} mencantumkan Anda sebagai {role}',
+    '{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen.' => '{owner} menggunakan Death Plan Switch, sebuah aplikasi kecil di server milik sendiri. Setiap minggu aplikasi ini meminta {owner} untuk check-in. Jika check-in berhenti, aplikasi mengirim email kepada orang-orang yang telah dipilih.',
+    'As next of kin you would be asked first. If {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.' => 'Sebagai kerabat terdekat, Anda akan ditanya lebih dulu. Jika {owner} melewatkan satu check-in dan tiga hari pengingat, Anda akan menerima satu email yang menanyakan apakah semuanya baik-baik saja, dengan dua tombol untuk menjawab.',
+    'If {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what {owner} needs you to do.' => 'Jika {owner} berhenti melakukan check-in dan kerabat terdekatnya tidak dapat memastikan bahwa semuanya baik-baik saja, Anda akan menerima satu email yang menjelaskan apa yang diminta {owner} dari Anda.',
+    'Confirming tells {owner} that {address} reaches you, and that you are willing.' => 'Dengan mengonfirmasi, {owner} akan tahu bahwa {address} sampai kepada Anda, dan bahwa Anda bersedia.',
+    'Yes, I confirm' => 'Ya, saya konfirmasi',
+    'No, leave me out' => 'Tidak, jangan libatkan saya',
+    'It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.' => 'Tautan ini sudah pernah dipakai atau sudah kedaluwarsa. Jika Anda ingin mengonfirmasi, mintalah orang yang mencantumkan Anda untuk mengirim permintaan baru.',
+
+    // Respond (next of kin)
+    'All fine' => 'Semua baik-baik saja',
+    'You have seen or spoken to {owner} and they are all right. Nobody else is contacted, and {owner} is told you answered.' => 'Anda telah bertemu atau berbicara dengan {owner} dan keadaannya baik. Tidak ada orang lain yang dihubungi, dan {owner} akan diberi tahu bahwa Anda sudah menjawab.',
+    "Something's wrong" => 'Ada yang tidak beres',
+    '{owner} cannot run their business at the moment.' => '{owner} saat ini tidak dapat mengurus urusannya.',
+    'These people are sent their instructions straight away: {names}.' => 'Orang-orang ini akan segera menerima petunjuk mereka: {names}.',
+    'The people they chose are sent their instructions straight away.' => 'Orang-orang yang telah dipilih akan segera menerima petunjuk mereka.',
+    'You are sent yours too.' => 'Anda juga akan menerima petunjuk Anda.',
+    'Thank you' => 'Terima kasih',
+    'Your answer has been recorded. Nobody else has been contacted, and {owner} has been told that you answered.' => 'Jawaban Anda telah dicatat. Tidak ada orang lain yang dihubungi, dan {owner} sudah diberi tahu bahwa Anda menjawab.',
+    'Your answer has been recorded.' => 'Jawaban Anda telah dicatat.',
+    'These people have been sent their instructions: {names}.' => 'Orang-orang ini telah menerima petunjuk mereka: {names}.',
+    'The people {owner} chose have been sent their instructions.' => 'Orang-orang yang dipilih {owner} telah menerima petunjuk mereka.',
+    'You have been emailed a message from {owner} as well, with what to do next.' => 'Anda juga telah dikirimi pesan dari {owner}, berisi apa yang perlu dilakukan selanjutnya.',
+    'Is {owner} all right?' => 'Apakah {owner} baik-baik saja?',
+    '{owner} has not answered their weekly check-in or its reminders. You are their next of kin, so you are asked first. Nothing has been sent to anyone else.' => '{owner} belum menjawab check-in mingguannya maupun pengingatnya. Anda adalah kerabat terdekatnya, sehingga Anda ditanya lebih dulu. Belum ada apa pun yang dikirim kepada orang lain.',
+    'Not sure yet? You can come back to this page. If neither you nor {owner} answers by the time given in the email, the others are sent their instructions.' => 'Belum yakin? Anda dapat kembali ke halaman ini. Jika Anda maupun {owner} tidak menjawab sampai batas waktu yang tertera di email, orang-orang lain akan dikirimi petunjuk mereka.',
+    'It has either been used already, or the check it belonged to has been settled. You do not need to do anything.' => 'Tautan ini sudah pernah dipakai, atau pemeriksaan yang terkait dengannya sudah selesai. Anda tidak perlu melakukan apa pun.',
+
+    // History
+    'History: Death Plan Switch' => 'Riwayat: Death Plan Switch',
+    'History' => 'Riwayat',
+    'Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.' => 'Semua yang telah dilakukan sakelar, dari yang terbaru. Proses penjadwal yang tidak menemukan apa pun untuk dilakukan tidak dicantumkan.',
+    'Nothing has happened yet.' => 'Belum ada yang terjadi.',
+
+    // Public page
+    'This switch is active.' => 'Sakelar ini aktif.',
+    'This switch is not active.' => 'Sakelar ini tidak aktif.',
+    'This switch is armed.' => 'Sakelar ini siaga.',
+    'Triggered' => 'Telah dijalankan',
+    'This switch has been triggered.' => 'Sakelar ini telah dijalankan.',
+    'Open the vault' => 'Buka brankas',
+    'Armed' => 'Siaga',
+    'Not active' => 'Tidak aktif',
+    'Owner sign-in' => 'Masuk pemilik',
+
+    // Vault (owner and recipient)
+    'That recipient has no contact with an email address, so no invitation was sent.' => 'Penerima itu tidak memiliki kontak dengan alamat email, sehingga undangan tidak dikirim.',
+    'Invitation sent to {name}.' => 'Undangan dikirim ke {name}.',
+    'The invitation could not be sent. Check the mail settings.' => 'Undangan tidak dapat dikirim. Periksa pengaturan email.',
+    'Vault: Death Plan Switch' => 'Brankas: Death Plan Switch',
+    'Vault' => 'Brankas',
+    "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'Apa yang Anda tinggalkan untuk orang-orang pilihan Anda, dikunci di peramban Anda. Hanya kode atau kata sandi penerima yang dapat membukanya, dan hanya setelah sakelar dijalankan.',
+    'The vault needs JavaScript. Turn it on for this page.' => 'Brankas memerlukan JavaScript. Aktifkan JavaScript untuk halaman ini.',
+    'This page needs JavaScript, because everything is decrypted in your browser.' => 'Halaman ini memerlukan JavaScript, karena semuanya didekripsi di peramban Anda.',
+];

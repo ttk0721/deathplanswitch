@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+// Check-in, confirm, respond, history, public page and the vault pages.
+// Keys are the English source strings. Pages for family avoid gendered forms.
+return [
+    // Check-in (owner)
+    'Check in: Death Plan Switch' => 'Підтвердження присутності: Death Plan Switch',
+    'Checked in' => 'Присутність підтверджено',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm: {names}.' => 'Твій перемикач спрацював. Усі, з ким ми звʼязувалися, уже отримали повідомлення, що це була помилкова тривога: {names}.',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm.' => 'Твій перемикач спрацював. Усі, з ким ми звʼязувалися, уже отримали повідомлення, що це була помилкова тривога.',
+    'Your contacts have read their messages, so any pointer in them has been seen. {link} to review what needs changing.' => 'Твої контакти прочитали свої повідомлення, тож хтось міг побачити вказівки в них. {link}, щоб переглянути, що треба змінити.',
+    'Sign in' => 'Увійти',
+    '{names} had been asked whether you are all right, and has now been told it was a false alarm. Nobody else was contacted.' => 'Ми запитали, чи все з тобою гаразд: {names}. Про помилкову тривогу вже повідомлено. Ніхто інший не отримував повідомлень.',
+    '{names} had been asked whether you are all right, and have now been told it was a false alarm. Nobody else was contacted.' => 'Ми запитали, чи все з тобою гаразд: {names}. Про помилкову тривогу вже повідомлено. Ніхто інший не отримував повідомлень.',
+    'Thank you. Nobody was contacted.' => 'Дякуємо. Нікого не сповіщено.',
+    'Your switch is paused until {date}.' => 'Твій перемикач призупинено до: {date}.',
+    'Your next check-in email arrives on {date} at {time}.' => 'Наступний лист із проханням підтвердити присутність надійде: {date}, о {time}.',
+    'Are you there, {name}?' => '{name}, ти тут?',
+    'owner' => 'власнику',
+    'Press the button to check in. Opening this page is not enough.' => 'Натисни кнопку, щоб підтвердити присутність. Самого відкриття цієї сторінки недостатньо.',
+    'I am here: check in' => 'Я тут: підтверджую',
+    'This link is no longer active' => 'Це посилання більше не діє',
+    'Each check-in link works once, and for 14 days. If you have a newer email from Death Plan Switch, use the link in that one.' => 'Кожне посилання для підтвердження присутності діє один раз і протягом 14 днів. Якщо в тебе є новіший лист від Death Plan Switch, скористайся посиланням із нього.',
+    'You can also {link} and check in from the dashboard.' => 'Також можна {link} і підтвердити присутність на панелі керування.',
+    'sign in' => 'увійти',
+
+    // Confirm (contact)
+    'Death Plan Switch' => 'Death Plan Switch',
+    'Confirmed' => 'Підтверджено',
+    'Thank you, {name}. {owner} has been told. There is nothing else to do.' => 'Дякуємо, {name}. Людину, яка вас вказала ({owner}), поінформовано. Більше нічого робити не потрібно.',
+    'If {owner} ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.' => 'Якщо людина, яка вас вказала ({owner}), перестане підтверджувати присутність, ви отримаєте повідомлення з тієї самої адреси, з якої надійшов цей запит. Додайте її до контактів, щоб лист не потрапив до спаму.',
+    'Done' => 'Готово',
+    "You will not be contacted by {owner}'s Death Plan Switch. {owner} has been told." => 'Death Plan Switch цієї людини ({owner}) не звʼязуватиметься з вами. Ми їй про це повідомляємо.',
+    "Still happy to be {owner}'s {role}?" => 'Ви й досі погоджуєтеся бути в ролі «{role}» для: {owner}?',
+    '{owner} has listed you as their {role}' => '{owner} вказує вас у ролі: {role}',
+    '{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen.' => 'Людина на імʼя {owner} користується Death Plan Switch, невеликим застосунком на власному сервері. Щотижня він просить підтвердити, що все гаразд. Якщо підтвердження немає, застосунок пише обраним людям.',
+    'As next of kin you would be asked first. If {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.' => 'Як найближчу людину, вас запитали б першою. Якщо від {owner} немає підтвердження і минуло три дні нагадувань, ви отримаєте один лист із питанням, чи все гаразд, і двома кнопками для відповіді.',
+    'If {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what {owner} needs you to do.' => 'Якщо від {owner} немає підтвердження, а найближча людина не може підтвердити, що все гаразд, ви отримаєте один лист із поясненням, чого {owner} очікує від вас.',
+    'Confirming tells {owner} that {address} reaches you, and that you are willing.' => 'Підтвердивши, ви повідомите людину ({owner}), що адреса {address} до вас доходить і що ви погоджуєтеся.',
+    'Yes, I confirm' => 'Так, підтверджую',
+    'No, leave me out' => 'Ні, не додавайте мене',
+    'It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.' => 'Посилання вже використано або його термін минув. Якщо ви хотіли підтвердити, попросіть людину, яка вас вказала, надіслати новий запит.',
+
+    // Respond (next of kin)
+    'All fine' => 'Усе гаразд',
+    'You have seen or spoken to {owner} and they are all right. Nobody else is contacted, and {owner} is told you answered.' => 'Ви бачилися або розмовляли з людиною: {owner}, і з нею все гаразд. Нікого іншого не сповіщатимуть, а їй повідомлять, що ви відповіли.',
+    "Something's wrong" => 'Щось не так',
+    '{owner} cannot run their business at the moment.' => 'Людина ({owner}) наразі не може займатися своїми справами.',
+    'These people are sent their instructions straight away: {names}.' => 'Ці люди одразу отримають свої вказівки: {names}.',
+    'The people they chose are sent their instructions straight away.' => 'Люди, яких вибрано, одразу отримають свої вказівки.',
+    'You are sent yours too.' => 'Ви теж отримаєте свою.',
+    'Thank you' => 'Дякуємо',
+    'Your answer has been recorded. Nobody else has been contacted, and {owner} has been told that you answered.' => 'Вашу відповідь записано. Нікого іншого не сповіщено, а людині ({owner}) повідомлять, що ви відповіли.',
+    'Your answer has been recorded.' => 'Вашу відповідь записано.',
+    'These people have been sent their instructions: {names}.' => 'Ці люди отримали свої вказівки: {names}.',
+    'The people {owner} chose have been sent their instructions.' => 'Люди, яких вибрано ({owner}), отримали свої вказівки.',
+    'You have been emailed a message from {owner} as well, with what to do next.' => 'Ми також надіслали вам повідомлення від: {owner}, із поясненням, що робити далі.',
+    'Is {owner} all right?' => 'Чи все гаразд із людиною: {owner}?',
+    '{owner} has not answered their weekly check-in or its reminders. You are their next of kin, so you are asked first. Nothing has been sent to anyone else.' => 'Людина ({owner}) не відповіла на щотижневий лист і на нагадування. Ви її найближча людина, тому запитуємо насамперед вас. Нікому іншому нічого не надсилали.',
+    'Not sure yet? You can come back to this page. If neither you nor {owner} answers by the time given in the email, the others are sent their instructions.' => 'Ще не знаєте? Можете повернутися на цю сторінку. Якщо до часу, указаного в листі, не відповісте ні ви, ні {owner}, решта людей отримають свої вказівки.',
+    'It has either been used already, or the check it belonged to has been settled. You do not need to do anything.' => 'Посилання вже використано або питання, якого воно стосувалося, вирішено. Вам нічого робити не потрібно.',
+
+    // History
+    'History: Death Plan Switch' => 'Історія: Death Plan Switch',
+    'History' => 'Історія',
+    'Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.' => 'Усе, що зробив перемикач, від найновіших. Запуски планувальника, яким не було що робити, не показано.',
+    'Nothing has happened yet.' => 'Поки що нічого не відбувалося.',
+
+    // Public page
+    'This switch is active.' => 'Цей перемикач активний.',
+    'This switch is not active.' => 'Цей перемикач неактивний.',
+    'This switch is armed.' => 'Цей перемикач активований.',
+    'Triggered' => 'Спрацював',
+    'This switch has been triggered.' => 'Цей перемикач спрацював.',
+    'Open the vault' => 'Відкрити сейф',
+    'Armed' => 'Активний',
+    'Not active' => 'Неактивний',
+    'Owner sign-in' => 'Вхід для власника',
+
+    // Vault (owner and recipient)
+    'That recipient has no contact with an email address, so no invitation was sent.' => 'У цього отримувача немає контакту з адресою e-mail, тож запрошення не надіслано.',
+    'Invitation sent to {name}.' => 'Запрошення надіслано: {name}.',
+    'The invitation could not be sent. Check the mail settings.' => 'Не вдалося надіслати запрошення. Перевір налаштування пошти.',
+    'Vault: Death Plan Switch' => 'Сейф: Death Plan Switch',
+    'Vault' => 'Сейф',
+    "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'Те, що ти залишаєш обраним людям, замкнене у твоєму браузері. Відкрити його можна лише кодом або паролем отримувача, і тільки після того, як перемикач спрацює.',
+    'The vault needs JavaScript. Turn it on for this page.' => 'Сейфу потрібен JavaScript. Увімкни його для цієї сторінки.',
+    'This page needs JavaScript, because everything is decrypted in your browser.' => 'Цій сторінці потрібен JavaScript, бо все розшифровується у твоєму браузері.',
+];

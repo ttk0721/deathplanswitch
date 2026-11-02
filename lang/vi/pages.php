@@ -1,0 +1,90 @@
+<?php
+declare(strict_types=1);
+
+// Check-in, confirm, respond, history, public page and the vault pages.
+// Keys are the English source strings. Pages for family avoid gendered forms.
+return [
+    // Check-in (owner)
+    'Check in: Death Plan Switch' => 'Check-in: Death Plan Switch',
+    'Checked in' => 'Đã check-in',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm: {names}.' => 'Công tắc của bạn đã được kích hoạt. Tất cả những người đã được liên hệ giờ đã được báo rằng đó là báo động nhầm: {names}.',
+    'Your switch had fired. Everyone who was contacted has now been told it was a false alarm.' => 'Công tắc của bạn đã được kích hoạt. Tất cả những người đã được liên hệ giờ đã được báo rằng đó là báo động nhầm.',
+    'Your contacts have read their messages, so any pointer in them has been seen. {link} to review what needs changing.' => 'Những người liên hệ của bạn đã đọc tin nhắn của họ, nên mọi chỉ dẫn trong đó đã bị xem. {link} để xem lại những gì cần thay đổi.',
+    'Sign in' => 'Đăng nhập',
+    '{names} had been asked whether you are all right, and has now been told it was a false alarm. Nobody else was contacted.' => '{names} đã được hỏi xem bạn có ổn không, và giờ đã được báo rằng đó là báo động nhầm. Không ai khác được liên hệ.',
+    '{names} had been asked whether you are all right, and have now been told it was a false alarm. Nobody else was contacted.' => '{names} đã được hỏi xem bạn có ổn không, và giờ đã được báo rằng đó là báo động nhầm. Không ai khác được liên hệ.',
+    'Thank you. Nobody was contacted.' => 'Cảm ơn bạn. Không ai được liên hệ.',
+    'Your switch is paused until {date}.' => 'Công tắc của bạn đang tạm dừng đến {date}.',
+    'Your next check-in email arrives on {date} at {time}.' => 'Email check-in tiếp theo sẽ đến vào {date} lúc {time}.',
+    'Are you there, {name}?' => '{name} ơi, bạn có ở đó không?',
+    'owner' => 'chủ sở hữu',
+    'Press the button to check in. Opening this page is not enough.' => 'Hãy bấm nút để check-in. Chỉ mở trang này là chưa đủ.',
+    'I am here: check in' => 'Tôi ở đây: check-in',
+    'This link is no longer active' => 'Liên kết này không còn hiệu lực',
+    'Each check-in link works once, and for 14 days. If you have a newer email from Death Plan Switch, use the link in that one.' => 'Mỗi liên kết check-in chỉ dùng được một lần và trong 14 ngày. Nếu bạn có email mới hơn từ Death Plan Switch, hãy dùng liên kết trong email đó.',
+    'You can also {link} and check in from the dashboard.' => 'Bạn cũng có thể {link} và check-in từ trang tổng quan.',
+    'sign in' => 'đăng nhập',
+
+    // Confirm (contact)
+    'Death Plan Switch' => 'Death Plan Switch',
+    'Confirmed' => 'Đã xác nhận',
+    'Thank you, {name}. {owner} has been told. There is nothing else to do.' => 'Cảm ơn {name}. {owner} đã được báo. Không còn việc gì khác phải làm.',
+    'If {owner} ever stops checking in, you will hear from the same email address that sent you this request. Add it to your contacts so it is not mistaken for spam.' => 'Nếu một lúc nào đó {owner} không check-in nữa, bạn sẽ nhận được tin từ chính địa chỉ email đã gửi yêu cầu này. Hãy thêm địa chỉ đó vào danh bạ của bạn để không bị nhầm là thư rác.',
+    'Done' => 'Xong',
+    "You will not be contacted by {owner}'s Death Plan Switch. {owner} has been told." => 'Death Plan Switch của {owner} sẽ không liên hệ với bạn. {owner} đã được báo.',
+    "Still happy to be {owner}'s {role}?" => 'Quý vị vẫn sẵn lòng làm {role} của {owner} chứ?',
+    '{owner} has listed you as their {role}' => '{owner} đã ghi tên Quý vị là {role}',
+    '{owner} uses Death Plan Switch, a small app on their own server. Every week it asks {owner} to check in. If they stop, it emails the people they have chosen.' => '{owner} dùng Death Plan Switch, một ứng dụng nhỏ chạy trên máy chủ riêng của họ. Mỗi tuần ứng dụng nhờ {owner} check-in. Nếu việc check-in dừng lại, ứng dụng sẽ gửi email cho những người họ đã chọn.',
+    'As next of kin you would be asked first. If {owner} misses a check-in and three days of reminders, you would get one email asking whether everything is all right, with two buttons to answer.' => 'Với vai trò người thân nhất, bạn sẽ được hỏi trước. Nếu {owner} bỏ lỡ một lần check-in và ba ngày nhắc nhở, bạn sẽ nhận một email hỏi xem mọi việc có ổn không, kèm hai nút để trả lời.',
+    'If {owner} stops checking in and their next of kin cannot confirm they are well, you would get one email telling you what {owner} needs you to do.' => 'Nếu {owner} không check-in nữa và người thân nhất của họ không thể xác nhận rằng mọi việc vẫn ổn, bạn sẽ nhận một email nói rõ {owner} nhờ bạn làm gì.',
+    'Confirming tells {owner} that {address} reaches you, and that you are willing.' => 'Việc xác nhận cho {owner} biết rằng {address} đến được với bạn, và bạn sẵn lòng nhận vai trò này.',
+    'Yes, I confirm' => 'Vâng, tôi xác nhận',
+    'No, leave me out' => 'Không, xin đừng đưa tôi vào',
+    'It has either been used already or has expired. If you meant to confirm, ask the person who listed you to send a new request.' => 'Liên kết này đã được dùng hoặc đã hết hạn. Nếu bạn muốn xác nhận, hãy nhờ người đã ghi tên bạn gửi yêu cầu mới.',
+
+    // Respond (next of kin)
+    'All fine' => 'Mọi việc đều ổn',
+    'You have seen or spoken to {owner} and they are all right. Nobody else is contacted, and {owner} is told you answered.' => 'Bạn đã gặp hoặc nói chuyện với {owner} và họ vẫn ổn. Không ai khác được liên hệ, và {owner} sẽ được báo rằng bạn đã trả lời.',
+    "Something's wrong" => 'Có điều không ổn',
+    '{owner} cannot run their business at the moment.' => '{owner} hiện không thể tự lo công việc của mình.',
+    'These people are sent their instructions straight away: {names}.' => 'Những người này sẽ nhận hướng dẫn của họ ngay: {names}.',
+    'The people they chose are sent their instructions straight away.' => 'Những người họ đã chọn sẽ nhận hướng dẫn của họ ngay.',
+    'You are sent yours too.' => 'Bạn cũng sẽ nhận hướng dẫn của bạn.',
+    'Thank you' => 'Cảm ơn bạn',
+    'Your answer has been recorded. Nobody else has been contacted, and {owner} has been told that you answered.' => 'Câu trả lời của bạn đã được ghi nhận. Không ai khác được liên hệ, và {owner} đã được báo rằng bạn đã trả lời.',
+    'Your answer has been recorded.' => 'Câu trả lời của bạn đã được ghi nhận.',
+    'These people have been sent their instructions: {names}.' => 'Những người này đã được gửi hướng dẫn của họ: {names}.',
+    'The people {owner} chose have been sent their instructions.' => 'Những người {owner} đã chọn đã được gửi hướng dẫn của họ.',
+    'You have been emailed a message from {owner} as well, with what to do next.' => 'Bạn cũng đã được gửi một tin nhắn từ {owner}, nói rõ việc cần làm tiếp theo.',
+    'Is {owner} all right?' => '{owner} có ổn không?',
+    '{owner} has not answered their weekly check-in or its reminders. You are their next of kin, so you are asked first. Nothing has been sent to anyone else.' => '{owner} chưa trả lời lần check-in hằng tuần cũng như các nhắc nhở. Bạn là người thân nhất của họ nên được hỏi trước. Chưa có gì được gửi cho người khác.',
+    'Not sure yet? You can come back to this page. If neither you nor {owner} answers by the time given in the email, the others are sent their instructions.' => 'Bạn chưa chắc? Bạn có thể quay lại trang này. Nếu đến hạn ghi trong email mà cả bạn lẫn {owner} đều chưa trả lời, những người còn lại sẽ được gửi hướng dẫn của họ.',
+    'It has either been used already, or the check it belonged to has been settled. You do not need to do anything.' => 'Liên kết này đã được dùng, hoặc lần kiểm tra liên quan đã được giải quyết xong. Bạn không cần làm gì.',
+
+    // History
+    'History: Death Plan Switch' => 'Lịch sử: Death Plan Switch',
+    'History' => 'Lịch sử',
+    'Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.' => 'Mọi việc công tắc đã làm, mới nhất ở trên. Những lần bộ lập lịch chạy mà không có việc gì để làm sẽ không được liệt kê.',
+    'Nothing has happened yet.' => 'Chưa có gì xảy ra.',
+
+    // Public page
+    'This switch is active.' => 'Công tắc này đang hoạt động.',
+    'This switch is not active.' => 'Công tắc này không hoạt động.',
+    'This switch is armed.' => 'Công tắc này đang bật.',
+    'Triggered' => 'Đã kích hoạt',
+    'This switch has been triggered.' => 'Công tắc này đã được kích hoạt.',
+    'Open the vault' => 'Mở két an toàn',
+    'Armed' => 'Đang bật',
+    'Not active' => 'Không hoạt động',
+    'Owner sign-in' => 'Đăng nhập của chủ sở hữu',
+
+    // Vault (owner and recipient)
+    'That recipient has no contact with an email address, so no invitation was sent.' => 'Người nhận này không có người liên hệ nào có địa chỉ email, nên chưa gửi lời mời.',
+    'Invitation sent to {name}.' => 'Đã gửi lời mời đến {name}.',
+    'The invitation could not be sent. Check the mail settings.' => 'Không gửi được lời mời. Hãy kiểm tra cài đặt email.',
+    'Vault: Death Plan Switch' => 'Két an toàn: Death Plan Switch',
+    'Vault' => 'Két an toàn',
+    "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'Những gì bạn để lại cho những người bạn chọn, được khóa ngay trong trình duyệt của bạn. Chỉ mã hoặc mật khẩu của người nhận mới mở được, và chỉ sau khi công tắc được kích hoạt.',
+    'The vault needs JavaScript. Turn it on for this page.' => 'Két an toàn cần JavaScript. Hãy bật JavaScript cho trang này.',
+    'This page needs JavaScript, because everything is decrypted in your browser.' => 'Trang này cần JavaScript, vì mọi thứ được giải mã ngay trong trình duyệt của bạn.',
+];

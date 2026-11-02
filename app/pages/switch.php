@@ -115,6 +115,19 @@ foreach ($plan as $key => $step) {
     }
 }
 
+// The trusted people, in the order they are asked, with the real (or expected) time of each ask.
+$askRows = [];
+$chainIds = $cycle['verify']['chain'] ?? array_column($engine->contacts()->trustedConfirmed(), 'id');
+if (count($chainIds) > 1 && $plan !== []) {
+    foreach (array_values($chainIds) as $i => $id) {
+        $person = $engine->contacts()->find((string) $id);
+        $step = $i === 0 ? $plan['verify'] : ($plan['ask:' . $id] ?? null);
+        if ($person !== null && $step !== null) {
+            $askRows[] = [$person, $step['at'], $step['done']];
+        }
+    }
+}
+
 $notified = [];
 foreach ($contacts as $contact) {
     if (isset($cycle['notified'][$contact['id']])) {
@@ -224,9 +237,26 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <?php endforeach ?>
   </ol>
 <?php if ($cycle === null): ?>
-  <p class="small muted"><?= e(t('This is what happens if you miss the next check-in. Your other contacts would be told 6 days after the email, at most 13 days after your last check-in.')) ?></p>
+  <p class="small muted"><?= e($askRows
+      ? t('This is what happens if you miss the next check-in. Your other contacts would be told on {date}.', ['date' => when($plan['fire']['at'], $tz, $long)])
+      : t('This is what happens if you miss the next check-in. Your other contacts would be told 6 days after the email, at most 13 days after your last check-in.')) ?></p>
 <?php endif ?>
 </div>
+<?php if ($askRows): ?>
+<section class="card">
+  <h2><?= e(t('Trusted people')) ?></h2>
+  <div class="rows">
+<?php foreach ($askRows as $n => [$person, $at, $done]): ?>
+    <div class="row">
+      <div>
+        <h3><?= e((string) ($n + 1)) ?>. <a href="index.php?p=contact&amp;id=<?= e($person['id']) ?>"><?= e($person['name']) ?></a></h3>
+        <p class="role"><?= e($done ? t('Asked {when}', ['when' => when($at, $tz, $short)]) : t('Will be asked {when}', ['when' => when($at, $tz, $short)])) ?></p>
+      </div>
+    </div>
+<?php endforeach ?>
+  </div>
+</section>
+<?php endif ?>
 <?php endif ?>
 
 <?php if ($mode === 'setup'): ?>
@@ -267,7 +297,9 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
       <h3><a href="index.php?p=contact&amp;id=<?= e($contact['id']) ?>"><?= e($contact['name']) ?></a></h3>
       <p class="role"><?= e(Contacts::label((string) $contact['role_label'])) ?>. <?= e($contact['kind'] === 'nok'
           ? t('Asked first, after you miss a check-in and 72 hours of reminders.')
-          : t('Sent their message if neither you nor your next of kin confirms you are well.')) ?></p>
+          : (($number = $engine->contacts()->trustedNumber((string) $contact['id'])) !== null
+              ? t('Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.', ['n' => $number])
+              : t('Sent their message if neither you nor your next of kin confirms you are well.'))) ?></p>
     </div>
     <div class="side">
 <?php if ($contact['status'] === 'confirmed'): ?>

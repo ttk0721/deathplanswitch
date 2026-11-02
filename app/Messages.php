@@ -72,6 +72,15 @@ final class Messages
         ];
     }
 
+    /** The question put to a trusted person who is not the next of kin. */
+    public static function verifyTrusted(): array
+    {
+        return [
+            'subject' => t('Is {owner_name} all right?'),
+            'body' => t('{owner_name} hasn\'t checked in with Death Plan Switch for {days} days. You\'re one of the people they trust to be asked. Is everything all right?'),
+        ];
+    }
+
     public static function hasMarker(string $text): bool
     {
         return preg_match(self::MARKER, $text) === 1;
@@ -223,13 +232,19 @@ final class Messages
             ->p(t('The pause has ended and your switch is armed. Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
-    public static function ownerVouched(array $config, ?array $nok, int $nextAt): Email
+    /** @param bool $othersAsked other trusted people were asked before this one answered */
+    public static function ownerVouched(array $config, ?array $nok, int $nextAt, bool $othersAsked = false): Email
     {
         $who = $nok['name'] ?? t('Your next of kin');
         $next = self::at($nextAt, (string) ($config['timezone'] ?? 'UTC'));
-        return (new Email(t('{who} confirmed you are all right', ['who' => $who])))
-            ->p(t('You missed this week\'s check-in, so {who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.', ['who' => $who]))
-            ->p(t('Your next check-in email arrives on {next}.', ['next' => $next]));
+        $email = new Email(t('{who} confirmed you are all right', ['who' => $who]));
+        if ($othersAsked) {
+            $email->p(t('You missed this week\'s check-in, so the people you trust were asked in turn whether everything is all right. {who} answered that all is fine, and nobody else will be asked.', ['who' => $who]))
+                ->p(t('The other trusted people who were asked before them have been told it was a false alarm.'));
+        } else {
+            $email->p(t('You missed this week\'s check-in, so {who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.', ['who' => $who]));
+        }
+        return $email->p(t('Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
     public static function ownerContactAnswered(array $contact, bool $accepted, string $extra = ''): Email
@@ -292,7 +307,7 @@ final class Messages
     public static function nokVerify(array $config, array $contact, array $vars, string $fineUrl, string $wrongUrl, int $fireAt, bool $reminder): Email
     {
         $owner = (string) $config['owner_name'];
-        $message = $contact['verify_message'] ?? self::verifyDefault();
+        $message = $contact['verify_message'] ?? (($contact['kind'] ?? '') === 'nok' ? self::verifyDefault() : self::verifyTrusted());
         $deadline = self::at($fireAt, (string) ($config['timezone'] ?? 'UTC'))
             . ' (' . self::zoneLabel((string) ($config['timezone'] ?? 'UTC')) . ')';
 
@@ -322,6 +337,16 @@ final class Messages
             ->p(t('You will need the code on that card once, to set the password.'))
             ->link(t('Set your password'), $url)
             ->note(t('This link works once, within 30 days.'));
+    }
+
+    /** To people who were asked, when another trusted person has confirmed the owner is all right. */
+    public static function trustedClear(array $config, string $by): Email
+    {
+        $owner = (string) $config['owner_name'];
+        return (new Email(t('False alarm: {owner} is all right', ['owner' => $owner])))
+            ->p($by === ''
+                ? t('Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.', ['owner' => $owner])
+                : t('{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.', ['name' => $by, 'owner' => $owner]));
     }
 
     public static function allClear(array $config): Email

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Trusted people: an ordered list replaces the single next of kin. The next of kin is still asked first; if nobody says all is fine, the next person is asked after an interval (automatic, spread over 12 hours, or a fixed number of minutes), or everyone at once after the first. Any "all fine" ends the cycle. The switch never fires before the last person has been asked and a reply window (6 to 72 hours, 24 by default) has passed. Contacts, Settings and the dashboard show the list and the times. Existing installs keep working: the next of kin is trusted person 1.
+
 ## 1.0.0, October 2026
 
 First public release.

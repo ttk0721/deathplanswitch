@@ -133,6 +133,37 @@ final class Coordinator
         return ['stage' => $stage, 'fired_at' => $firedAt, 'fired_reason' => $firedReason, 'nok' => $nok, 'steps' => $steps];
     }
 
+    /**
+     * Every "all fine" any peer reports for cycle $cycleKey, oldest first, with the id of the person who gave it when known.
+     *
+     * @return list<array{at: int, by: ?string}>
+     */
+    public function peerFines(int $cycleKey): array
+    {
+        $out = [];
+        foreach ($this->peerCycles($cycleKey) as $cy) {
+            $n = $cy['nok'] ?? null;
+            if (is_array($n) && ($n['answer'] ?? null) === 'fine' && is_int($n['at'] ?? null)) {
+                $by = $n['by'] ?? null;
+                $out[] = ['at' => $n['at'], 'by' => is_string($by) && preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $by) ? $by : null];
+            }
+        }
+        usort($out, static fn (array $a, array $b): int => $a['at'] <=> $b['at']);
+        return $out;
+    }
+
+    /** @return list<array> the chain and timing each peer runs cycle $cycleKey on, as they report it (unchecked) */
+    public function peerTrusts(int $cycleKey): array
+    {
+        $out = [];
+        foreach ($this->peerCycles($cycleKey) as $cy) {
+            if (is_array($cy['trust'] ?? null)) {
+                $out[] = $cy['trust'];
+            }
+        }
+        return $out;
+    }
+
     /** @return array<string, array{state: array, seen_at: int}> well-formed peers, self excluded */
     private function peers(): array
     {
@@ -162,7 +193,7 @@ final class Coordinator
             $v = $p['state']['vouched'] ?? null;
             if (is_array($v) && ($v['key'] ?? null) === $cycleKey && is_int($v['at'] ?? null) && is_array($v['steps'] ?? null)) {
                 $out[] = ['key' => $cycleKey, 'stage' => 'vouched', 'steps' => $v['steps'],
-                    'fired_at' => null, 'fired_reason' => null, 'nok' => ['answer' => 'fine', 'at' => $v['at']]];
+                    'fired_at' => null, 'fired_reason' => null, 'nok' => ['answer' => 'fine', 'at' => $v['at']] + (isset($v['by']) ? ['by' => $v['by']] : [])];
             }
         }
         return $out;

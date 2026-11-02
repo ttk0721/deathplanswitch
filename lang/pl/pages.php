@@ -100,4 +100,9 @@ return [
     "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'To, co zostawiasz wybranym osobom, zamknięte w twojej przeglądarce. Otworzy to tylko kod lub hasło odbiorcy, i to dopiero po uruchomieniu przełącznika.',
     'The vault needs JavaScript. Turn it on for this page.' => 'Sejf wymaga JavaScriptu. Włącz go dla tej strony.',
     'This page needs JavaScript, because everything is decrypted in your browser.' => 'Ta strona wymaga JavaScriptu, bo wszystko jest odszyfrowywane w twojej przeglądarce.',
+    // trusted people
+    'Nobody is sent anything early. If {owner} does not check in and nobody answers "All fine" by the time given in the email, the people {owner} chose are sent their instructions.' => 'Nikt nie dostaje niczego wcześniej. Jeśli {owner} nie potwierdzi obecności i nikt nie odpowie „Wszystko w porządku” do czasu podanego w e-mailu, osoby wybrane przez: {owner} dostaną swoje instrukcje.',
+    'Your answer has been recorded. Nobody else will be asked. The others who were asked are told it was a false alarm, and {owner} has been told that you answered.' => 'Odpowiedź zapisana. Nikt więcej nie dostanie pytania. Osoby, które już je dostały, dowiedzą się, że to był fałszywy alarm, a osoba: {owner} dowie się, że odpowiedziano.',
+    'The other trusted people are still asked in turn, and nobody is sent anything early.' => 'Pozostałe zaufane osoby nadal dostają pytanie po kolei i nikt nie dostaje niczego wcześniej.',
+    '{owner} has not answered their weekly check-in or its reminders. You are one of the people they trust, so you are asked whether everything is all right. Nothing has been sent to anyone else.' => '{owner} nie odpowiedział(a) na tygodniowe potwierdzenie ani na przypomnienia. Jesteś jedną z osób, którym ufa, więc pytamy cię, czy wszystko w porządku. Nikt inny nic jeszcze nie dostał.',
 ];

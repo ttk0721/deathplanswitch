@@ -75,4 +75,10 @@ return [
     'Death Plan Switch {version} was installed.' => 'Zainstalowano Death Plan Switch {version}.',
     'Vault API error: {detail}' => 'Błąd API sejfu: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Nie udało się odczytać pliku {name}.json. Użyto ostatniej poprawnej kopii.',
+    // trusted people
+    '{name} was asked whether {owner} is all right.' => '{name} dostał(a) pytanie, czy u {owner} wszystko w porządku.',
+    '{name} could not be emailed.' => 'Nie udało się wysłać e-maila do: {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} odpowiedział(a): „Coś jest nie tak”. Nic nie jest wysyłane wcześniej, a kolejne osoby nadal dostają pytanie po kolei.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name} odpowiedział(a): „Wszystko w porządku”. Nikt więcej nie dostanie pytania.',
+    'The settings for the trusted people were changed.' => 'Zmieniono ustawienia zaufanych osób.',
 ];

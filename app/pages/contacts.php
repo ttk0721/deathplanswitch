@@ -9,7 +9,35 @@ if (!defined('DPS_ROOT')) {
 
 Web::requireOwner();
 $engine = engine();
+
+// Who is trusted, and in which order: plain forms, one press at a time.
+if (Web::posted()) {
+    $id = Web::post('id');
+    $book = $engine->contacts();
+    if ($book->find($id) !== null) {
+        switch (Web::post('action')) {
+            case 'trust':
+                $book->setTrusted($id, true);
+                Web::flash(t('Saved.'));
+                break;
+            case 'untrust':
+                $book->setTrusted($id, false);
+                Web::flash(t('Saved.'));
+                break;
+            case 'up':
+                $book->move($id, -1);
+                break;
+            case 'down':
+                $book->move($id, 1);
+                break;
+        }
+    }
+    Web::redirect('index.php?p=contacts');
+}
+
 $contacts = $engine->contacts()->all();
+$trusted = $engine->contacts()->trusted();
+$trustedIds = array_column($trusted, 'id');
 $state = $engine->state();
 $hasNok = $engine->contacts()->nok() !== null;
 $hasTechnical = array_filter($contacts, static fn (array $c): bool => $c['kind'] === 'technical') !== [];
@@ -42,6 +70,33 @@ Web::$title = t('Contacts: Death Plan Switch');
   <p><?= e(t('Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.')) ?></p>
 </section>
 <?php else: ?>
+<?php if ($trusted !== []): ?>
+<section class="card">
+  <h2><?= e(t('Trusted people')) ?></h2>
+  <p><?= e(t('These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.')) ?></p>
+  <div class="rows">
+<?php foreach ($trusted as $i => $person): ?>
+    <div class="row">
+      <div>
+        <h3><?= e((string) ($i + 1)) ?>. <a href="index.php?p=contact&amp;id=<?= e($person['id']) ?>"><?= e($person['name']) ?></a></h3>
+        <p class="role"><?= e($i === 0 ? t('Asked first') : t('Asked after {name}', ['name' => $trusted[$i - 1]['name']])) ?></p>
+      </div>
+      <div class="side">
+<?php if ($i > 0): ?>
+<?php foreach ([['up', t('Move up'), $i > 1], ['down', t('Move down'), $i < count($trusted) - 1]] as [$action, $label, $show]): ?>
+<?php if ($show): ?>
+        <form method="post" action="index.php?p=contacts" class="inline-form"><?= Web::csrfField() ?><input type="hidden" name="id" value="<?= e($person['id']) ?>"><input type="hidden" name="action" value="<?= e($action) ?>"><button class="button-quiet" type="submit"><?= e($label) ?></button></form>
+<?php endif ?>
+<?php endforeach ?>
+        <form method="post" action="index.php?p=contacts" class="inline-form"><?= Web::csrfField() ?><input type="hidden" name="id" value="<?= e($person['id']) ?>"><input type="hidden" name="action" value="untrust"><button class="button-quiet" type="submit"><?= e(t('Remove from trusted people')) ?></button></form>
+<?php endif ?>
+      </div>
+    </div>
+<?php endforeach ?>
+  </div>
+</section>
+<?php endif ?>
+
 <div class="contact-grid">
 <?php foreach ($contacts as $contact): ?>
   <article class="card contact-card">
@@ -54,6 +109,9 @@ Web::$title = t('Contacts: Death Plan Switch');
     <p class="small muted"><?= e(t('Changing to {email} once they confirm it.', ['email' => $contact['pending_email']])) ?></p>
 <?php endif ?>
     <div class="tags">
+<?php if (in_array($contact['id'], $trustedIds, true)): ?>
+      <span class="tag tag-ok"><?= e(t('Trusted person {n}', ['n' => array_search($contact['id'], $trustedIds, true) + 1])) ?></span>
+<?php endif ?>
 <?php if ($contact['status'] === 'confirmed'): ?>
       <span class="tag tag-ok"><?= e(t('Confirmed')) ?></span>
 <?php elseif ($contact['status'] === 'declined'): ?>
@@ -71,6 +129,9 @@ Web::$title = t('Contacts: Death Plan Switch');
       <span class="tag"><?= e(t('Has what they need')) ?></span>
 <?php endif ?>
     </div>
+<?php if (!in_array($contact['id'], $trustedIds, true)): ?>
+    <form method="post" action="index.php?p=contacts"><?= Web::csrfField() ?><input type="hidden" name="id" value="<?= e($contact['id']) ?>"><input type="hidden" name="action" value="trust"><button class="button-quiet" type="submit"><?= e(t('Add to trusted people')) ?></button></form>
+<?php endif ?>
   </article>
 <?php endforeach ?>
 </div>

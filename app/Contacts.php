@@ -53,6 +53,104 @@ final class Contacts
         return null;
     }
 
+    /**
+     * The chain of trusted people, in the order they are asked. The next of kin is always first.
+     * A file written before the chain existed has no "trusted" field anywhere: then the next of kin
+     * alone is the chain, and nothing on disk changes until the owner edits the list.
+     *
+     * @return array<int, array> every trusted contact, confirmed or not
+     */
+    public function trusted(): array
+    {
+        $list = $this->all();
+        $nok = null;
+        $explicit = false;
+        $flagged = [];
+        foreach ($list as $contact) {
+            if (array_key_exists('trusted', $contact)) {
+                $explicit = true;
+            }
+            if (($contact['kind'] ?? '') === 'nok') {
+                $nok ??= $contact;
+            } elseif (($contact['trusted'] ?? false) === true) {
+                $flagged[] = $contact;
+            }
+        }
+        if (!$explicit) {
+            return $nok === null ? [] : [$nok];
+        }
+        usort($flagged, static fn (array $a, array $b): int =>
+            [(int) ($a['trusted_order'] ?? PHP_INT_MAX), $a['created_at'] ?? 0] <=> [(int) ($b['trusted_order'] ?? PHP_INT_MAX), $b['created_at'] ?? 0]);
+        return $nok === null ? $flagged : array_merge([$nok], $flagged);
+    }
+
+    /** The trusted people who have confirmed, in order: the ones who are actually asked. */
+    public function trustedConfirmed(): array
+    {
+        return array_values(array_filter($this->trusted(), static fn (array $c): bool => ($c['status'] ?? '') === 'confirmed'));
+    }
+
+    /** 1 for the first trusted person, and so on; null if this contact is not trusted. */
+    public function trustedNumber(string $id): ?int
+    {
+        foreach ($this->trusted() as $i => $contact) {
+            if (($contact['id'] ?? '') === $id) {
+                return $i + 1;
+            }
+        }
+        return null;
+    }
+
+    /** Add a contact to the end of the chain, or take them off it. The next of kin is always on it. */
+    public function setTrusted(string $id, bool $trusted): void
+    {
+        $this->store->locked(function () use ($id, $trusted): void {
+            $doc = $this->store->read('contacts');
+            $list = array_values(array_filter((array) ($doc['contacts'] ?? []), 'is_array'));
+            $next = 1;
+            foreach ($list as $c) {
+                $next = max($next, (int) ($c['trusted_order'] ?? 0) + 1);
+            }
+            foreach ($list as $i => $c) {
+                if (($c['id'] ?? '') !== $id || ($c['kind'] ?? '') === 'nok') {
+                    continue;
+                }
+                if ($trusted && ($c['trusted'] ?? false) !== true) {
+                    $list[$i]['trusted'] = true;
+                    $list[$i]['trusted_order'] = $next;
+                } elseif (!$trusted) {
+                    $list[$i]['trusted'] = false;
+                    $list[$i]['trusted_order'] = null;
+                }
+            }
+            $this->store->write('contacts', ['contacts' => $list]);
+        });
+    }
+
+    /** Move a trusted person up ($by = -1) or down ($by = 1). Nobody can go above the next of kin. */
+    public function move(string $id, int $by): void
+    {
+        $this->store->locked(function () use ($id, $by): void {
+            $ids = array_column($this->trusted(), 'id');
+            $at = array_search($id, $ids, true);
+            $to = $at === false ? false : $at + ($by < 0 ? -1 : 1);
+            if ($at === false || $at < 1 || $to < 1 || $to >= count($ids)) {
+                return;
+            }
+            [$ids[$at], $ids[$to]] = [$ids[$to], $ids[$at]];
+            $doc = $this->store->read('contacts');
+            $list = array_values(array_filter((array) ($doc['contacts'] ?? []), 'is_array'));
+            foreach ($list as $i => $c) {
+                $n = array_search($c['id'] ?? '', $ids, true);
+                if ($n !== false) {
+                    $list[$i]['trusted'] = true;
+                    $list[$i]['trusted_order'] = $n + 1;
+                }
+            }
+            $this->store->write('contacts', ['contacts' => $list]);
+        });
+    }
+
     /** @return array<int, array> contacts who have confirmed, and so will be written to */
     public function confirmed(): array
     {
@@ -88,6 +186,9 @@ final class Contacts
             'created_at' => Clock::now(),
             'updated_at' => Clock::now(),
         ];
+        // The next of kin is trusted number one; anyone else joins the chain when the owner adds them.
+        $contact['trusted'] = $kind === 'nok';
+        $contact['trusted_order'] = $kind === 'nok' ? 1 : null;
         if ($kind === 'nok') {
             $contact['verify_message'] = Messages::verifyDefault();
         }

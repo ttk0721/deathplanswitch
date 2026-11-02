@@ -153,4 +153,14 @@ return [
     'Apprise examples: {examples}.' => 'Przykłady Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook to adres {scheme}; każde żądanie jest podpisane, a podpis jest w nagłówku {header}.',
     'Add channel' => 'Dodaj kanał',
+    // trusted people
+    'Trusted people' => 'Zaufane osoby',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Te osoby dostają pytanie, czy wszystko w porządku, po kolei, zaczynając od najbliższej osoby. Jeśli któraś odpowie, że jest dobrze, nikt więcej nie dostaje pytania. Pytamy tylko potwierdzone osoby. Odstęp między nimi ustawisz w Ustawieniach.',
+    'Asked first' => 'Pytana jako pierwsza',
+    'Asked after {name}' => 'Pytana po: {name}',
+    'Move up' => 'W górę',
+    'Move down' => 'W dół',
+    'Remove from trusted people' => 'Usuń z zaufanych osób',
+    'Trusted person {n}' => 'Zaufana osoba {n}',
+    'Add to trusted people' => 'Dodaj do zaufanych osób',
 ];

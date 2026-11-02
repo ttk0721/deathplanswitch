@@ -44,6 +44,22 @@ if (Web::posted()) {
             Web::flash(t('Saved.'));
             break;
 
+        case 'trust_save':
+            [$settings, $errors] = Trust::fromPost(
+                Web::post('trust_mode'),
+                Web::post('trust_interval_kind'),
+                Web::post('trust_interval_minutes'),
+                Web::post('trust_window')
+            );
+            if ($errors) {
+                Web::flash(implode(' ', $errors), 'bad');
+                break;
+            }
+            Trust::save($store, $settings);
+            $store->log('settings.trust', t('The settings for the trusted people were changed.'));
+            Web::flash(t('Saved.'));
+            break;
+
         case 'language_save':
             $language = Web::post('language');
             if (!isset(I18n::available()[$language])) {
@@ -305,6 +321,9 @@ if (Web::posted()) {
 }
 
 $state = $engine->state();
+$trust = Trust::settings($config);
+$trustCount = max(1, count($engine->contacts()->trusted()));
+$trustTiming = Trust::timing($trust, $trustCount);
 $smtp = (array) ($config['smtp'] ?? []);
 $pending = is_array($config['pending_email'] ?? null) && $config['pending_email']['expires_at'] > Clock::now() ? $config['pending_email'] : null;
 $probe = (array) ($state['probe'] ?? []);
@@ -368,6 +387,46 @@ Web::$title = t('Settings: Death Plan Switch');
       </select>
     </div>
     <span class="help"><?= e(t('Pick a time you reliably read email. The interval is fixed at one week.')) ?></span>
+  </div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
+</form>
+</section>
+
+<section class="card">
+<h2><?= e(t('Trusted people')) ?></h2>
+<p><?= e(t('When you miss a check-in, your next of kin is asked first whether everything is all right. If nobody says all is fine, the other trusted people from the Contacts page are asked too. Anyone who says all is fine ends it at once, and nobody else is asked.')) ?></p>
+<form method="post" action="index.php?p=settings">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="trust_save">
+  <p class="help"><?= e(t('If your next of kin answers "Something\'s wrong", the others are told at once. If anyone else on the list says that, it is only recorded and the others are still asked: they are a fallback when your next of kin is silent.')) ?></p>
+  <fieldset class="field">
+    <legend class="label"><?= e(t('How they are asked')) ?></legend>
+    <label><input type="radio" name="trust_mode" value="sequential"<?= $trust['mode'] === 'sequential' ? ' checked' : '' ?>> <?= e(t('One after another')) ?></label>
+    <span class="help"><?= e(t('The next person is asked a set time after the one before, unless someone has said all is fine.')) ?></span>
+    <label><input type="radio" name="trust_mode" value="all_at_once"<?= $trust['mode'] === 'all_at_once' ? ' checked' : '' ?>> <?= e(t('The first alone, then everyone together')) ?></label>
+    <span class="help"><?= e(t('Your next of kin is asked first. If nobody says all is fine within that time, everyone else is asked at once.')) ?></span>
+  </fieldset>
+  <fieldset class="field">
+    <legend class="label"><?= e(t('Time between two people')) ?></legend>
+    <label><input type="radio" name="trust_interval_kind" value="auto"<?= $trust['interval'] === null ? ' checked' : '' ?>> <?= e(t('Automatic: spread over 12 hours')) ?></label>
+    <div class="inline">
+      <label><input type="radio" name="trust_interval_kind" value="fixed"<?= $trust['interval'] !== null ? ' checked' : '' ?>> <?= e(t('Fixed')) ?></label>
+      <input type="number" name="trust_interval_minutes" min="<?= Trust::INTERVAL_MIN ?>" max="<?= Trust::INTERVAL_MAX ?>" value="<?= e((string) ($trust['interval'] ?? 60)) ?>" aria-label="<?= e(t('Minutes between two people')) ?>">
+      <span><?= e(t('minutes')) ?></span>
+    </div>
+    <span class="help"><?= e($trust['mode'] === 'all_at_once'
+        ? t('The first person is asked alone. If nobody says all is fine, everyone else is asked together {interval} later.', ['interval' => duration($trustTiming['gap'])])
+        : ($trustCount < 2
+            ? t('With only one person on the list, nobody is asked after them.')
+            : t('{people}, the next person is asked every {interval}.', ['people' => tn('With {n} person', 'With {n} people', $trustCount), 'interval' => duration($trustTiming['gap'])]))) ?></span>
+  </fieldset>
+  <div class="field">
+    <label for="trust_window"><?= e(t('Reply window')) ?></label>
+    <div class="inline">
+      <input type="number" id="trust_window" name="trust_window" min="<?= Trust::WINDOW_MIN ?>" max="<?= Trust::WINDOW_MAX ?>" value="<?= e((string) $trust['window']) ?>" required>
+      <span><?= e(t('hours')) ?></span>
+    </div>
+    <span class="help"><?= e(t('The switch never fires before the last person has been asked and this time has passed. Between 6 and 72 hours.')) ?></span>
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>

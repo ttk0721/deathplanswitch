@@ -128,4 +128,10 @@ return [
     'A disarmed switch sends no check-in emails and contacts nobody. It stays off until you arm it again. If you only need a break, pause it instead.' => 'Rozbrojony przełącznik nie wysyła e-maili z prośbą o potwierdzenie i nikogo nie powiadamia. Zostaje wyłączony, dopóki go znowu nie uzbroisz. Jeśli potrzebujesz tylko przerwy, wstrzymaj go.',
     'Your password' => 'Twoje hasło',
     'Disarm the switch' => 'Rozbrój przełącznik',
+    // trusted people
+    'Trusted people' => 'Zaufane osoby',
+    'This is what happens if you miss the next check-in. Your other contacts would be told on {date}.' => 'Tak będzie, jeśli pominiesz następne potwierdzenie. Pozostałe kontakty dostałyby wiadomość: {date}.',
+    'Will be asked {when}' => 'Dostanie pytanie: {when}',
+    'Asked {when}' => 'Zapytano {when}',
+    'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Zaufana osoba {n}: dostaje pytanie, czy u ciebie wszystko w porządku, po osobach przed nią. Dostaje swoją wiadomość, jeśli nikt nie potwierdzi, że jesteś cały i zdrowy.',
 ];

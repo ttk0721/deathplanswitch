@@ -354,6 +354,15 @@ Web::$title = t('Settings: Death Plan Switch');
 </section>
 
 <section class="card">
+<h2><?= e(t('Theme')) ?></h2>
+<div class="theme-choice" role="group" aria-label="<?= e(t('Theme')) ?>">
+  <button type="button" class="button-quiet" data-theme-set="dark" aria-pressed="true"><?= e(t('Dark')) ?></button>
+  <button type="button" class="button-quiet" data-theme-set="light" aria-pressed="false"><?= e(t('Light')) ?></button>
+  <button type="button" class="button-quiet" data-theme-set="system" aria-pressed="false"><?= e(t('System')) ?></button>
+</div>
+</section>
+
+<section class="card">
 <h2><?= e(t('You, and your weekly email')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>

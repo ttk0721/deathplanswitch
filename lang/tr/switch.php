@@ -127,6 +127,10 @@ return [
 
     'More' => 'Daha fazla',
     'Menu' => 'Menü',
+    'Theme' => 'Tema',
+    'Dark' => 'Koyu',
+    'Light' => 'Açık',
+    'System' => 'Sistem',
     'Add your next of kin, and a technical helper if you like' => 'En yakın kişini ve istersen bir teknik yardımcı ekle',
     'Trusted people' => 'Güvenilir kişiler',
     'This is what happens if you miss the next check-in. Your other contacts would be told on {date}.' => 'Bir sonraki durum bildirimini kaçırırsan olacaklar bunlardır. Diğer kişilere {date} tarihinde mesaj gider.',

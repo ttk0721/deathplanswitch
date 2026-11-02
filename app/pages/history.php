@@ -16,7 +16,7 @@ Web::$title = t('History: Death Plan Switch');
 <h1><?= e(t('History')) ?></h1>
 <p class="lede"><?= e(t('Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.')) ?></p>
 <?php if ($rows === []): ?>
-<p class="card"><?= e(t('Nothing has happened yet.')) ?></p>
+<div class="card empty"><p><?= e(t('Nothing has happened yet.')) ?></p></div>
 <?php else: ?>
 <div class="card card-tight">
 <table class="log">

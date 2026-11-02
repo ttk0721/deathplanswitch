@@ -17,7 +17,11 @@ $install = Web::$layout === 'install';
 $current = Web::get('p', 'switch');
 $navText = ['switch' => t('Switch'), 'contacts' => t('Contacts'), 'vault' => t('Vault'), 'nodes' => t('Nodes'), 'settings' => t('Settings'), 'history' => t('History')];
 $navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
+$page = $current;
 $current = $navFor[$current] ?? $current;
+// The phone header: the screen's name, and an arrow back on detail screens.
+$screenTitle = ['contact' => t('Contact'), 'review' => t('Yearly review')][$page] ?? ($navText[$current] ?? '');
+$back = in_array($page, ['contact', 'review'], true) ? ['index.php?p=contacts', t('All contacts')] : null;
 
 // Line icons for the menus, 24x24, drawn with the text colour.
 $icons = [
@@ -28,12 +32,23 @@ $icons = [
     'nodes' => '<rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/>',
     'history' => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
     'logout' => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+    'back' => '<path d="M15 18l-6-6 6-6"/>',
     'more' => '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
 ];
 $icon = static fn (string $name): string => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $icons[$name] . '</svg>';
 $tabs = ['switch', 'contacts', 'vault', 'settings'];
 $more = ['nodes', 'history'];
 $href = static fn (string $key): string => 'index.php' . ($key === 'switch' ? '' : '?p=' . $key);
+
+$stageSrc = 'assets/landing/' . Landing::DEFAULT_BACKGROUND . '.svg';
+if (!$admin && !$landing) {
+    try {
+        $landingConfig = (array) (store()->read('config')['landing'] ?? []);
+        $stageSrc = Landing::src(Landing::choice(store(), $landingConfig), $landingConfig);
+    } catch (\Throwable) {
+        // keep the default picture
+    }
+}
 
 $logo = null;
 foreach (['logo.svg', 'logo.png'] as $file) {
@@ -96,57 +111,71 @@ if ($admin) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
-<meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0c0e11">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#14161c">
 <title><?= e(Web::$title) ?></title>
 <link rel="stylesheet" href="assets/app.css?v=<?= e(VERSION) ?>">
+<script src="assets/theme.js?v=<?= e(VERSION) ?>"></script>
 <link rel="icon" href="data:,">
 </head>
 <body class="layout-<?= $admin ? 'admin' : ($landing ? 'landing' : ($install ? 'install' : 'plain')) ?>">
 <?php if ($admin): ?>
-<div class="app">
-  <aside class="sidebar">
+<div class="shell">
+  <header class="topbar">
     <a class="brand" href="index.php">
 <?php if ($logo): ?>
       <img src="<?= e($logo) ?>" alt="Death Plan Switch">
 <?php else: ?>
-      <span class="brand-dot" aria-hidden="true">DPS</span>
-      <span class="brand-text">
-        <span class="brand-name">Death Plan Switch</span>
-<?php if ($modeText !== ''): ?>
-        <span class="brand-sub"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><?= e($modeText) ?></span>
-<?php endif ?>
-      </span>
+      <span class="brand-mark" aria-hidden="true">DPS</span>
+      <span class="brand-name">Death Plan Switch</span>
 <?php endif ?>
     </a>
-    <nav class="nav-section" aria-label="<?= e(t('Menu')) ?>">
-<?php foreach ($navText as $key => $label): ?>
-      <a class="nav-item" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><span class="nav-ico"><?= $icon($key) ?></span><?= e($label) ?></a>
-<?php endforeach ?>
-    </nav>
-    <div class="user-card">
-      <span class="avatar" aria-hidden="true"><?= e($initials) ?></span>
-      <span class="user-text">
-        <span class="user-name"><?= e($user['name'] !== '' ? $user['name'] : 'Death Plan Switch') ?></span>
-        <span class="user-role"><?= e($user['line']) ?></span>
+<?php if ($modeText !== ''): ?>
+    <span class="state-line"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><span><?= e($modeText) ?></span></span>
+<?php endif ?>
+    <span class="top-spacer"></span>
+    <div class="account">
+      <span class="account-text">
+        <span class="account-name"><?= e($user['name'] !== '' ? $user['name'] : 'Death Plan Switch') ?></span>
+        <span class="account-line"><?= e($user['line']) ?></span>
       </span>
+      <span class="avatar" aria-hidden="true"><?= e($initials) ?></span>
       <a class="icon-link" href="index.php?p=logout" title="<?= e(t('Sign out')) ?>" aria-label="<?= e(t('Sign out')) ?>"><?= $icon('logout') ?></a>
     </div>
-  </aside>
-  <div class="content">
-    <header class="mobile-top">
-      <a class="brand" href="index.php">
-<?php if ($logo): ?>
-        <img src="<?= e($logo) ?>" alt="Death Plan Switch">
-<?php else: ?>
-        <span class="brand-dot" aria-hidden="true">DPS</span>
-        <span class="brand-text"><span class="brand-name">Death Plan Switch</span></span>
+  </header>
+  <nav class="tabs" aria-label="<?= e(t('Menu')) ?>">
+    <div class="tab-list">
+<?php foreach ($navText as $key => $label): ?>
+      <a class="tab-link" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
+<?php endforeach ?>
+      <span class="tab-indicator" aria-hidden="true"></span>
+    </div>
+  </nav>
+  <header class="screen-head<?= $back !== null ? ' has-back' : '' ?>">
+<?php if ($back !== null): ?>
+    <a class="screen-back" href="<?= e($back[0]) ?>" aria-label="<?= e($back[1]) ?>"><?= $icon('back') ?></a>
 <?php endif ?>
-      </a>
+    <p class="screen-title"><?= e($screenTitle) ?></p>
 <?php if ($modeText !== ''): ?>
-      <span class="mobile-state"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><?= e($modeText) ?></span>
+    <span class="state-line"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><span><?= e($modeText) ?></span></span>
 <?php endif ?>
-    </header>
+  </header>
+  <div class="scroller">
+<?php endif ?>
+<?php if (!$admin && !$landing): ?>
+<div class="stage">
+  <img class="landing-bg" src="<?= e($stageSrc) ?>" alt="">
+  <div class="landing-scrim"></div>
+  <header class="stage-top">
+    <a class="brand" href="index.php">
+<?php if ($logo): ?>
+      <img src="<?= e($logo) ?>" alt="Death Plan Switch">
+<?php else: ?>
+      <span class="brand-mark" aria-hidden="true">DPS</span>
+      <span class="brand-name">Death Plan Switch</span>
+<?php endif ?>
+    </a>
+  </header>
 <?php endif ?>
 <main class="<?= $admin ? 'main' : 'plain-main' ?>">
 <?php foreach (Web::flashes() as [$type, $message]): ?>
@@ -177,19 +206,36 @@ if ($admin) {
   <?= $admin ? e(t('Death Plan Switch {version}. Free software under the MIT licence.', ['version' => VERSION])) : e(t('Death Plan Switch')) ?>
 </footer>
 <?php endif ?>
+<?php if (!$admin && !$landing): ?>
+</div>
+<?php endif ?>
 <?php if ($admin): ?>
   </div>
-  <nav class="mobile-bar" aria-label="<?= e(t('Menu')) ?>">
+  <nav class="bottombar" aria-label="<?= e(t('Menu')) ?>">
 <?php foreach ($tabs as $key): ?>
-    <a class="tab" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= $icon($key) ?><span><?= e($navText[$key]) ?></span></a>
+    <a class="tab" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><span class="tab-ico"><?= $icon($key) ?></span><span><?= e($navText[$key]) ?></span></a>
 <?php endforeach ?>
     <details class="more">
-      <summary class="tab"<?= in_array($current, $more, true) ? ' aria-current="page"' : '' ?>><?= $icon('more') ?><span><?= e(t('More')) ?></span></summary>
+      <summary class="tab"<?= in_array($current, $more, true) ? ' aria-current="page"' : '' ?>><span class="tab-ico"><?= $icon('more') ?></span><span><?= e(t('More')) ?></span></summary>
+      <div class="more-scrim"></div>
       <div class="more-sheet">
 <?php foreach ($more as $key): ?>
         <a class="nav-item" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><span class="nav-ico"><?= $icon($key) ?></span><?= e($navText[$key]) ?></a>
 <?php endforeach ?>
+        <div class="sheet-account">
+          <span class="avatar" aria-hidden="true"><?= e($initials) ?></span>
+          <span class="account-text">
+            <span class="account-name"><?= e($user['name'] !== '' ? $user['name'] : 'Death Plan Switch') ?></span>
+            <span class="account-line"><?= e($user['line']) ?></span>
+          </span>
+        </div>
         <a class="nav-item" href="index.php?p=logout"><span class="nav-ico"><?= $icon('logout') ?></span><?= e(t('Sign out')) ?></a>
+        <span class="sheet-label label-mono"><?= e(t('Theme')) ?></span>
+        <div class="theme-choice" role="group" aria-label="<?= e(t('Theme')) ?>">
+          <button type="button" class="button-quiet" data-theme-set="dark" aria-pressed="true"><?= e(t('Dark')) ?></button>
+          <button type="button" class="button-quiet" data-theme-set="light" aria-pressed="false"><?= e(t('Light')) ?></button>
+          <button type="button" class="button-quiet" data-theme-set="system" aria-pressed="false"><?= e(t('System')) ?></button>
+        </div>
       </div>
     </details>
   </nav>

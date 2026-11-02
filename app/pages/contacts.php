@@ -65,9 +65,10 @@ Web::$title = t('Contacts: Death Plan Switch');
 <?php endif ?>
 
 <?php if ($contacts === []): ?>
-<section class="card">
+<section class="card empty">
   <h2><?= e(t('Start with your next of kin')) ?></h2>
   <p><?= e(t('Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.')) ?></p>
+  <div class="actions"><a class="button button-quiet" href="index.php?p=contact&amp;kind=nok"><?= e(t('Add your next of kin')) ?></a></div>
 </section>
 <?php else: ?>
 <?php if ($trusted !== []): ?>

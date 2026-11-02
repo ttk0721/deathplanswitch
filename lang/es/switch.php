@@ -127,6 +127,10 @@ return [
     // layout, trusted people
     'More' => 'Más',
     'Menu' => 'Menú',
+    'Theme' => 'Tema',
+    'Dark' => 'Oscuro',
+    'Light' => 'Claro',
+    'System' => 'Sistema',
     'Add your next of kin, and a technical helper if you like' => 'Añade a tu persona más cercana y, si quieres, a un ayudante técnico',
     'Trusted people' => 'Personas de confianza',
     'This is what happens if you miss the next check-in. Your other contacts would be told on {date}.' => 'Esto es lo que ocurriría si no confirmas tu presencia la próxima vez. Tus demás contactos recibirían el aviso el {date}.',

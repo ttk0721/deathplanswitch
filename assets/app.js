@@ -1,6 +1,8 @@
 /* Death Plan Switch
  *
- * The app works without this file. It adds five conveniences:
+ * The app works without this file. It adds a few conveniences:
+ *   - the sliding underline under the current tab
+ *   - the dark / light / system choice (assets/theme.js applies it)
  *   - closing the "More" sheet of the phone menu on a tap outside it, or Escape
  *   - asking before a few actions that are awkward to undo
  *   - guessing the timezone in the installer
@@ -23,11 +25,56 @@
   var more = document.querySelector('details.more');
   if (more) {
     document.addEventListener('click', function (event) {
-      if (more.open && !more.contains(event.target)) { more.open = false; }
+      var target = event.target;
+      var sheet = more.querySelector('.more-sheet');
+      var inSheet = sheet && sheet.contains(target);
+      var onSummary = target.closest && target.closest('details.more > summary');
+      if (more.open && !inSheet && !onSummary) { more.open = false; }
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && more.open) { more.open = false; }
     });
+  }
+
+  // Theme: dark, light or system. Every control with data-theme-set picks one.
+  var picks = document.querySelectorAll('[data-theme-set]');
+  function markTheme() {
+    var now = window.dpsTheme ? window.dpsTheme.get() : 'dark';
+    Array.prototype.forEach.call(picks, function (button) {
+      button.setAttribute('aria-pressed', button.getAttribute('data-theme-set') === now ? 'true' : 'false');
+    });
+  }
+  Array.prototype.forEach.call(picks, function (button) {
+    button.addEventListener('click', function () {
+      if (window.dpsTheme) { window.dpsTheme.set(button.getAttribute('data-theme-set')); }
+      markTheme();
+    });
+  });
+  markTheme();
+
+  // The tab strip: one underline that slides to the current tab.
+  var strip = document.querySelector('.tab-list');
+  var bar = strip ? strip.querySelector('.tab-indicator') : null;
+  if (strip && bar) {
+    var place = function () {
+      var current = strip.querySelector('[aria-current="page"]');
+      if (!current) { bar.style.opacity = '0'; return; }
+      var from = strip.getBoundingClientRect();
+      var box = current.getBoundingClientRect();
+      var left = box.left - from.left + strip.scrollLeft;
+      strip.classList.add('has-indicator');
+      bar.style.opacity = '';
+      bar.style.transform = 'translateX(' + left + 'px) scaleX(' + box.width + ')';
+    };
+    var jump = function () {
+      bar.style.transition = 'none';
+      place();
+      void bar.offsetWidth;
+      bar.style.transition = '';
+    };
+    jump();
+    window.addEventListener('resize', place);
+    if (document.fonts && document.fonts.ready) { document.fonts.ready.then(jump); }
   }
 
   // Installer: preselect the visitor's timezone.

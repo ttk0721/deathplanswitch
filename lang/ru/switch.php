@@ -127,6 +127,10 @@ return [
 
     'More' => 'Ещё',
     'Menu' => 'Меню',
+    'Theme' => 'Тема',
+    'Dark' => 'Тёмная',
+    'Light' => 'Светлая',
+    'System' => 'Системная',
     'Add your next of kin, and a technical helper if you like' => 'Добавь близкого человека и, если хочешь, технического помощника',
     'Trusted people' => 'Доверенные лица',
     'This is what happens if you miss the next check-in. Your other contacts would be told on {date}.' => 'Так это выглядело бы, если бы ты пропустил следующее подтверждение присутствия. Остальные контакты получили бы сообщение {date}.',

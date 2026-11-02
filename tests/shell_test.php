@@ -38,22 +38,38 @@ function render(string $page, array $query = []): string
     return $out;
 }
 
-test('signed-in pages carry a sidebar for the desktop and a tab bar for the phone', function (): void {
+test('signed-in pages carry a top bar and tab strip for the desktop, and a header and bottom bar for the phone', function (): void {
     $html = render('switch');
-    check(str_contains($html, '<aside class="sidebar">'), 'the sidebar');
-    check(str_contains($html, '<header class="mobile-top">'), 'the phone top bar');
-    check(str_contains($html, 'class="user-card"') && str_contains($html, 'index.php?p=logout'), 'the user block with sign-out');
-    preg_match('~<nav class="mobile-bar".*?</nav>~s', $html, $bar);
+    check(!str_contains($html, '<aside'), 'no sidebar');
+    check(str_contains($html, '<header class="topbar">'), 'the top bar');
+    check(!str_contains($html, 'class="user-card"') && str_contains($html, 'index.php?p=logout'), 'sign-out is in the account area');
+    preg_match('~<nav class="tabs".*?</nav>~s', $html, $strip);
+    $strip = $strip[0] ?? '';
+    same(6, preg_match_all('~<a class="tab-link" href="index\.php(\?p=(contacts|vault|nodes|settings|history))?"~', $strip), 'six tabs');
+    same(1, substr_count($strip, 'class="tab-indicator"'), 'one sliding underline');
+    check(str_contains($html, '<header class="screen-head'), 'the phone screen header');
+    preg_match('~<nav class="bottombar".*?</nav>~s', $html, $bar);
     $bar = $bar[0] ?? '';
     same(4, preg_match_all('~<a class="tab" href="index\.php(\?p=(contacts|vault|settings))?"~', $bar), 'four main tabs');
     check(str_contains($bar, '<details class="more">') && str_contains($bar, 'p=nodes') && str_contains($bar, 'p=history') && str_contains($bar, 'p=logout'), 'More holds nodes, history and sign-out');
+    same(3, substr_count($bar, 'data-theme-set='), 'More holds the theme choice');
     check(substr_count($html, 'aria-current="page"') >= 1, 'the current page is marked');
+});
+
+test('detail screens have an arrow back in the phone header', function (): void {
+    $html = render('contact', ['kind' => 'technical']);
+    check(str_contains($html, 'class="screen-back" href="index.php?p=contacts"'), 'back to contacts');
+    check(!str_contains(render('contacts'), 'class="screen-back"'), 'none on a main screen');
+});
+
+test('settings offer the theme choice', function (): void {
+    same(6, substr_count(render('settings'), 'data-theme-set='), 'dark, light, system here and in the More sheet');
 });
 
 test('no inline styles and no inline scripts anywhere in the shell', function (): void {
     foreach (['switch', 'contacts', 'settings', 'history', 'nodes', 'vault'] as $page) {
         $html = render($page);
-        check($html !== '' && str_contains($html, 'sidebar'), "$page rendered");
+        check($html !== '' && str_contains($html, 'class="shell"'), "$page rendered");
         check(!preg_match('~\sstyle=~i', $html), "$page has an inline style");
         check(!preg_match('~<script(?![^>]*\ssrc=)~i', $html), "$page has an inline script");
         check(!preg_match('~<style~i', $html), "$page has a style element");
@@ -70,10 +86,20 @@ test('the fonts are self-hosted, with their licence', function (): void {
     $css = (string) file_get_contents(ROOT . '/assets/app.css');
     preg_match_all('~url\("(fonts/[^"]+\.woff2)"\)~', $css, $m);
     check(count($m[1]) >= 15, 'font-face rules');
+    check(str_contains($css, 'font-family: "Archivo"') && str_contains($css, 'font-family: "IBM Plex Mono"'), 'Archivo and Plex Mono');
+    check(!preg_match('~ibm-plex-sans-latin~', $css), 'no unused Plex Sans');
     foreach (array_unique($m[1]) as $file) {
         check(is_file(ROOT . '/assets/' . $file), "$file exists");
     }
     check(!preg_match('~https?://~', (string) preg_replace('~/\*.*?\*/~s', '', $css)), 'nothing is loaded from another site');
-    check(is_file(ROOT . '/assets/fonts/OFL.txt'), 'the licence is shipped');
+    check(is_file(ROOT . '/assets/fonts/OFL.txt') && is_file(ROOT . '/assets/fonts/OFL-Archivo.txt') && is_file(ROOT . '/assets/fonts/OFL-Mono.txt'), 'the licences are shipped');
+});
+
+test('the theme is applied before paint by a script from this site, and light is a token set', function (): void {
+    $html = render('switch');
+    check(preg_match('~<head>.*<script src="assets/theme\.js[^"]*"></script>.*</head>~s', $html) === 1, 'theme.js in the head, not deferred');
+    $css = (string) file_get_contents(ROOT . '/assets/app.css');
+    check(str_contains($css, ':root[data-motyw="jasny"]'), 'the light theme');
+    check(!preg_match('~#(3ddc97|4be5a3|0c0e11)~i', $css), 'no colour from another project');
 });
 finish();

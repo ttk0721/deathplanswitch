@@ -24,20 +24,20 @@ if (Web::posted()) {
     $error = $result;
 }
 
-Web::$title = 'Sign in: Death Plan Switch';
+Web::$title = t('Sign in: Death Plan Switch');
 ?>
-<h1>Sign in</h1>
+<h1><?= e(t('Sign in')) ?></h1>
 <?php if ($error): ?>
 <div class="notice notice-bad" role="alert"><p><?= e($error) ?></p></div>
 <?php endif ?>
 <form method="post" action="index.php?p=login">
   <?= Web::csrfField() ?>
   <div class="field">
-    <label for="password">Owner password</label>
+    <label for="password"><?= e(t('Owner password')) ?></label>
     <input type="password" id="password" name="password" autocomplete="current-password" required autofocus>
   </div>
   <div class="actions">
-    <button type="submit">Sign in</button>
+    <button type="submit"><?= e(t('Sign in')) ?></button>
   </div>
 </form>
-<p class="small muted">Forgotten it? Run <code>php cli/reset-password.php</code> on the server.</p>
+<p class="small muted"><?= e(t('Forgotten it? Run {command} on the server.', ['command' => 'php cli/reset-password.php'])) ?></p>

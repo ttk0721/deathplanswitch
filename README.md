@@ -1,5 +1,7 @@
 # Death Plan Switch
 
+This is a fork with Docker support (NAS and Raspberry Pi).
+
 **If you disappear, the right people are told.**
 
 This project is open source but doesn't accept pull requests. Fork it freely.
@@ -33,7 +35,7 @@ Read this part before relying on it.
 
 - **It is a notification tool, not a guarantee.** It sends emails. It cannot know why you stopped checking in, cannot make anyone act, and cannot work if its server, its scheduler or its mail service is down. The sections below on separate hosting and on monitoring exist because of this.
 - **It stores no documents and no passwords.** Messages say where things are and who to call. Keep the documents themselves with people: a lawyer, your next of kin, your backup developer.
-- **It is email only.** No SMS, no phone calls, no app.
+- **It is email first.** Every email can also go out on a channel you set up (Discord, Telegram, ntfy, SMS through Apprise, or a signed webhook); see the notification channels section of [the Synology guide](docs/pl/synology.md) (Polish). No phone calls, no app.
 - **It is for one person.** One install, one owner. There are no accounts and no hosted version.
 - **It comes with no warranty** and best-effort support. See [Support](#support).
 
@@ -184,3 +186,37 @@ MIT. See [LICENSE](LICENSE). The software is provided "as is", without warranty 
 Death Plan Switch bundles [PHPMailer](https://github.com/PHPMailer/PHPMailer) 7.1.1 in `app/lib/PHPMailer`, unmodified, under the LGPL 2.1. Its licence is in that folder.
 
 Made by [Tecky](https://tecky.au).
+
+## Install from a release
+
+Every merge into `main` of this fork produces a release. It holds a Docker image and one download per platform, each named after its platform: Docker Compose, `.deb`, `.rpm`, Arch package, Alpine package, Linux tarball, FreeBSD, macOS, Windows and Solaris/illumos. Native installs run the web page and the scheduler as background services, with no Docker and no Apache.
+
+- Which file to download and how to install it (Polish): [docs/pl/instalacja.md](docs/pl/instalacja.md)
+- How releases and version numbers are made (Polish): [docs/pl/wydania.md](docs/pl/wydania.md)
+
+## Docker
+
+The image runs as two services from one compose file: `web` (Apache) and `scheduler` (runs `cron.php` every 15 minutes and pings an optional heartbeat URL). Data lives in `./data`, mounted at `/data`, outside the web root.
+
+```
+cp .env.example .env
+docker compose up -d
+```
+
+Then open `http://localhost:8080/install.php`.
+
+This uses the published image `ghcr.io/ttk0721/deathplanswitch:latest`; nothing is built, so the compose file and `.env` are enough (this is how the NAS runs). To build from source instead (for example before CI has published the first image on `main`):
+
+```
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
+```
+
+This tags the image `dps-local:dev`. To pin a published version, set `DPS_IMAGE` in `.env`, for example `DPS_IMAGE=ghcr.io/ttk0721/deathplanswitch:sha-abc1234`.
+
+- `DPS_PORT`: host port (default 8080).
+- `TZ`: time zone (default Europe/Warsaw).
+- `HEARTBEAT_URL`: optional Healthchecks.io URL; the scheduler pings it, and `/fail` when it is unhealthy.
+- Both services restart by themselves (`unless-stopped`), so the switch comes back after a power cut.
+- Back up the `data/` folder.
+
+A step-by-step guide for Synology and Raspberry Pi (in Polish): [docs/pl/synology.md](docs/pl/synology.md).

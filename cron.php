@@ -21,7 +21,14 @@ require __DIR__ . '/app/bootstrap.php';
 DPS\Cli::requireDataOwner();
 
 try {
-    $did = DPS\engine()->tick('cron');
+    // A federated node ticks with its Coordinator, so it takes its peers into account.
+    if (DPS\Node::publicIdentity(DPS\store()) !== null && DPS\Cluster::enabled(DPS\store())) {
+        require_once DPS_ROOT . '/app/Sync.php';
+        $engine = DPS\federatedEngine();
+    } else {
+        $engine = DPS\engine();
+    }
+    $did = $engine->tick('cron');
     if (in_array('--verbose', $argv, true) || in_array('-v', $argv, true)) {
         echo date('Y-m-d H:i:s') . " UTC\n- " . implode("\n- ", $did) . "\n";
     }

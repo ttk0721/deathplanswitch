@@ -31,21 +31,39 @@ final class Web
             ob_end_clean();
             http_response_code(500);
             self::$layout = 'plain';
-            self::$title = 'The data folder needs attention';
-            $content = '<h1>The data folder needs attention</h1><p class="lede">' . e($e->getMessage()) . '</p>'
-                . '<p>Nothing has been changed. See "If a data file is damaged" in the README.</p>';
+            self::$title = t('The data folder needs attention');
+            $content = '<h1>' . e(t('The data folder needs attention')) . '</h1><p class="lede">' . e($e->getMessage()) . '</p>'
+                . '<p>' . e(t('Nothing has been changed. See "If a data file is damaged" in the README.')) . '</p>';
         }
         require __DIR__ . '/pages/_layout.php';
         exit;
     }
 
-    public static function headers(): void
+    /** Extra connect-src origins; set by headers() and kept for Web::page(). */
+    private static array $connectOrigins = [];
+
+    /** The Content-Security-Policy value; only well-formed http(s) origins are added to connect-src. */
+    public static function csp(array $connectOrigins = []): string
     {
+        $extra = '';
+        foreach ($connectOrigins as $o) {
+            if (is_string($o) && preg_match('/^https?:\/\/[A-Za-z0-9.-]+(:\d+)?$/D', $o)) {
+                $extra .= ' ' . $o;
+            }
+        }
+        return "default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
+            . "connect-src 'self'" . $extra . "; form-action 'self'; base-uri 'none'; frame-ancestors 'none'";
+    }
+
+    public static function headers(array $connectOrigins = []): void
+    {
+        if ($connectOrigins !== []) {
+            self::$connectOrigins = $connectOrigins;
+        }
         if (headers_sent()) {
             return;
         }
-        header("Content-Security-Policy: default-src 'none'; style-src 'self'; script-src 'self'; img-src 'self' data:; "
-            . "connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+        header('Content-Security-Policy: ' . self::csp(self::$connectOrigins));
         header('X-Content-Type-Options: nosniff');
         header('X-Frame-Options: DENY');
         // Emailed links carry tokens in the address. Never pass them on.
@@ -234,7 +252,7 @@ final class Web
             $now = Clock::now();
             $auth = $store->read('auth') + ['failures' => 0, 'locked_until' => 0];
             if ($auth['locked_until'] > $now) {
-                return 'Too many wrong passwords. Try again ' . relative((int) $auth['locked_until']) . '.';
+                return t('Too many wrong passwords. Try again {when}.', ['when' => relative((int) $auth['locked_until'])]);
             }
             $hash = (string) ($store->read('config')['password_hash'] ?? '');
             if ($hash !== '' && password_verify($password, $hash)) {
@@ -249,8 +267,8 @@ final class Web
                 $auth['locked_until'] = $now + min(3600, 60 * 2 ** ($auth['failures'] - 5));
             }
             $store->write('auth', $auth);
-            $store->log('auth.failed', 'A wrong password was entered at sign-in.');
-            return 'That password is not right.';
+            $store->log('auth.failed', t('A wrong password was entered at sign-in.'));
+            return t('That password is not right.');
         });
     }
 
@@ -285,7 +303,7 @@ final class Web
         if ($sent === '' || !hash_equals((string) ($_SESSION['csrf'] ?? ''), $sent)) {
             http_response_code(400);
             self::$layout = 'plain';
-            self::flash('That form had expired. Go back, reload the page and try again.', 'bad');
+            self::flash(t('That form had expired. Go back, reload the page and try again.'), 'bad');
             self::redirect('index.php');
         }
         return true;

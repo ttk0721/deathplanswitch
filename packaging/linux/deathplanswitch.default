@@ -1,0 +1,20 @@
+# Death Plan Switch settings. Read by systemd (EnvironmentFile) and OpenRC.
+# Plain KEY=value lines, no spaces around "=" and no quotes needed.
+# After a change: systemctl restart deathplanswitch-web deathplanswitch-scheduler
+# (OpenRC: rc-service deathplanswitch-web restart; rc-service deathplanswitch-scheduler restart)
+
+# Where the switch keeps its data. Owned by the deathplanswitch user, mode 0700.
+DPS_DATA=/var/lib/deathplanswitch
+
+# Address of the web interface. Keep it on 127.0.0.1 and put HTTPS in front
+# (Caddy, nginx, a tunnel); see docs/pl/instalacja.md.
+DPS_LISTEN=127.0.0.1:8080
+
+# Optional: a URL pinged after every healthy scheduler run.
+HEARTBEAT_URL=
+
+# Optional: Apprise API address for extra notification channels.
+DPS_APPRISE_URL=
+
+# Worker processes of PHP's built-in server.
+PHP_CLI_SERVER_WORKERS=4

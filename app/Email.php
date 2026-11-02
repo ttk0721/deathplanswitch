@@ -52,6 +52,17 @@ final class Email
         return $this;
     }
 
+    /** The URL of the first link block, if any. */
+    public function firstLink(): ?string
+    {
+        foreach ($this->blocks as $block) {
+            if ($block[0] === 'link') {
+                return $block[2];
+            }
+        }
+        return null;
+    }
+
     public function text(): string
     {
         $out = [];

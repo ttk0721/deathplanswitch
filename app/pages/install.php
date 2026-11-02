@@ -29,6 +29,13 @@ if (!empty($config['installed_at'])) {
 
 Web::session();
 $errors = [];
+if ($config === []) {
+    // No config yet, so no saved language: use the one picked on step 1.
+    if (Web::posted() && in_array(Web::post('language'), ['pl', 'en'], true)) {
+        $_SESSION['install_lang'] = Web::post('language');
+    }
+    I18n::setLanguage((string) ($_SESSION['install_lang'] ?? 'pl'));
+}
 $outbox = new Outbox($store, new SmtpTransport());
 $requirements = Setup::requirements();
 $requirementsOk = array_filter($requirements, static fn (array $r): bool => !$r['ok']) === [];
@@ -66,20 +73,20 @@ if (Web::posted()) {
 
     if ($step === 1 && $action === 'check') {
         if (!$requirementsOk) {
-            $errors[] = 'Fix the items marked below, then check again.';
+            $errors[] = t('Fix the items marked below, then check again.');
         } else {
             $probe = Probe::run($store, Web::guessBaseUrl());
             $found = Web::post('found');
             if ($probe['result'] === 'exposed' || $found === 'exposed') {
-                $errors[] = 'Files in the data folder can be opened in a browser. Block the folder as shown below, then check again.';
+                $errors[] = t('Files in the data folder can be opened in a browser. Block the folder as shown below, then check again.');
             } elseif ($probe['result'] === 'unknown' && $found !== 'protected') {
-                $errors[] = 'The data folder could not be tested. Turn JavaScript on so your browser can run the test, then check again.';
+                $errors[] = t('The data folder could not be tested. Turn JavaScript on so your browser can run the test, then check again.');
             } elseif (!isset($_POST['separate'])) {
-                $errors[] = 'Confirm that this server is separate from the sites the switch protects.';
+                $errors[] = t('Confirm that this server is separate from the sites the switch protects.');
             } else {
                 if ($probe['result'] === 'unknown') {
                     $probe['browser_ok_at'] = Clock::now();
-                    $probe['detail'] = 'Checked from your browser: the request was refused.';
+                    $probe['detail'] = t('Checked from your browser: the request was refused.');
                 }
                 $_SESSION['install_checked'] = true;
                 $_SESSION['install_probe'] = $probe;
@@ -96,32 +103,34 @@ if (Web::posted()) {
         $dow = (int) Web::post('slot_dow', '1');
         $hour = (int) Web::post('slot_hour', '9');
         $baseUrl = rtrim(Web::post('base_url'), '/');
+        $language = (string) ($_SESSION['install_lang'] ?? 'pl');
 
         if ($name === '') {
-            $errors[] = 'Enter your name.';
+            $errors[] = t('Enter your name.');
         }
         if (!Web::validEmail($email)) {
-            $errors[] = 'Enter a valid email address.';
+            $errors[] = t('Enter a valid email address.');
         }
         if (($problem = Setup::passwordProblem($password)) !== null) {
             $errors[] = $problem;
         } elseif ($password !== (string) ($_POST['password2'] ?? '')) {
-            $errors[] = 'The two passwords do not match.';
+            $errors[] = t('The two passwords do not match.');
         }
         if (!Setup::validTimezone($tz)) {
-            $errors[] = 'Choose your timezone.';
+            $errors[] = t('Choose your timezone.');
         }
         if (!preg_match('~^https?://[^\s/]+(/[^\s]*)?$~i', $baseUrl)) {
-            $errors[] = 'Enter the full web address of this install.';
+            $errors[] = t('Enter the full web address of this install.');
         }
 
         if ($errors === []) {
-            $store->locked(static function () use ($store, $engine, $name, $email, $password, $tz, $dow, $hour, $baseUrl): void {
+            $store->locked(static function () use ($store, $engine, $name, $email, $password, $tz, $dow, $hour, $baseUrl, $language): void {
                 if ($store->exists('config')) {
                     return; // someone else got here first; do not overwrite them
                 }
                 $now = Clock::now();
                 $store->write('config', [
+                    'language' => $language,
                     'owner_name' => $name,
                     'owner_email' => $email,
                     'backup_email' => '',
@@ -154,18 +163,18 @@ if (Web::posted()) {
         [$smtp, $errors] = Setup::smtpFromPost((array) ($config['smtp'] ?? []));
         $email = strtolower(Web::post('owner_email'));
         if (!Web::validEmail($email)) {
-            $errors[] = 'Enter a valid email address for yourself.';
+            $errors[] = t('Enter a valid email address for yourself.');
         }
         if ($errors === []) {
             $config['smtp'] = $smtp;
             $config['owner_email'] = $email;
             $store->write('config', $config);
             if (Setup::startEmailCode($store, $outbox, 'owner_email', $email)) {
-                Web::flash("A test email with a code has been sent to {$email}.");
+                Web::flash(t('A test email with a code has been sent to {email}.', ['email' => $email]));
                 Web::redirect('install.php');
             }
-            $reason = $store->read('mail')['last_send_error']['error'] ?? 'unknown error';
-            $errors[] = 'The test email could not be sent. The mail server said: ' . $reason;
+            $reason = $store->read('mail')['last_send_error']['error'] ?? t('unknown error');
+            $errors[] = t('The test email could not be sent. The mail server said: {reason}', ['reason' => $reason]);
         }
         $config['smtp'] = $smtp;
     }
@@ -192,15 +201,15 @@ if (Web::posted()) {
         $config['installed_at'] = Clock::now();
         unset($config['install_step']);
         $store->write('config', $config);
-        $store->log('installed', 'Death Plan Switch ' . VERSION . ' was installed.');
-        Web::flash('Installed. Next: add your next of kin and your technical 2IC.');
+        $store->log('installed', t('Death Plan Switch {version} was installed.', ['version' => VERSION]));
+        Web::flash(t('Installed. Next: add your next of kin and your technical 2IC.'));
         Web::redirect('index.php?p=contacts');
     }
 }
 
 // ---------------------------------------------------------------- display
 
-$stepNames = [1 => 'Check the server', 2 => 'About you', 3 => 'Mail', 4 => 'Scheduler'];
+$stepNames = [1 => t('Check the server'), 2 => t('About you'), 3 => t('Mail'), 4 => t('Scheduler')];
 $probe = null;
 $probeUrl = null;
 if ($step === 1 && $requirementsOk) {
@@ -212,9 +221,9 @@ $ticked = $step === 4 ? $engine->state()['last_tick_at'] : null;
 $smtp = (array) ($config['smtp'] ?? []);
 $posted = static fn (string $key, string $default = ''): string => Web::isPost() ? Web::post($key, $default) : $default;
 
-Web::$title = 'Install Death Plan Switch';
+Web::$title = t('Install Death Plan Switch');
 ?>
-<h1>Install Death Plan Switch</h1>
+<h1><?= e(t('Install Death Plan Switch')) ?></h1>
 
 <?php if ($step > 0): ?>
 <ol class="steps">
@@ -229,17 +238,17 @@ Web::$title = 'Install Death Plan Switch';
 <?php endif ?>
 
 <?php if ($step === 0): ?>
-<p>This install was started but not finished. Enter the owner password to carry on.</p>
+<p><?= e(t('This install was started but not finished. Enter the owner password to carry on.')) ?></p>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="resume">
   <div class="field">
-    <label for="password">Owner password</label>
+    <label for="password"><?= e(t('Owner password')) ?></label>
     <input type="password" id="password" name="password" autocomplete="current-password" required autofocus>
   </div>
-  <div class="actions"><button type="submit">Continue the install</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Continue the install')) ?></button></div>
 </form>
-<p class="small muted">To start again from nothing, delete <code>config.json</code> and <code>config.json.bak</code> from the data folder.</p>
+<p class="small muted"><?= t('To start again from nothing, delete <code>config.json</code> and <code>config.json.bak</code> from the data folder.') ?></p>
 
 <?php elseif ($step === 1): ?>
 <ul class="checklist">
@@ -256,31 +265,31 @@ Web::$title = 'Install Death Plan Switch';
 <?php $probeOk = in_array($probe['result'], ['protected', 'outside'], true); ?>
   <li class="<?= $probeOk ? 'is-ok' : ($probe['result'] === 'exposed' ? 'is-todo' : 'is-optional') ?>" id="probe-item">
     <span class="mark" aria-hidden="true"><?= $probeOk ? '✓' : ($probe['result'] === 'exposed' ? '✗' : '○') ?></span>
-    <span>The data folder cannot be read from the web</span>
+    <span><?= e(t('The data folder cannot be read from the web')) ?></span>
 <?php if ($probe['result'] === 'exposed'): ?>
-    <span class="hint">A test file in the data folder was served to the web. Your contacts and their messages would be too.</span>
+    <span class="hint"><?= e(t('A test file in the data folder was served to the web. Your contacts and their messages would be too.')) ?></span>
 <?php elseif ($probe['result'] === 'unknown'): ?>
-    <span class="hint" id="probe-hint">The server could not request its own address, so your browser is running the test instead.</span>
+    <span class="hint" id="probe-hint"><?= e(t('The server could not request its own address, so your browser is running the test instead.')) ?></span>
 <?php endif ?>
   </li>
 <?php endif ?>
   <li class="<?= Web::isHttps() ? 'is-ok' : 'is-optional' ?>">
     <span class="mark" aria-hidden="true"><?= Web::isHttps() ? '✓' : '○' ?></span>
-    <span>This page is served over HTTPS</span>
+    <span><?= e(t('This page is served over HTTPS')) ?></span>
 <?php if (!Web::isHttps()): ?>
-    <span class="hint">Without HTTPS, your password and the links in emails can be read in transit. Set up a certificate before you rely on this install.</span>
+    <span class="hint"><?= e(t('Without HTTPS, your password and the links in emails can be read in transit. Set up a certificate before you rely on this install.')) ?></span>
 <?php endif ?>
   </li>
 </ul>
 
 <?php if ($probe !== null && ($probe['result'] === 'exposed' || Web::post('found') === 'exposed')): ?>
 <div class="panel">
-  <h2>Block the data folder</h2>
-  <p><strong>Apache:</strong> the folder already holds a <code>.htaccess</code> file that blocks it. If you see this message, Apache is ignoring it. Set <code>AllowOverride All</code> for this site, or copy the rule into the site's own configuration.</p>
-  <p><strong>nginx:</strong> add this inside the site's <code>server</code> block, then reload nginx:</p>
+  <h2><?= e(t('Block the data folder')) ?></h2>
+  <p><?= t('<strong>Apache:</strong> the folder already holds a <code>.htaccess</code> file that blocks it. If you see this message, Apache is ignoring it. Set <code>AllowOverride All</code> for this site, or copy the rule into the site\'s own configuration.') ?></p>
+  <p><?= t('<strong>nginx:</strong> add this inside the site\'s <code>server</code> block, then reload nginx:') ?></p>
   <pre class="cron">location ~ ^<?= e(rtrim((string) parse_url(Web::guessBaseUrl(), PHP_URL_PATH), '/')) ?>/(data|app|cli|tests|docs)/ { deny all; }</pre>
-  <p class="small">The package includes a complete example in <code>docs/nginx.conf.example</code>.</p>
-  <p><strong>Or</strong> move the data folder out of the web folder altogether. The README shows how.</p>
+  <p class="small"><?= t('The package includes a complete example in <code>docs/nginx.conf.example</code>.') ?></p>
+  <p><?= t('<strong>Or</strong> move the data folder out of the web folder altogether. The README shows how.') ?></p>
 </div>
 <?php endif ?>
 
@@ -288,12 +297,20 @@ Web::$title = 'Install Death Plan Switch';
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="check">
   <input type="hidden" name="found" value="">
+  <div class="field">
+    <label for="language">Język / Language</label>
+    <select id="language" name="language">
+      <option value="pl"<?= ($_SESSION['install_lang'] ?? 'pl') === 'pl' ? ' selected' : '' ?>>Polski</option>
+      <option value="en"<?= ($_SESSION['install_lang'] ?? 'pl') === 'en' ? ' selected' : '' ?>>English</option>
+    </select>
+    <span class="help"><?= e(t('Used for the pages and the emails. You can change it later in Settings.')) ?></span>
+  </div>
   <div class="tick">
     <input type="checkbox" id="separate" name="separate" value="1"<?= isset($_POST['separate']) ? ' checked' : '' ?>>
-    <label for="separate">This server is separate from the sites the switch protects</label>
-    <span class="help">If the switch lives on the same server as your clients' sites, the outage that takes them down takes the switch down with them, and nobody is told. Use different hosting: a small, cheap server is plenty.</span>
+    <label for="separate"><?= e(t('This server is separate from the sites the switch protects')) ?></label>
+    <span class="help"><?= e(t('If the switch lives on the same server as your clients\' sites, the outage that takes them down takes the switch down with them, and nobody is told. Use different hosting: a small, cheap server is plenty.')) ?></span>
   </div>
-  <div class="actions"><button type="submit"><?= $errors ? 'Check again' : 'Continue' ?></button></div>
+  <div class="actions"><button type="submit"><?= e($errors ? t('Check again') : t('Continue')) ?></button></div>
 </form>
 
 <?php elseif ($step === 2): ?>
@@ -301,26 +318,26 @@ Web::$title = 'Install Death Plan Switch';
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="owner">
   <div class="field">
-    <label for="owner_name">Your name</label>
+    <label for="owner_name"><?= e(t('Your name')) ?></label>
     <input type="text" id="owner_name" name="owner_name" value="<?= e($posted('owner_name')) ?>" required maxlength="120" autocomplete="name">
-    <span class="help">As your contacts know you. It appears in every message they receive.</span>
+    <span class="help"><?= e(t('As your contacts know you. It appears in every message they receive.')) ?></span>
   </div>
   <div class="field">
-    <label for="owner_email">Your email address</label>
+    <label for="owner_email"><?= e(t('Your email address')) ?></label>
     <input type="email" id="owner_email" name="owner_email" value="<?= e($posted('owner_email')) ?>" required maxlength="254" autocomplete="email">
-    <span class="help">Where your weekly check-in is sent. Use the one you read every day.</span>
+    <span class="help"><?= e(t('Where your weekly check-in is sent. Use the one you read every day.')) ?></span>
   </div>
   <div class="field">
-    <label for="password">Choose a password</label>
+    <label for="password"><?= e(t('Choose a password')) ?></label>
     <input type="password" id="password" name="password" minlength="<?= Setup::MIN_PASSWORD ?>" required autocomplete="new-password">
-    <span class="help">At least <?= Setup::MIN_PASSWORD ?> characters. It protects your contacts and their messages.</span>
+    <span class="help"><?= e(t('At least {n} characters. It protects your contacts and their messages.', ['n' => (string) Setup::MIN_PASSWORD])) ?></span>
   </div>
   <div class="field">
-    <label for="password2">Type it again</label>
+    <label for="password2"><?= e(t('Type it again')) ?></label>
     <input type="password" id="password2" name="password2" required autocomplete="new-password">
   </div>
   <div class="field">
-    <label for="timezone">Timezone</label>
+    <label for="timezone"><?= e(t('Timezone')) ?></label>
     <select id="timezone" name="timezone"<?= Web::isPost() ? '' : ' data-timezone-guess="1"' ?>>
 <?php $chosen = $posted('timezone', 'UTC'); foreach (Setup::timezones() as $tz): ?>
       <option<?= $tz === $chosen ? ' selected' : '' ?>><?= e($tz) ?></option>
@@ -328,96 +345,101 @@ Web::$title = 'Install Death Plan Switch';
     </select>
   </div>
   <div class="field">
-    <span class="label" id="slot-label">Send my check-in email every</span>
+    <span class="label" id="slot-label"><?= e(t('Send my check-in email every')) ?></span>
     <div class="inline" role="group" aria-labelledby="slot-label">
-      <select name="slot_dow" aria-label="Day">
+      <select name="slot_dow" aria-label="<?= e(t('Day')) ?>">
 <?php foreach (Schedule::DAYS as $n => $day): ?>
-        <option value="<?= $n ?>"<?= $n === (int) $posted('slot_dow', '1') ? ' selected' : '' ?>><?= e($day) ?></option>
+        <option value="<?= $n ?>"<?= $n === (int) $posted('slot_dow', '1') ? ' selected' : '' ?>><?= e(t($day)) ?></option>
 <?php endforeach ?>
       </select>
-      <span>at</span>
-      <select name="slot_hour" aria-label="Hour">
+      <span><?= e(t('at')) ?></span>
+      <select name="slot_hour" aria-label="<?= e(t('Hour')) ?>">
 <?php for ($h = 0; $h < 24; $h++): ?>
         <option value="<?= $h ?>"<?= $h === (int) $posted('slot_hour', '9') ? ' selected' : '' ?>><?= e(hourLabel($h)) ?></option>
 <?php endfor ?>
       </select>
     </div>
-    <span class="help">Pick a time you reliably read email. You can change it later.</span>
+    <span class="help"><?= e(t('Pick a time you reliably read email. You can change it later.')) ?></span>
   </div>
   <div class="field">
-    <label for="base_url">Web address of this install</label>
+    <label for="base_url"><?= e(t('Web address of this install')) ?></label>
     <input type="url" id="base_url" name="base_url" value="<?= e($posted('base_url', Web::guessBaseUrl())) ?>" required>
-    <span class="help">Used to build the links in emails. Check it is exactly what is in your address bar, without <code>install.php</code>.</span>
+    <span class="help"><?= t('Used to build the links in emails. Check it is exactly what is in your address bar, without <code>install.php</code>.') ?></span>
   </div>
-  <div class="actions"><button type="submit">Continue</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Continue')) ?></button></div>
 </form>
 
 <?php elseif ($step === 3 && $pending): ?>
-<p class="lede">The mail server accepted a test email. Now check it arrived.</p>
+<p class="lede"><?= e(t('The mail server accepted a test email. Now check it arrived.')) ?></p>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="code">
   <div class="field">
-    <label for="code">The six-digit code sent to <?= e($pending['address']) ?></label>
+    <label for="code"><?= e(t('The six-digit code sent to {address}', ['address' => (string) $pending['address']])) ?></label>
     <input type="text" id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required autofocus>
-    <span class="help">It can take a minute. Look in spam too: if it landed there, mark it as not spam now, so your check-in emails are not lost later.</span>
+    <span class="help"><?= e(t('It can take a minute. Look in spam too: if it landed there, mark it as not spam now, so your check-in emails are not lost later.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Continue</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Continue')) ?></button></div>
 </form>
-<form method="post" action="install.php"><?= Web::csrfField() ?><input type="hidden" name="action" value="recode"><button class="link" type="submit">Nothing arrived: change the mail settings or my address</button></form>
+<form method="post" action="install.php"><?= Web::csrfField() ?><input type="hidden" name="action" value="recode"><button class="link" type="submit"><?= e(t('Nothing arrived: change the mail settings or my address')) ?></button></form>
 
 <?php elseif ($step === 3): ?>
-<p class="lede">The switch sends email through a mail server you choose. Enter its details and a test email is sent to you.</p>
+<p class="lede"><?= e(t('The switch sends email through a mail server you choose. Enter its details and a test email is sent to you.')) ?></p>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="smtp">
 <?php require __DIR__ . '/_smtp_fields.php' ?>
   <div class="field">
-    <label for="owner_email">Send the test to</label>
+    <label for="owner_email"><?= e(t('Send the test to')) ?></label>
     <input type="email" id="owner_email" name="owner_email" value="<?= e($posted('owner_email', (string) $config['owner_email'])) ?>" required maxlength="254">
-    <span class="help">Your own address, from the last step.</span>
+    <span class="help"><?= e(t('Your own address, from the last step.')) ?></span>
   </div>
-  <div class="actions"><button type="submit">Send the test email</button></div>
+  <div class="actions"><button type="submit"><?= e(t('Send the test email')) ?></button></div>
 </form>
 
 <?php elseif ($step === 4): ?>
-<p class="lede">The switch does nothing by itself. Every 15 minutes, the server has to run it. This is the one technical step.</p>
-<h2>Add this line to the server's crontab</h2>
+<p class="lede"><?= e(t('The switch does nothing by itself. Every 15 minutes, the server has to run it. This is the one technical step.')) ?></p>
+<?php if (\DPS\inDocker()): ?>
+<h2><?= e(t('The scheduler runs in its own container')) ?></h2>
+<p><?= t('The <code>scheduler</code> service runs the switch every 15 minutes. Waiting for its first run…') ?></p>
+<?php else: ?>
+<h2><?= e(t('Add this line to the server\'s crontab')) ?></h2>
 <?php $runUser = Web::runUser(); ?>
 <?php if ($runUser['differs']): ?>
-<p>On this server the web pages run as the user <code><?= e($runUser['name']) ?></code>, so the scheduler must too. Open that user's crontab with <code><?= e(Web::crontabCommand()) ?></code> and paste:</p>
+<p><?= t('On this server the web pages run as the user <code>{user}</code>, so the scheduler must too. Open that user\'s crontab with <code>{command}</code> and paste:', ['user' => e($runUser['name']), 'command' => e(Web::crontabCommand())]) ?></p>
 <?php else: ?>
-<p>Run <code>crontab -e</code> as the user that owns these files, and paste:</p>
+<p><?= t('Run <code>crontab -e</code> as the user that owns these files, and paste:') ?></p>
 <?php endif ?>
 <pre class="cron"><?= e(Web::cronLine()) ?></pre>
 <?php if (Web::phpCli() === null): ?>
-<div class="notice notice-warn"><p>The path to PHP could not be detected on this server. Replace <code>php</code> at the start of the command with the full path your host gives you, for example <code>/usr/bin/php</code>.</p></div>
+<div class="notice notice-warn"><p><?= t('The path to PHP could not be detected on this server. Replace <code>php</code> at the start of the command with the full path your host gives you, for example <code>/usr/bin/php</code>.') ?></p></div>
 <?php endif ?>
-<p>To test it straight away, without waiting for cron, run the same command once by hand:</p>
+<p><?= e(t('To test it straight away, without waiting for cron, run the same command once by hand:')) ?></p>
 <pre class="cron"><?= e(Web::cronCommand()) ?></pre>
 <details>
-  <summary>My hosting has no cron</summary>
-  <p>Use any outside scheduler to request this address every 15 minutes instead. It does the same job. Treat the address as a secret.</p>
+  <summary><?= e(t('My hosting has no cron')) ?></summary>
+  <p><?= e(t('Use any outside scheduler to request this address every 15 minutes instead. It does the same job. Treat the address as a secret.')) ?></p>
   <pre class="cron"><?= e($engine->url($config, 'tick.php', ['key' => $config['tick_key']])) ?></pre>
 </details>
+<?php endif ?>
 
 <?php if ($ticked): ?>
-<div class="notice notice-ok" role="status"><p><strong>The first run has arrived.</strong> The scheduler ran <?= e(relative($ticked)) ?>.</p></div>
+<div class="notice notice-ok" role="status"><p><?= t('<strong>The first run has arrived.</strong> The scheduler ran {when}.', ['when' => e(relative($ticked))]) ?></p></div>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="finish">
-  <div class="actions"><button class="button-big" type="submit">Finish</button></div>
+  <div class="actions"><button class="button-big" type="submit"><?= e(t('Finish')) ?></button></div>
 </form>
 <?php else: ?>
-<div class="notice" role="status" data-poll="install.php?poll=1"><p><strong>Waiting for the first run.</strong> This page updates by itself when it arrives, within 15 minutes of adding the line.</p></div>
+<div class="notice" role="status" data-poll="install.php?poll=1"><p><?= t(\DPS\inDocker() ? '<strong>Waiting for the first run.</strong> This page updates by itself when it arrives, within 15 minutes of the scheduler container starting.' : '<strong>Waiting for the first run.</strong> This page updates by itself when it arrives, within 15 minutes of adding the line.') ?></p></div>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="finish">
   <div class="actions">
-    <a class="button" href="install.php">Check now</a>
-    <button class="button-quiet" type="submit">Carry on without waiting</button>
+    <a class="button" href="install.php"><?= e(t('Check now')) ?></a>
+    <button class="button-quiet" type="submit"><?= e(t('Carry on without waiting')) ?></button>
   </div>
-  <p class="small muted">You can add your contacts in the meantime. The switch cannot be armed until a run has arrived.</p>
+  <p class="small muted"><?= e(t('You can add your contacts in the meantime. The switch cannot be armed until a run has arrived.')) ?></p>
 </form>
 <?php endif ?>
 <?php endif ?>

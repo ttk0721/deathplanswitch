@@ -1,0 +1,13 @@
+.git
+.github
+.*
+tests
+docs
+packaging
+data/**
+!data/index.html
+.env*
+.gitignore
+Dockerfile
+docker-compose.yml
+config.local.php

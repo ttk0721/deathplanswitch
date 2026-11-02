@@ -1,0 +1,78 @@
+#!/bin/sh
+#
+# PROVIDE: deathplanswitch_web
+# REQUIRE: LOGIN NETWORKING
+# KEYWORD: shutdown
+#
+# Add these to /etc/rc.conf (install.sh does it with sysrc):
+#   deathplanswitch_web_enable="YES"
+#   deathplanswitch_web_listen="127.0.0.1:8080"
+#   deathplanswitch_web_data="/var/db/deathplanswitch"
+#   deathplanswitch_web_php="/usr/local/bin/php"      (absolute path, no PATH lookup)
+#   deathplanswitch_web_app="/usr/local/share/deathplanswitch"
+#   deathplanswitch_web_runas="deathplanswitch"   (not "_user": rc.subr would then run su; daemon drops privileges itself)
+#   deathplanswitch_web_workers="4"
+
+. /etc/rc.subr
+
+name="deathplanswitch_web"
+rcvar="deathplanswitch_web_enable"
+desc="DeathPlanSwitch web interface"
+
+load_rc_config $name
+
+: ${deathplanswitch_web_enable:="NO"}
+: ${deathplanswitch_web_runas:="deathplanswitch"}
+: ${deathplanswitch_web_listen:="127.0.0.1:8080"}
+: ${deathplanswitch_web_data:="/var/db/deathplanswitch"}
+: ${deathplanswitch_web_php:="/usr/local/bin/php"}
+: ${deathplanswitch_web_app:="/usr/local/share/deathplanswitch"}
+: ${deathplanswitch_web_workers:="4"}
+
+pidfile="/var/run/${name}.pid"
+procname="/usr/sbin/daemon"
+command="/usr/sbin/daemon"
+# rc.subr evals command_args, so every value is validated in the prestart
+# (strict charset, no quote or shell metacharacter) and then single-quoted here.
+command_args="-r -u '${deathplanswitch_web_runas}' -P ${pidfile} -t ${name} \
+/usr/bin/env 'DPS_DATA=${deathplanswitch_web_data}' 'DPS_LISTEN=${deathplanswitch_web_listen}' \
+'PHP_CLI_SERVER_WORKERS=${deathplanswitch_web_workers}' \
+'${deathplanswitch_web_php}' -S '${deathplanswitch_web_listen}' \
+-t '${deathplanswitch_web_app}' '${deathplanswitch_web_app}/bin/router.php'"
+
+start_precmd="deathplanswitch_web_prestart"
+
+# Plain value (user, path): letters, digits and . _ / + - only.
+deathplanswitch_web_check_plain()
+{
+	case "$2" in
+		''|*[!A-Za-z0-9._/+-]*) err 1 "invalid $1 in rc.conf: only letters, digits and . _ / + - are allowed" ;;
+	esac
+}
+
+deathplanswitch_web_prestart()
+{
+	deathplanswitch_web_check_plain deathplanswitch_web_runas "${deathplanswitch_web_runas}"
+	deathplanswitch_web_check_plain deathplanswitch_web_data "${deathplanswitch_web_data}"
+	deathplanswitch_web_check_plain deathplanswitch_web_php "${deathplanswitch_web_php}"
+	deathplanswitch_web_check_plain deathplanswitch_web_app "${deathplanswitch_web_app}"
+	# listen = host:port, strict charset, numeric port.
+	case "${deathplanswitch_web_listen}" in
+		''|*[!A-Za-z0-9.:_-]*|*:|:*) err 1 "invalid deathplanswitch_web_listen in rc.conf: use host:port, for example 127.0.0.1:8080" ;;
+		*:*) ;;
+		*) err 1 "invalid deathplanswitch_web_listen in rc.conf: use host:port, for example 127.0.0.1:8080" ;;
+	esac
+	case "${deathplanswitch_web_listen##*:}" in
+		''|*[!0-9]*) err 1 "invalid deathplanswitch_web_listen in rc.conf: the port must be a number" ;;
+	esac
+	case "${deathplanswitch_web_workers}" in
+		''|*[!0-9]*) err 1 "invalid deathplanswitch_web_workers in rc.conf: must be a number" ;;
+	esac
+	if [ "$(id -u "${deathplanswitch_web_runas}" 2>/dev/null)" = "0" ]; then
+		err 1 "refusing to run as root"
+	fi
+	[ -x "${deathplanswitch_web_php}" ] || err 1 "php not found at ${deathplanswitch_web_php}"
+	[ -f "${deathplanswitch_web_app}/bin/router.php" ] || err 1 "app not found in ${deathplanswitch_web_app}"
+}
+
+run_rc_command "$1"

@@ -142,26 +142,44 @@ final class Contacts
     {
         $label = trim((string) ($contact['role_label'] ?? ''));
         return match ($label) {
-            'Next of kin' => 'next of kin',
-            'Technical 2IC' => 'technical 2IC',
-            'Legal contact' => 'legal contact',
-            'Other contact', '' => 'contact',
+            'Next of kin' => t('next of kin'),
+            'Technical 2IC' => t('technical 2IC'),
+            'Legal contact' => t('legal contact'),
+            'Other contact', '' => t('contact'),
             default => $label,
         };
+    }
+
+    /** A role label for display: the four built-in labels are translated, anything the owner typed is shown as typed. */
+    public static function label(string $label): string
+    {
+        return match ($label) {
+            'Next of kin' => t('Next of kin'),
+            'Technical 2IC' => t('Technical 2IC'),
+            'Legal contact' => t('Legal contact'),
+            'Other contact' => t('Other contact'),
+            default => $label,
+        };
+    }
+
+    /** The name of a kind, for display. */
+    public static function kindLabel(string $kind): string
+    {
+        return self::label(self::KINDS[$kind] ?? self::KINDS['other']);
     }
 
     /** "Role: Name, email, phone" for use in messages to other contacts. */
     public static function line(array $contact): string
     {
         $parts = array_filter([$contact['name'] ?? '', $contact['email'] ?? '', $contact['phone'] ?? '']);
-        return ($contact['role_label'] ?? 'Contact') . ': ' . implode(', ', $parts);
+        return (isset($contact['role_label']) ? self::label((string) $contact['role_label']) : t('Contact')) . ': ' . implode(', ', $parts);
     }
 
     /** "Name, email, phone" */
     public static function details(?array $contact): string
     {
         if ($contact === null) {
-            return '(none listed)';
+            return t('(none listed)');
         }
         return implode(', ', array_filter([$contact['name'] ?? '', $contact['email'] ?? '', $contact['phone'] ?? '']));
     }

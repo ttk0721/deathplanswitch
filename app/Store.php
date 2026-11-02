@@ -230,7 +230,7 @@ final class Store
         }
         if (!isset($this->recovered[$name])) {
             $this->recovered[$name] = true;
-            $this->log('store.recovered', "{$name}.json was unreadable. The last good copy was used instead.");
+            $this->log('store.recovered', t('{name}.json was unreadable. The last good copy was used instead.', ['name' => $name]));
         }
         return $backup;
     }

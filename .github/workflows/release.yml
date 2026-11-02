@@ -1,0 +1,262 @@
+name: Release
+
+# A merged pull request into main (or a manual run) produces one tested,
+# versioned release. Only the closed event of a pull request is used, never
+# pull_request_target, and the PR head is never checked out: the code built
+# is the merge commit on main.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/ttk0721/deathplanswitch
+
+jobs:
+  version:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      skip: ${{ steps.next.outputs.skip }}
+      version: ${{ steps.next.outputs.version }}
+      sha: ${{ steps.next.outputs.sha }}
+    steps:
+      - name: Pick the commit
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then sha="$MERGE_SHA"; else sha="$GITHUB_SHA"; fi
+          case "$sha" in
+            *[!0-9a-f]* | "") echo "no commit to release" >&2; exit 1 ;;
+          esac
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ steps.pick.outputs.sha }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Next version
+        id: next
+        env:
+          EVENT: ${{ github.event_name }}
+          BUMP: ${{ inputs.bump }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          SHA: ${{ steps.pick.outputs.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            LABELS="release:$BUMP"
+            PR_TITLE="manual: $BUMP"
+          fi
+          printf '%s' "$PR_BODY" > "$RUNNER_TEMP/body.txt"
+          last="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+          base="$(tr -d '[:space:]' < VERSION)"
+          # A rerun: an earlier run already tagged this very commit. Keep that
+          # version instead of bumping again from the new tag.
+          same="$(git tag --points-at "$SHA" --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -n 1)"
+          if [ -n "$same" ]; then
+            v="${same#v}"
+            # The releases API lists published releases only, never drafts.
+            if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$v" >/dev/null 2>&1; then
+              {
+                echo "skip=true"
+                echo "version="
+                echo "sha=$SHA"
+              } >> "$GITHUB_OUTPUT"
+              echo "v$v is already published for this commit; nothing to do."
+              exit 0
+            fi
+            {
+              echo "skip=false"
+              echo "version=$v"
+              echo "sha=$SHA"
+            } >> "$GITHUB_OUTPUT"
+            echo "Resuming v$v (tag already on this commit)"
+            exit 0
+          fi
+          v="$(bash packaging/next-version.sh "$last" "$base" "$LABELS" "$PR_TITLE" "$RUNNER_TEMP/body.txt")"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          if [ "$v" = "skip" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "Release skipped by label."
+            exit 0
+          fi
+          if git rev-parse -q --verify "refs/tags/v$v" >/dev/null; then
+            echo "tag v$v already exists; refusing to overwrite it" >&2
+            exit 1
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$v (last tag: ${last:-none})"
+
+  tests:
+    needs: version
+    if: needs.version.outputs.skip == 'false'
+    # The called workflow declares a job that can push images (skipped here),
+    # so the caller has to allow packages: write for the call to be valid.
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ needs.version.outputs.sha }}
+
+  tag:
+    # The tag comes first. Creating it fails when it exists on another commit,
+    # so a version is never reused; a rerun on the same commit carries on.
+    needs: [version, tests]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Create the tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+          SHA: ${{ needs.version.outputs.sha }}
+        run: |
+          set -eu
+          if existing="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$VERSION" --jq .object.sha 2>/dev/null)"; then
+            if [ "$existing" = "$SHA" ]; then
+              echo "tag v$VERSION already points at $SHA; continuing"
+              exit 0
+            fi
+            echo "tag v$VERSION exists on $existing, not $SHA; refusing to move it" >&2
+            exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/v$VERSION" -f "sha=$SHA" >/dev/null
+
+  build:
+    needs: [version, tests, tag]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          persist-credentials: false
+      - name: Build every asset
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: bash packaging/build.sh "$VERSION" "$RUNNER_TEMP/dist"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: ${{ runner.temp }}/dist/*
+          if-no-files-found: error
+
+  image:
+    needs: [version, tests, tag, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          persist-credentials: false
+      - name: Stamp the version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: printf '%s\n' "$VERSION" > VERSION
+      - name: Tags
+        id: tags
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          # X.Y and latest move only when this is the highest version right now.
+          highest="$(gh api --paginate "repos/$GITHUB_REPOSITORY/tags" --jq '.[].name' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sed 's/^v//' | sort -V | tail -n 1)"
+          {
+            echo "list<<EOF"
+            echo "$IMAGE:$VERSION"
+            if [ "$highest" = "$VERSION" ]; then
+              echo "$IMAGE:${VERSION%.*}"
+              echo "$IMAGE:latest"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.tags.outputs.list }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.version.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.version.outputs.sha }}
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+
+  release:
+    needs: [version, build, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+      - name: Upload the assets and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -eu
+          bash packaging/release-notes.sh "$VERSION" > "$RUNNER_TEMP/notes.md"
+          # Never touch a published release (its assets and SHA256SUMS stay as they are).
+          if gh api "repos/$GITHUB_REPOSITORY/releases/tags/v$VERSION" >/dev/null 2>&1; then
+            echo "v$VERSION is already published; nothing to do."
+            exit 0
+          fi
+          # A draft stays invisible until the images and every asset exist.
+          if gh release view "v$VERSION" >/dev/null 2>&1; then
+            gh release upload "v$VERSION" dist/* --clobber
+          else
+            gh release create "v$VERSION" dist/* \
+              --draft \
+              --verify-tag \
+              --title "Death Plan Switch v$VERSION" \
+              --notes-file "$RUNNER_TEMP/notes.md" \
+              --generate-notes
+          fi
+          gh release edit "v$VERSION" --draft=false

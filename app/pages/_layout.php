@@ -13,7 +13,8 @@ if (!isset($content)) {
 
 $admin = Web::$layout === 'admin';
 $current = Web::get('p', 'switch');
-$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'settings' => 'Settings', 'history' => 'History'];
+$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'nodes' => 'Nodes', 'settings' => 'Settings', 'history' => 'History'];
+$navText = ['switch' => t('Switch'), 'contacts' => t('Contacts'), 'vault' => t('Vault'), 'nodes' => t('Nodes'), 'settings' => t('Settings'), 'history' => t('History')];
 $navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
 $current = $navFor[$current] ?? $current;
 
@@ -34,9 +35,22 @@ if ($admin) {
         $faults = [];
     }
 }
+
+// A secondary node mirrors the primary; say so on every admin page.
+$mirrors = null;
+if ($admin) {
+    try {
+        $self = Node::publicIdentity(store());
+        if ($self !== null && Cluster::enabled(store()) && !Cluster::isPrimary(store(), $self['id'])) {
+            $mirrors = (string) (Cluster::find(store(), (string) Cluster::read(store())['primary'])['name'] ?? t('the primary'));
+        }
+    } catch (\Throwable) {
+        $mirrors = null;
+    }
+}
 ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= e(lang()) ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -51,9 +65,9 @@ if ($admin) {
   <a class="wordmark" href="index.php"><?php if ($logo): ?><img src="<?= e($logo) ?>" alt="Death Plan Switch"><?php else: ?>Death Plan Switch<?php endif ?></a>
   <nav aria-label="Main">
 <?php foreach ($nav as $key => $label): ?>
-    <a href="index.php<?= $key === 'switch' ? '' : '?p=' . $key ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
+    <a href="index.php<?= $key === 'switch' ? '' : '?p=' . $key ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= e($navText[$key]) ?></a>
 <?php endforeach ?>
-    <a href="index.php?p=logout">Sign out</a>
+    <a href="index.php?p=logout"><?= e(t('Sign out')) ?></a>
   </nav>
 </header>
 <?php endif ?>
@@ -61,6 +75,9 @@ if ($admin) {
 <?php foreach (Web::flashes() as [$type, $message]): ?>
   <div class="notice notice-<?= e($type) ?>" role="status"><p><?= e($message) ?></p></div>
 <?php endforeach ?>
+<?php if ($mirrors !== null): ?>
+  <div class="notice notice-warn" role="status"><p><?= e(t('This node mirrors {name}. Change settings there; check-ins here count everywhere.', ['name' => $mirrors])) ?></p></div>
+<?php endif ?>
 <?php if ($faults): ?>
   <div class="notice notice-bad" role="alert">
     <ul>
@@ -79,7 +96,7 @@ if ($admin) {
 <?php endif ?>
 </main>
 <footer class="colophon">
-  <?= $admin ? 'Death Plan Switch ' . e(VERSION) . '. Free software under the MIT licence.' : 'Death Plan Switch' ?>
+  <?= $admin ? e(t('Death Plan Switch {version}. Free software under the MIT licence.', ['version' => VERSION])) : e(t('Death Plan Switch')) ?>
 </footer>
 <script src="assets/app.js?v=<?= e(VERSION) ?>" defer></script>
 </body>

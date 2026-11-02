@@ -1,0 +1,25 @@
+# Overrides docker-compose.yml for the smoke test. Run through smoke.sh.
+services:
+  web:
+    # Use the locally built dps-local:dev image; never pull.
+    pull_policy: never
+    # !override: a plain list would be added to the base ports, not replace them.
+    ports: !override ["18080:80"]
+    volumes: !override ["${SMOKE_DATA}:/data"]
+
+  scheduler:
+    pull_policy: never
+    volumes: !override ["${SMOKE_DATA}:/data"]
+    environment:
+      HEARTBEAT_URL: http://catcher:9000/ping
+    healthcheck:
+      interval: 5s
+      start_period: 5s
+    depends_on: [catcher]
+
+  catcher:
+    image: php:8.4-cli
+    command: php -S 0.0.0.0:9000 /t/catcher.php
+    volumes:
+      - ./tests/docker:/t:ro
+      - ${SMOKE_DATA}-out:/out

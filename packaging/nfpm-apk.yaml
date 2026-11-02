@@ -1,0 +1,60 @@
+# nfpm config for the Alpine package (apk add --allow-untrusted). Same work
+# directory as nfpm.yaml: ./stage, ./linux and ./alpine, with VERSION and
+# SOURCE_DATE_EPOCH exported. ./openrc holds the OpenRC scripts with the PHP
+# path already set to /usr/bin/php83.
+name: deathplanswitch
+arch: all
+platform: linux
+version: ${VERSION}
+maintainer: ttk0721 <ttk0721@protonmail.com>
+# One line: .PKGINFO holds one key per line.
+description: Death Plan Switch, a dead man's switch that runs as two background services (web on 127.0.0.1:8080 by default; put an HTTPS proxy in front)
+homepage: https://github.com/ttk0721/deathplanswitch
+license: MIT
+# php83 carries filter, hash, json and random; the rest are separate packages.
+depends:
+  - php83
+  - php83-ctype
+  - php83-curl
+  - php83-mbstring
+  - php83-openssl
+  - php83-posix
+  - php83-session
+  - php83-sodium
+contents:
+  # build.sh replaces the next line with one entry per staged file. Not a
+  # "tree": nfpm 2.46 writes the directory flag into the mode of the tree's
+  # directories in an apk, and apk-tools then rejects the package. apk creates
+  # the parent directories (root, 0755) by itself.
+  # @STAGE_FILES@
+  # Owned by the service user, which preinstall.sh creates before unpacking:
+  # apk re-applies a package's directory owner after the post-install script.
+  - dst: /var/lib/deathplanswitch
+    type: dir
+    file_info:
+      mode: 0700
+      owner: deathplanswitch
+      group: deathplanswitch
+  - src: ./openrc/deathplanswitch-web
+    dst: /etc/init.d/deathplanswitch-web
+    file_info:
+      mode: 0755
+  - src: ./openrc/deathplanswitch-scheduler
+    dst: /etc/init.d/deathplanswitch-scheduler
+    file_info:
+      mode: 0755
+  - src: ./linux/deathplanswitch.default
+    dst: /etc/default/deathplanswitch
+    type: config|noreplace
+    file_info:
+      mode: 0600
+      owner: root
+      group: root
+scripts:
+  preinstall: ./alpine/preinstall.sh
+  postinstall: ./alpine/postinstall.sh
+  preremove: ./alpine/preremove.sh
+apk:
+  scripts:
+    preupgrade: ./alpine/preinstall.sh
+    postupgrade: ./alpine/postinstall.sh

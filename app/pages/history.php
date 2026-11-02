@@ -11,12 +11,12 @@ Web::requireOwner();
 $tz = (string) (engine()->config()['timezone'] ?? 'UTC');
 $rows = store()->history(300);
 
-Web::$title = 'History: Death Plan Switch';
+Web::$title = t('History: Death Plan Switch');
 ?>
-<h1>History</h1>
-<p class="lede">Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.</p>
+<h1><?= e(t('History')) ?></h1>
+<p class="lede"><?= e(t('Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.')) ?></p>
 <?php if ($rows === []): ?>
-<p>Nothing has happened yet.</p>
+<p><?= e(t('Nothing has happened yet.')) ?></p>
 <?php else: ?>
 <table class="log">
   <tbody>

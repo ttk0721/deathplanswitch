@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'persona más cercana',
-    'technical 2IC' => 'suplente técnico',
     'legal contact' => 'contacto legal',
     'contact' => 'contacto',
     'Next of kin' => 'Persona más cercana',
-    'Technical 2IC' => 'Suplente técnico',
     'Legal contact' => 'Contacto legal',
     'Other contact' => 'Otro contacto',
     'Contact' => 'Contacto',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Abrir la caja fuerte',
-    'You disarmed it from the dashboard.' => 'Lo desactivaste desde el panel.',
+    'You disarmed it from the dashboard.' => 'Lo desarmaste desde el panel.',
     'Their previous address is still in use.' => 'Se sigue usando su dirección anterior.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} rechazó el papel de {role}, así que falta un contacto necesario.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Tu interruptor se ha desactivado, porque este papel debe estar cubierto.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Tu interruptor se ha desarmado, porque este papel debe estar cubierto.',
 
     // Engine: checklist
     'The scheduler is running' => 'El planificador está funcionando',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'El servidor no pudo comprobarlo por sí solo. Ejecuta la comprobación desde Ajustes.',
     'Your next of kin has confirmed' => 'Tu persona más cercana ha confirmado',
     'Add your next of kin.' => 'Añade a tu persona más cercana.',
-    'Your technical 2IC has confirmed' => 'Tu suplente técnico ha confirmado',
-    'Add the person who would look after your clients.' => 'Añade a la persona que se ocuparía de tus clientes.',
     'Every message says where things are' => 'Cada mensaje dice dónde está cada cosa',
     'Still holding starter text in square brackets: {names}.' => 'Aún contienen texto de ejemplo entre corchetes: {names}.',
     'Checked once your contacts have confirmed.' => 'Se comprobará cuando tus contactos hayan confirmado.',
@@ -93,4 +89,10 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Cuando no confirmas tu presencia ni respondes a los recordatorios',
     'When the switch fires' => 'Cuando el interruptor se acciona',
+
+    // Technical helper
+    'technical helper' => 'ayudante técnico',
+    'Technical helper' => 'Ayudante técnico',
+    'Technical helper (optional)' => 'Ayudante técnico (opcional)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Alguien que pueda mantener en marcha tus servidores, cuentas o proyectos.',
 ];

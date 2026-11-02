@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'người thân nhất',
-    'technical 2IC' => 'cộng sự kỹ thuật',
     'legal contact' => 'người liên hệ pháp lý',
     'contact' => 'người liên hệ',
     'Next of kin' => 'Người thân nhất',
-    'Technical 2IC' => 'Cộng sự kỹ thuật',
     'Legal contact' => 'Người liên hệ pháp lý',
     'Other contact' => 'Người liên hệ khác',
     'Contact' => 'Người liên hệ',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Mở két an toàn',
-    'You disarmed it from the dashboard.' => 'Bạn đã tắt công tắc từ trang tổng quan.',
+    'You disarmed it from the dashboard.' => 'Bạn đã tắt báo động từ trang tổng quan.',
     'Their previous address is still in use.' => 'Địa chỉ trước đây của họ vẫn đang được dùng.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} đã từ chối làm {role} của bạn, nên còn thiếu một người liên hệ bắt buộc.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Công tắc của bạn đã được tắt, vì vai trò này phải có người đảm nhiệm.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Báo động của bạn đã được tắt, vì vai trò này phải có người đảm nhiệm.',
 
     // Engine: checklist
     'The scheduler is running' => 'Bộ lập lịch đang chạy',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Máy chủ không tự kiểm tra được điều này. Hãy chạy kiểm tra từ Cài đặt.',
     'Your next of kin has confirmed' => 'Người thân nhất của bạn đã xác nhận',
     'Add your next of kin.' => 'Hãy thêm người thân nhất của bạn.',
-    'Your technical 2IC has confirmed' => 'Cộng sự kỹ thuật của bạn đã xác nhận',
-    'Add the person who would look after your clients.' => 'Hãy thêm người sẽ lo cho khách hàng của bạn.',
     'Every message says where things are' => 'Mỗi tin nhắn đều nói rõ mọi thứ ở đâu',
     'Still holding starter text in square brackets: {names}.' => 'Vẫn còn đoạn mẫu trong ngoặc vuông: {names}.',
     'Checked once your contacts have confirmed.' => 'Sẽ được kiểm tra khi những người liên hệ của bạn đã xác nhận.',
@@ -93,4 +89,8 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Khi bạn bỏ lỡ một lần check-in và các nhắc nhở của nó',
     'When the switch fires' => 'Khi công tắc được kích hoạt',
+    'technical helper' => 'người hỗ trợ kỹ thuật',
+    'Technical helper' => 'Người hỗ trợ kỹ thuật',
+    'Technical helper (optional)' => 'Người hỗ trợ kỹ thuật (tùy chọn)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Người có thể giúp máy chủ, tài khoản hoặc dự án của bạn tiếp tục vận hành.',
 ];

@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'dasbor',
     'the emailed link' => 'tautan dari email',
     'another node' => 'node lain',
-    'arming the switch' => 'penyiagaan sakelar',
+    'arming the switch' => 'pengaktifan alarm',
     'pausing the switch' => 'penjedaan sakelar',
     'ending the pause' => 'berakhirnya jeda',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'Jeda berakhir. Sakelar aktif kembali.',
-    'The switch was armed.' => 'Sakelar disiagakan.',
-    'The switch was disarmed. {reason}' => 'Sakelar dinonaktifkan. {reason}',
+    'The switch was armed.' => 'Alarm diaktifkan.',
+    'The switch was disarmed. {reason}' => 'Alarm dinonaktifkan. {reason}',
     'The switch was paused for {duration}.' => 'Sakelar dijeda selama {duration}.',
     'The pause was ended early.' => 'Jeda diakhiri lebih awal.',
     'Yearly review completed.' => 'Peninjauan tahunan selesai.',
@@ -75,4 +75,10 @@ return [
     'Death Plan Switch {version} was installed.' => 'Death Plan Switch {version} telah diinstal.',
     'Vault API error: {detail}' => 'Kesalahan API brankas: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => '{name}.json tidak dapat dibaca. Salinan terakhir yang baik dipakai sebagai gantinya.',
+    'another node ({via})' => 'node lain ({via})',
+    '{name} was asked whether {owner} is all right.' => '{name} ditanya apakah {owner} baik-baik saja.',
+    '{name} could not be emailed.' => '{name} tidak dapat dikirimi email.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} menjawab "Ada yang tidak beres". Tidak ada yang dikirim lebih awal; yang lain tetap ditanya secara bergiliran.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name} menjawab "Semua baik-baik saja". Tidak ada orang lain yang akan ditanya.',
+    'The settings for the trusted people were changed.' => 'Pengaturan orang tepercaya diubah.',
 ];

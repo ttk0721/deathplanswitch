@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'o painel',
     'the emailed link' => 'o link do e-mail',
     'another node' => 'outro nó',
-    'arming the switch' => 'ativar o interruptor',
+    'arming the switch' => 'armar o interruptor',
     'pausing the switch' => 'pausar o interruptor',
     'ending the pause' => 'encerrar a pausa',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'A pausa terminou. O interruptor está ativo novamente.',
-    'The switch was armed.' => 'O interruptor foi ativo.',
-    'The switch was disarmed. {reason}' => 'O interruptor foi desativado. {reason}',
+    'The switch was armed.' => 'O interruptor foi armado.',
+    'The switch was disarmed. {reason}' => 'O interruptor foi desarmado. {reason}',
     'The switch was paused for {duration}.' => 'O interruptor foi pausado por {duration}.',
     'The pause was ended early.' => 'A pausa foi encerrada antes do prazo.',
     'Yearly review completed.' => 'Revisão anual concluída.',
@@ -75,4 +75,12 @@ return [
     'Death Plan Switch {version} was installed.' => 'O Death Plan Switch {version} foi instalado.',
     'Vault API error: {detail}' => 'Erro da API do cofre: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Não foi possível ler {name}.json. A última cópia válida foi usada no lugar.',
+
+    // Trusted people
+    'another node ({via})' => 'outro nó ({via})',
+    '{name} was asked whether {owner} is all right.' => 'Perguntou-se a {name} se {owner} está bem.',
+    '{name} could not be emailed.' => 'Não foi possível enviar o e-mail para {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} respondeu “Algo não está bem”. Nada é enviado antes da hora e as outras pessoas continuam sendo consultadas uma após a outra.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name} respondeu “Está tudo bem”. Ninguém mais será consultado.',
+    'The settings for the trusted people were changed.' => 'As configurações das pessoas de confiança foram alteradas.',
 ];

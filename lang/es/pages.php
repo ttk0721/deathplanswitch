@@ -70,11 +70,11 @@ return [
     // Public page
     'This switch is active.' => 'Este interruptor está activo.',
     'This switch is not active.' => 'Este interruptor no está activo.',
-    'This switch is armed.' => 'Este interruptor está activo.',
+    'This switch is armed.' => 'El interruptor está vigilando.',
     'Triggered' => 'Accionado',
     'This switch has been triggered.' => 'Este interruptor se ha accionado.',
     'Open the vault' => 'Abrir la caja fuerte',
-    'Armed' => 'Activo',
+    'Armed' => 'Armado',
     'Not active' => 'No activo',
     'Owner sign-in' => 'Acceso del titular',
 
@@ -87,4 +87,25 @@ return [
     "What you leave for the people you choose, locked in your browser. Only a recipient's code or password opens it, and only after the switch has fired." => 'Lo que dejas para las personas que eliges, cerrado en tu navegador. Solo lo abre el código o la contraseña de un destinatario, y únicamente después de que el interruptor se haya accionado.',
     'The vault needs JavaScript. Turn it on for this page.' => 'La caja fuerte necesita JavaScript. Actívalo para esta página.',
     'This page needs JavaScript, because everything is decrypted in your browser.' => 'Esta página necesita JavaScript, porque todo se descifra en tu navegador.',
+
+    // Public landing page and background images
+    'This switch is being set up.' => 'Este interruptor se está configurando.',
+    'All is well.' => 'Todo está bien.',
+    'Set up' => 'Configurar',
+    'Dawn' => 'Amanecer',
+    'Sea' => 'Mar',
+    'Forest' => 'Bosque',
+    'Paper' => 'Papel',
+    'Plain' => 'Liso',
+    'That file is empty.' => 'Ese archivo está vacío.',
+    'The image can be up to 3 MB.' => 'La imagen puede ocupar hasta 3 MB.',
+    'Use a JPEG, PNG or WebP image.' => 'Usa una imagen JPEG, PNG o WebP.',
+    'That file is not a valid image.' => 'Ese archivo no es una imagen válida.',
+    'The image is too large in pixels. Use one up to {n} pixels on each side.' => 'La imagen tiene demasiados píxeles. Usa una de hasta {n} píxeles por lado.',
+
+    // Respond (trusted people)
+    'Nobody is sent anything early. If {owner} does not check in and nobody answers "All fine" by the time given in the email, the people {owner} chose are sent their instructions.' => 'No se envía nada antes de tiempo. Si {owner} no confirma su presencia y nadie responde «Todo va bien» antes de la fecha indicada en el correo, las personas que eligió {owner} recibirán sus instrucciones.',
+    'Your answer has been recorded. Nobody else will be asked. The others who were asked are told it was a false alarm, and {owner} has been told that you answered.' => 'Su respuesta se ha registrado. No se preguntará a nadie más. A las demás personas a las que se preguntó se les avisa de que era una falsa alarma y se ha avisado a {owner} de que ha respondido.',
+    'The other trusted people are still asked in turn, and nobody is sent anything early.' => 'Las demás personas de confianza siguen recibiendo la pregunta por turnos y no se envía nada antes de tiempo.',
+    '{owner} has not answered their weekly check-in or its reminders. You are one of the people they trust, so you are asked whether everything is all right. Nothing has been sent to anyone else.' => '{owner} no ha respondido a su confirmación semanal ni a los recordatorios. Usted es una de las personas en las que confía, así que le preguntamos si todo va bien. No se ha enviado nada a nadie más.',
 ];

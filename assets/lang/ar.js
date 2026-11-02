@@ -29,7 +29,7 @@ export default {
   'Give the recipient a label.': 'أعطِ المستلم تسمية.',
   'I have printed or saved it': 'لقد طبعته أو حفظته',
   'Invite to set a password': 'دعوة لتعيين كلمة مرور',
-  'Keep this safe. With the switch\'s release, it opens what {owner} left for you.': 'احتفظ بهذا في مكان آمن. مع إطلاق المفتاح، يفتح هذا الرمز ما تركه {owner} لك.',
+  'Keep this safe. With the switch\'s release, it opens what {owner} left for you.': 'احتفظ بهذا في مكان آمن. مع إطلاق المُبدِّل، يفتح هذا الرمز ما تركه {owner} لك.',
   'Key shares': 'أجزاء المفتاح',
   'Key shares distributed.': 'تم توزيع أجزاء المفتاح.',
   'Key shares: {k} of {n} nodes are needed (cluster version {version}).': 'أجزاء المفتاح: يلزم {k} من {n} عقدة (إصدار المجموعة {version}).',

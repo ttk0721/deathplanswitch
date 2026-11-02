@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'найближча людина',
-    'technical 2IC' => 'технічний заступник',
     'legal contact' => 'юридичний контакт',
     'contact' => 'контакт',
     'Next of kin' => 'Найближча людина',
-    'Technical 2IC' => 'Технічний заступник',
     'Legal contact' => 'Юридичний контакт',
     'Other contact' => 'Інший контакт',
     'Contact' => 'Контакт',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Відкрити сейф',
-    'You disarmed it from the dashboard.' => 'Ти деактивував його з панелі керування.',
+    'You disarmed it from the dashboard.' => 'Перемикач знято з охорони з панелі керування.',
     'Their previous address is still in use.' => 'Попередня адреса цієї людини досі використовується.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} відмовляється від ролі «{role}», тож бракує обовʼязкового контакту.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Твій перемикач деактивовано, бо ця роль має бути заповнена.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Твій перемикач знято з охорони, бо ця роль має бути заповнена.',
 
     // Engine: checklist
     'The scheduler is running' => 'Планувальник працює',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Сервер не зміг перевірити це самостійно. Запусти перевірку в Налаштуваннях.',
     'Your next of kin has confirmed' => 'Твоя найближча людина підтвердила згоду',
     'Add your next of kin.' => 'Додай свою найближчу людину.',
-    'Your technical 2IC has confirmed' => 'Твій технічний заступник підтвердив згоду',
-    'Add the person who would look after your clients.' => 'Додай людину, яка подбала б про твоїх клієнтів.',
     'Every message says where things are' => 'Кожне повідомлення вказує, де що лежить',
     'Still holding starter text in square brackets: {names}.' => 'Усе ще містять зразок тексту в квадратних дужках: {names}.',
     'Checked once your contacts have confirmed.' => 'Перевіримо, коли контакти підтвердять згоду.',
@@ -93,4 +89,9 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Коли ти пропустиш підтвердження присутності та нагадування про нього',
     'When the switch fires' => 'Коли перемикач спрацює',
+
+    'technical helper' => 'технічний помічник',
+    'Technical helper' => 'Технічний помічник',
+    'Technical helper (optional)' => 'Технічний помічник (за бажанням)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Той, хто зможе підтримувати роботу твоїх серверів, облікових записів чи проєктів.',
 ];

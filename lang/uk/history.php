@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'панель керування',
     'the emailed link' => 'посилання з листа',
     'another node' => 'інший вузол',
-    'arming the switch' => 'активація перемикача',
+    'arming the switch' => 'постановка перемикача на охорону',
     'pausing the switch' => 'призупинення перемикача',
     'ending the pause' => 'завершення призупинення',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'Призупинення закінчилося. Перемикач знову працює.',
-    'The switch was armed.' => 'Перемикач активовано.',
-    'The switch was disarmed. {reason}' => 'Перемикач деактивовано. {reason}',
+    'The switch was armed.' => 'Перемикач поставлено на охорону.',
+    'The switch was disarmed. {reason}' => 'Перемикач знято з охорони. {reason}',
     'The switch was paused for {duration}.' => 'Перемикач призупинено на {duration}.',
     'The pause was ended early.' => 'Призупинення завершено раніше.',
     'Yearly review completed.' => 'Щорічний перегляд завершено.',
@@ -75,4 +75,11 @@ return [
     'Death Plan Switch {version} was installed.' => 'Встановлено Death Plan Switch {version}.',
     'Vault API error: {detail}' => 'Помилка API сейфа: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Не вдалося прочитати файл {name}.json. Використано останню справну копію.',
+
+    'another node ({via})' => 'інший вузол ({via})',
+    '{name} was asked whether {owner} is all right.' => 'Запитання, чи у {owner} усе гаразд, надіслано: {name}.',
+    '{name} could not be emailed.' => 'Не вдалося надіслати лист: {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name}: відповідь «Щось не так». Нічого не надсилається завчасно, решту й далі питають по черзі.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name}: відповідь «Усе гаразд». Більше нікого не питатимуть.',
+    'The settings for the trusted people were changed.' => 'Налаштування довірених осіб змінено.',
 ];

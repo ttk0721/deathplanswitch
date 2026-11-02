@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Kerabat terdekat',
-    'Technical 2IC' => 'Wakil teknis',
     'Legal contact' => 'Kontak hukum',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Orang-orang yang dihubungi sakelar Anda. Setiap orang terlebih dahulu mengonfirmasi lewat email sebelum dihitung, dan hanya kontak yang sudah mengonfirmasi yang akan dikirimi pesan.',
     'Your yearly review is due.' => 'Saatnya peninjauan tahunan Anda.',
     'Confirm each contact still has what they need' => 'Pastikan setiap kontak masih memiliki apa yang mereka perlukan',
-    'Start with two people' => 'Mulailah dengan dua orang',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'Kerabat terdekat Anda ditanya lebih dulu, secara pribadi, apakah semuanya baik-baik saja. Wakil teknis Anda adalah orang yang akan mengurus klien Anda. Tanyakan kepada keduanya sebelum Anda menambahkan mereka.',
     'Changing to {email} once they confirm it.' => 'Akan diubah ke {email} setelah mereka mengonfirmasinya.',
     'Confirmed' => 'Sudah konfirmasi',
     'Declined' => 'Menolak',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Belum menerima apa yang mereka perlukan',
     'Has what they need' => 'Sudah memiliki apa yang mereka perlukan',
     'Add your next of kin' => 'Tambahkan kerabat terdekat Anda',
-    'Add a technical contact' => 'Tambahkan kontak teknis',
     'Add a legal contact' => 'Tambahkan kontak hukum',
     'Add someone else' => 'Tambahkan orang lain',
     'Yearly review' => 'Peninjauan tahunan',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Anda sudah memiliki kerabat terdekat. Ubah datanya, atau hapus terlebih dahulu.',
     'That contact no longer exists.' => 'Kontak itu sudah tidak ada.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => '{name} tidak dapat dihapus selama sakelar siaga, karena peran ini harus terisi. Nonaktifkan sakelar terlebih dahulu, atau tambahkan dan konfirmasikan penggantinya.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => '{name} tidak dapat dihapus selama alarm aktif, karena peran ini harus terisi. Nonaktifkan alarm terlebih dahulu, atau tambahkan dan konfirmasikan penggantinya.',
     '{name} has been deleted and will not be contacted.' => '{name} telah dihapus dan tidak akan dihubungi.',
     'Confirmation email sent to {email}.' => 'Email konfirmasi telah dikirim ke {email}.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Email konfirmasi tidak dapat dikirim. Periksa pengaturan email.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'Bagi kerabat terdekat, ini biasanya berarti: mereka tahu sakelar ini ada, mereka tahu siapa saja kontak Anda yang lain, dan mereka tahu di mana surat wasiat dan dokumen kuasa Anda disimpan.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'Bagi wakil teknis, ini biasanya berarti: mereka memegang kata sandi dokumen serah terima Anda, mereka dapat mengakses server Anda, dan mereka tahu klien mana yang perlu dihubungi lebih dulu.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'Bagi kontak hukum, ini biasanya berarti: mereka memegang salinan tersegel yang telah Anda sepakati, dan mereka tahu siapa kerabat terdekat dan wakil teknis Anda.',
     'Whatever this person would need in order to act on the message below.' => 'Apa pun yang diperlukan orang ini untuk bertindak berdasarkan pesan di bawah.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Tambah kontak',
@@ -99,7 +93,7 @@ return [
     'Sent only if neither you nor your next of kin confirms you are well.' => 'Dikirim hanya jika Anda maupun kerabat terdekat Anda tidak mengonfirmasi bahwa Anda baik-baik saja.',
     'Say where things are and who to call.' => 'Sebutkan di mana barang-barang berada dan siapa yang dapat dihubungi.',
     'Never put a password or login in a message.' => 'Jangan pernah menaruh kata sandi atau data login di dalam pesan.',
-    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Ganti teks dalam [tanda kurung siku] dengan tulisan Anda sendiri. Selama teks itu masih ada, sakelar tidak dapat disiagakan.',
+    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Ganti teks dalam [tanda kurung siku] dengan tulisan Anda sendiri. Selama teks itu masih ada, alarm tidak dapat diaktifkan.',
     'Words that fill themselves in' => 'Kata-kata yang terisi otomatis',
     'What they hold' => 'Apa yang mereka pegang',
     'I have given {name} what they need' => 'Saya sudah memberikan kepada {name} apa yang mereka perlukan',
@@ -153,4 +147,19 @@ return [
     'Apprise examples: {examples}.' => 'Contoh Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook adalah alamat {scheme}; setiap permintaan ditandatangani, dan tanda tangannya ada di header {header}.',
     'Add channel' => 'Tambah kanal',
+    'Technical helper' => 'Asisten teknis',
+    'Start with your next of kin' => 'Mulailah dengan kerabat terdekat Anda',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'Kerabat terdekat Anda ditanya lebih dulu, secara pribadi, apakah semuanya baik-baik saja. Asisten teknis bersifat opsional: orang yang dapat menjaga server, akun, atau proyek Anda tetap berjalan. Tanyakan kepadanya sebelum Anda menambahkannya.',
+    'Add a technical helper' => 'Tambahkan asisten teknis',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'Bagi asisten teknis, ini biasanya berarti: mereka memegang kata sandi dokumen serah terima Anda, mereka dapat mengakses server dan akun Anda, dan mereka tahu apa yang perlu diperiksa lebih dulu.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'Bagi kontak hukum, ini biasanya berarti: mereka memegang salinan tersegel yang telah Anda sepakati, dan mereka tahu siapa kerabat terdekat dan asisten teknis Anda.',
+    'Trusted people' => 'Orang tepercaya',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Orang-orang ini ditanya apakah semuanya baik-baik saja, satu per satu, dimulai dari kerabat terdekat Anda. Jika salah satu dari mereka menjawab bahwa semuanya baik, tidak ada orang lain yang ditanya. Hanya orang yang sudah mengonfirmasi yang ditanya. Jarak waktu antar penanyaan diatur di Pengaturan.',
+    'Asked first' => 'Ditanya pertama',
+    'Asked after {name}' => 'Ditanya setelah {name}',
+    'Move up' => 'Naikkan',
+    'Move down' => 'Turunkan',
+    'Remove from trusted people' => 'Hapus dari orang tepercaya',
+    'Trusted person {n}' => 'Orang tepercaya {n}',
+    'Add to trusted people' => 'Tambahkan ke orang tepercaya',
 ];

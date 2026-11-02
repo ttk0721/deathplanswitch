@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'близкий человек',
-    'technical 2IC' => 'технический заместитель',
     'legal contact' => 'юридический контакт',
     'contact' => 'контакт',
     'Next of kin' => 'Близкий человек',
-    'Technical 2IC' => 'Технический заместитель',
     'Legal contact' => 'Юридический контакт',
     'Other contact' => 'Другой контакт',
     'Contact' => 'Контакт',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Открыть сейф',
-    'You disarmed it from the dashboard.' => 'Ты деактивировал его с панели управления.',
+    'You disarmed it from the dashboard.' => 'Переключатель снят с охраны с панели управления.',
     'Their previous address is still in use.' => 'Предыдущий адрес этого человека по-прежнему используется.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} отказывается от роли «{role}», поэтому не хватает обязательного контакта.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Твой переключатель деактивирован, потому что эта роль должна быть заполнена.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Твой переключатель снят с охраны, потому что эта роль должна быть заполнена.',
 
     // Engine: checklist
     'The scheduler is running' => 'Планировщик работает',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Сервер не смог проверить это самостоятельно. Запусти проверку в Настройках.',
     'Your next of kin has confirmed' => 'Твой близкий человек подтвердил согласие',
     'Add your next of kin.' => 'Добавь своего близкого человека.',
-    'Your technical 2IC has confirmed' => 'Твой технический заместитель подтвердил согласие',
-    'Add the person who would look after your clients.' => 'Добавь человека, который позаботился бы о твоих клиентах.',
     'Every message says where things are' => 'Каждое сообщение указывает, где что лежит',
     'Still holding starter text in square brackets: {names}.' => 'Всё ещё содержат образец текста в квадратных скобках: {names}.',
     'Checked once your contacts have confirmed.' => 'Проверим, когда контакты подтвердят согласие.',
@@ -93,4 +89,9 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Когда ты пропустишь подтверждение присутствия и напоминания о нём',
     'When the switch fires' => 'Когда переключатель сработает',
+
+    'technical helper' => 'технический помощник',
+    'Technical helper' => 'Технический помощник',
+    'Technical helper (optional)' => 'Технический помощник (по желанию)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Тот, кто сможет поддерживать работу твоих серверов, учётных записей или проектов.',
 ];

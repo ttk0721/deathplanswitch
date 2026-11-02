@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'pessoa mais próxima',
-    'technical 2IC' => 'substituto técnico',
     'legal contact' => 'contato jurídico',
     'contact' => 'contato',
     'Next of kin' => 'Pessoa mais próxima',
-    'Technical 2IC' => 'Substituto técnico',
     'Legal contact' => 'Contato jurídico',
     'Other contact' => 'Outro contato',
     'Contact' => 'Contato',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Abrir o cofre',
-    'You disarmed it from the dashboard.' => 'Você o desativou pelo painel.',
+    'You disarmed it from the dashboard.' => 'Você o desarmou pelo painel.',
     'Their previous address is still in use.' => 'O endereço anterior continua em uso.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} recusou o papel de {role}, então falta um contato necessário.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Seu interruptor foi desativado, porque este papel precisa estar preenchido.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Seu interruptor foi desarmado, porque este papel precisa estar preenchido.',
 
     // Engine: checklist
     'The scheduler is running' => 'O agendador está funcionando',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'O servidor não conseguiu testar isso sozinho. Execute a verificação em Configurações.',
     'Your next of kin has confirmed' => 'Sua pessoa mais próxima confirmou',
     'Add your next of kin.' => 'Adicione sua pessoa mais próxima.',
-    'Your technical 2IC has confirmed' => 'Seu substituto técnico confirmou',
-    'Add the person who would look after your clients.' => 'Adicione a pessoa que cuidaria dos seus clientes.',
     'Every message says where things are' => 'Cada mensagem diz onde estão as coisas',
     'Still holding starter text in square brackets: {names}.' => 'Ainda contêm texto de exemplo entre colchetes: {names}.',
     'Checked once your contacts have confirmed.' => 'Será verificado quando seus contatos confirmarem.',
@@ -93,4 +89,10 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Quando você deixa de confirmar a presença e de responder aos lembretes',
     'When the switch fires' => 'Quando o interruptor é acionado',
+
+    // Technical helper
+    'technical helper' => 'auxiliar técnico',
+    'Technical helper' => 'Auxiliar técnico',
+    'Technical helper (optional)' => 'Auxiliar técnico (opcional)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Alguém que possa manter em funcionamento seus servidores, contas ou projetos.',
 ];

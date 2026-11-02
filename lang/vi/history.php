@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'trang tổng quan',
     'the emailed link' => 'liên kết trong email',
     'another node' => 'nút khác',
-    'arming the switch' => 'việc bật công tắc',
+    'arming the switch' => 'việc bật báo động',
     'pausing the switch' => 'việc tạm dừng công tắc',
     'ending the pause' => 'việc kết thúc tạm dừng',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'Thời gian tạm dừng đã kết thúc. Công tắc hoạt động trở lại.',
-    'The switch was armed.' => 'Công tắc đã được bật.',
-    'The switch was disarmed. {reason}' => 'Công tắc đã được tắt. {reason}',
+    'The switch was armed.' => 'Đã bật báo động.',
+    'The switch was disarmed. {reason}' => 'Đã tắt báo động. {reason}',
     'The switch was paused for {duration}.' => 'Công tắc đã được tạm dừng trong {duration}.',
     'The pause was ended early.' => 'Việc tạm dừng đã được kết thúc sớm.',
     'Yearly review completed.' => 'Đã hoàn tất rà soát hằng năm.',
@@ -75,4 +75,10 @@ return [
     'Death Plan Switch {version} was installed.' => 'Đã cài đặt Death Plan Switch {version}.',
     'Vault API error: {detail}' => 'Lỗi API của két an toàn: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Không đọc được {name}.json. Bản sao tốt gần nhất đã được dùng thay thế.',
+    'another node ({via})' => 'nút khác ({via})',
+    '{name} was asked whether {owner} is all right.' => '{name} đã được hỏi xem {owner} có ổn không.',
+    '{name} could not be emailed.' => 'Không gửi được email cho {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} đã trả lời "Có điều không ổn". Không có gì được gửi sớm hơn; những người còn lại vẫn lần lượt được hỏi.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name} đã trả lời "Mọi việc đều ổn". Sẽ không ai khác được hỏi.',
+    'The settings for the trusted people were changed.' => 'Cài đặt cho những người đáng tin cậy đã được thay đổi.',
 ];

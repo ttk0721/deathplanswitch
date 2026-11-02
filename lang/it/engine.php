@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'persona più vicina',
-    'technical 2IC' => 'sostituto tecnico',
     'legal contact' => 'contatto legale',
     'contact' => 'contatto',
     'Next of kin' => 'Persona più vicina',
-    'Technical 2IC' => 'Sostituto tecnico',
     'Legal contact' => 'Contatto legale',
     'Other contact' => 'Altro contatto',
     'Contact' => 'Contatto',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Apri la cassaforte',
-    'You disarmed it from the dashboard.' => 'L’hai disattivato dal pannello.',
+    'You disarmed it from the dashboard.' => 'L’hai disinserito dal pannello.',
     'Their previous address is still in use.' => 'Resta in uso il loro indirizzo precedente.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} ha rifiutato il ruolo di {role}, quindi manca un contatto necessario.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Il tuo interruttore è stato disattivato, perché questo ruolo deve essere coperto.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Il tuo interruttore è stato disinserito, perché questo ruolo deve essere coperto.',
 
     // Engine: checklist
     'The scheduler is running' => 'Il pianificatore è in funzione',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Il server non è riuscito a verificarlo da solo. Esegui la verifica dalle Impostazioni.',
     'Your next of kin has confirmed' => 'La tua persona più vicina ha confermato',
     'Add your next of kin.' => 'Aggiungi la tua persona più vicina.',
-    'Your technical 2IC has confirmed' => 'Il tuo sostituto tecnico ha confermato',
-    'Add the person who would look after your clients.' => 'Aggiungi la persona che si occuperebbe dei tuoi clienti.',
     'Every message says where things are' => 'Ogni messaggio dice dove si trovano le cose',
     'Still holding starter text in square brackets: {names}.' => 'Contengono ancora il testo di esempio tra parentesi quadre: {names}.',
     'Checked once your contacts have confirmed.' => 'Verrà controllato quando i tuoi contatti avranno confermato.',
@@ -93,4 +89,10 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Quando non confermi la presenza né rispondi ai promemoria',
     'When the switch fires' => 'Quando l’interruttore scatta',
+
+    // Technical helper
+    'technical helper' => 'referente tecnico',
+    'Technical helper' => 'Referente tecnico',
+    'Technical helper (optional)' => 'Referente tecnico (facoltativo)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Qualcuno che possa mantenere in funzione i tuoi server, account o progetti.',
 ];

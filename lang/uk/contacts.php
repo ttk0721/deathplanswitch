@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Найближча людина',
-    'Technical 2IC' => 'Технічний заступник',
     'Legal contact' => 'Юридичний контакт',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Люди, яким пише твій перемикач. Кожен спершу підтверджує участь листом, і лише тоді враховується. Ми пишемо тільки підтвердженим контактам.',
     'Your yearly review is due.' => 'Настав час щорічного перегляду.',
     'Confirm each contact still has what they need' => 'Переконайся, що кожен контакт досі має все потрібне',
-    'Start with two people' => 'Почни з двох людей',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'Твою найближчу людину першою приватно запитають, чи все гаразд. Технічний заступник — це той, хто подбав би про твоїх клієнтів. Запитай їх обох, перш ніж додавати.',
     'Changing to {email} once they confirm it.' => 'Змінимо на {email}, щойно цю адресу буде підтверджено.',
     'Confirmed' => 'Підтверджено',
     'Declined' => 'Відмова',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Ще не отримано всього потрібного',
     'Has what they need' => 'Має все потрібне',
     'Add your next of kin' => 'Додати найближчу людину',
-    'Add a technical contact' => 'Додати технічний контакт',
     'Add a legal contact' => 'Додати юридичний контакт',
     'Add someone else' => 'Додати когось іншого',
     'Yearly review' => 'Щорічний перегляд',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Найближча людина вже є. Відредагуй цей контакт або спершу видали його.',
     'That contact no longer exists.' => 'Цього контакту вже немає.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Контакт {name} не можна видалити, поки перемикач активований, бо ця роль має бути заповнена. Спершу деактивуй перемикач або додай і підтверди заміну.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Контакт {name} не можна видалити, поки перемикач під охороною, бо ця роль має бути заповнена. Спершу зніми перемикач з охорони або додай і підтверди заміну.',
     '{name} has been deleted and will not be contacted.' => 'Контакт {name} видалено. Цій людині більше не надсилатимуть повідомлень.',
     'Confirmation email sent to {email}.' => 'Ми надіслали лист із проханням підтвердити на адресу {email}.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Не вдалося надіслати лист із проханням підтвердити. Перевір налаштування пошти.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'Для найближчої людини це зазвичай означає: вона знає, що цей перемикач існує, знає, хто твої інші контакти, і знає, де лежать заповіт і документи про повноваження.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'Для технічного заступника це зазвичай означає: він має пароль до документа передачі справ, має доступ до твоїх серверів і знає, кому з клієнтів телефонувати першим.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'Для юридичного контакту це зазвичай означає: він має запечатані копії, про які ви домовилися, і знає, хто твоя найближча людина та технічний заступник.',
     'Whatever this person would need in order to act on the message below.' => 'Усе, що потрібно цій людині, щоб діяти за повідомленням нижче.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Додати контакт',
@@ -99,7 +93,7 @@ return [
     'Sent only if neither you nor your next of kin confirms you are well.' => 'Надсилається лише тоді, коли ні ти, ні твоя найближча людина не підтвердите, що все гаразд.',
     'Say where things are and who to call.' => 'Напиши, де що лежить і кому телефонувати.',
     'Never put a password or login in a message.' => 'Ніколи не вписуй у повідомлення пароль чи логін.',
-    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Заміни текст у [квадратних дужках] власним. Доки він там, перемикач не активується.',
+    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Заміни текст у [квадратних дужках] власним. Доки він там, перемикач не вдасться поставити на охорону.',
     'Words that fill themselves in' => 'Слова, які підставляються самі',
     'What they hold' => 'Що є в цієї людини',
     'I have given {name} what they need' => 'Контакту {name} передано все потрібне',
@@ -153,4 +147,20 @@ return [
     'Apprise examples: {examples}.' => 'Приклади Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook — це адреса {scheme}; кожен запит підписано, а підпис міститься в заголовку {header}.',
     'Add channel' => 'Додати канал',
+
+    'Technical helper' => 'Технічний помічник',
+    'Start with your next of kin' => 'Почни з найближчої людини',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'Твою найближчу людину першою приватно запитають, чи все гаразд. Технічний помічник — за бажанням: той, хто зможе підтримувати роботу твоїх серверів, облікових записів чи проєктів. Запитай цю людину, перш ніж додавати.',
+    'Add a technical helper' => 'Додати технічного помічника',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'Для технічного помічника це зазвичай означає: він має пароль до документа передачі справ, має доступ до твоїх серверів і облікових записів і знає, на що дивитися насамперед.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'Для юридичного контакту це зазвичай означає: він має запечатані копії, про які ви домовилися, і знає, хто твоя найближча людина та технічний помічник.',
+    'Trusted people' => 'Довірені особи',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Ці люди по черзі отримують питання, чи все гаразд, починаючи з найближчої людини. Якщо хтось відповість, що все гаразд, більше нікого не питають. Питають лише підтверджених людей. Як швидко вони йдуть одна за одною, задається в Налаштуваннях.',
+    'Asked first' => 'Питаємо першою',
+    'Asked after {name}' => 'Питаємо після: {name}',
+    'Move up' => 'Вгору',
+    'Move down' => 'Вниз',
+    'Remove from trusted people' => 'Вилучити з довірених осіб',
+    'Trusted person {n}' => 'Довірена особа {n}',
+    'Add to trusted people' => 'Додати до довірених осіб',
 ];

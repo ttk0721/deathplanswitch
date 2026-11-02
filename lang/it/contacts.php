@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Persona più vicina',
-    'Technical 2IC' => 'Sostituto tecnico',
     'Legal contact' => 'Contatto legale',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Le persone a cui scrive il tuo interruttore. Ognuna conferma prima via email e solo allora conta. Si scrive solo ai contatti confermati.',
     'Your yearly review is due.' => 'È il momento della revisione annuale.',
     'Confirm each contact still has what they need' => 'Conferma che ogni contatto ha ancora ciò che gli serve',
-    'Start with two people' => 'Comincia con due persone',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'La tua persona più vicina viene interpellata per prima, in privato, per sapere se va tutto bene. Il tuo sostituto tecnico è chi si occuperebbe dei tuoi clienti. Parla con entrambe prima di aggiungerle.',
     'Changing to {email} once they confirm it.' => 'Verrà cambiato in {email} quando la persona lo confermerà.',
     'Confirmed' => 'Confermato',
     'Declined' => 'Ha rifiutato',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Non ha ancora ricevuto ciò che gli serve',
     'Has what they need' => 'Ha ciò che gli serve',
     'Add your next of kin' => 'Aggiungi la tua persona più vicina',
-    'Add a technical contact' => 'Aggiungi un contatto tecnico',
     'Add a legal contact' => 'Aggiungi un contatto legale',
     'Add someone else' => 'Aggiungi un’altra persona',
     'Yearly review' => 'Revisione annuale',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Hai già una persona più vicina. Modificala oppure eliminala prima.',
     'That contact no longer exists.' => 'Questo contatto non esiste più.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Non è possibile eliminare {name} mentre l’interruttore è attivo, perché questo ruolo deve essere coperto. Disattiva prima l’interruttore oppure aggiungi e conferma un sostituto.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Non è possibile eliminare {name} mentre l’interruttore è inserito, perché questo ruolo deve essere coperto. Disinserisci prima l’interruttore oppure aggiungi e conferma un sostituto.',
     '{name} has been deleted and will not be contacted.' => '{name} è stato eliminato e non sarà contattato.',
     'Confirmation email sent to {email}.' => 'Email di conferma inviata a {email}.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Non è stato possibile inviare l’email di conferma. Controlla le impostazioni di posta.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'Per la persona più vicina, di solito significa: sa che questo interruttore esiste, sa chi sono i tuoi altri contatti e sa dove sono conservati il tuo testamento e i documenti di autorizzazione.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'Per il sostituto tecnico, di solito significa: ha la password del tuo documento di passaggio di consegne, può accedere ai tuoi server e sa quali clienti chiamare per primi.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'Per il contatto legale, di solito significa: custodisce le copie sigillate che avete concordato e sa chi sono la tua persona più vicina e il tuo sostituto tecnico.',
     'Whatever this person would need in order to act on the message below.' => 'Tutto ciò che questa persona potrebbe aver bisogno di avere per agire in base al messaggio qui sotto.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Aggiungi un contatto',
@@ -153,4 +147,21 @@ return [
     'Apprise examples: {examples}.' => 'Esempi di Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Un webhook è un indirizzo {scheme}; ogni richiesta è firmata e la firma si trova nell’intestazione {header}.',
     'Add channel' => 'Aggiungi canale',
+
+    // technical helper, trusted people
+    'Technical helper' => 'Referente tecnico',
+    'Start with your next of kin' => 'Comincia dalla tua persona più vicina',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'La tua persona più vicina viene interpellata per prima, in privato, per sapere se va tutto bene. Il referente tecnico è facoltativo: qualcuno che possa mantenere in funzione i tuoi server, account o progetti. Parlane con questa persona prima di aggiungerla.',
+    'Add a technical helper' => 'Aggiungi un referente tecnico',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'Per il referente tecnico, di solito significa: ha la password del tuo documento di passaggio di consegne, può accedere ai tuoi server e account e sa da cosa partire.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'Per il contatto legale, di solito significa: custodisce le copie sigillate che avete concordato e sa chi sono la tua persona più vicina e il tuo referente tecnico.',
+    'Trusted people' => 'Persone di fiducia',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'A queste persone viene chiesto se va tutto bene, una dopo l’altra, a partire dalla tua persona più vicina. Se una di loro risponde che va tutto bene, non viene chiesto a nessun altro. Si chiede solo alle persone confermate. L’intervallo tra una e l’altra si imposta nelle Impostazioni.',
+    'Asked first' => 'Interpellata per prima',
+    'Asked after {name}' => 'Interpellata dopo {name}',
+    'Move up' => 'Sposta su',
+    'Move down' => 'Sposta giù',
+    'Remove from trusted people' => 'Rimuovi dalle persone di fiducia',
+    'Trusted person {n}' => 'Persona di fiducia {n}',
+    'Add to trusted people' => 'Aggiungi alle persone di fiducia',
 ];

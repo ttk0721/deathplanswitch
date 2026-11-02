@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Người thân nhất',
-    'Technical 2IC' => 'Cộng sự kỹ thuật',
     'Legal contact' => 'Người liên hệ pháp lý',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Những người mà công tắc của bạn sẽ gửi tin. Mỗi người trước hết xác nhận qua email thì mới được tính, và chỉ những người đã xác nhận mới được gửi tin.',
     'Your yearly review is due.' => 'Đã đến kỳ rà soát hằng năm của bạn.',
     'Confirm each contact still has what they need' => 'Xác nhận mỗi người liên hệ vẫn có những gì họ cần',
-    'Start with two people' => 'Bắt đầu với hai người',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'Người thân nhất của bạn được hỏi trước, một cách riêng tư, xem mọi việc có ổn không. Cộng sự kỹ thuật của bạn là người sẽ lo cho khách hàng của bạn. Hãy hỏi ý cả hai người trước khi thêm họ.',
     'Changing to {email} once they confirm it.' => 'Sẽ đổi sang {email} khi họ xác nhận.',
     'Confirmed' => 'Đã xác nhận',
     'Declined' => 'Đã từ chối',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Chưa nhận được những gì họ cần',
     'Has what they need' => 'Đã có những gì họ cần',
     'Add your next of kin' => 'Thêm người thân nhất của bạn',
-    'Add a technical contact' => 'Thêm người liên hệ kỹ thuật',
     'Add a legal contact' => 'Thêm người liên hệ pháp lý',
     'Add someone else' => 'Thêm người khác',
     'Yearly review' => 'Rà soát hằng năm',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Bạn đã có người thân nhất. Hãy sửa thông tin của họ, hoặc xóa họ trước.',
     'That contact no longer exists.' => 'Người liên hệ này không còn tồn tại.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Không thể xóa {name} khi công tắc đang bật, vì vai trò này phải có người đảm nhiệm. Hãy tắt công tắc trước, hoặc thêm và xác nhận người thay thế.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Không thể xóa {name} khi báo động đang bật, vì vai trò này phải có người đảm nhiệm. Hãy tắt báo động trước, hoặc thêm và xác nhận người thay thế.',
     '{name} has been deleted and will not be contacted.' => '{name} đã bị xóa và sẽ không được liên hệ.',
     'Confirmation email sent to {email}.' => 'Đã gửi email xác nhận đến {email}.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Không gửi được email xác nhận. Hãy kiểm tra cài đặt email.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'Với người thân nhất, điều này thường có nghĩa là: họ biết công tắc này tồn tại, biết những người liên hệ khác của bạn là ai, và biết di chúc cùng giấy tờ ủy quyền của bạn được cất ở đâu.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'Với cộng sự kỹ thuật, điều này thường có nghĩa là: họ giữ mật khẩu của tài liệu bàn giao, có thể truy cập máy chủ của bạn, và biết nên gọi khách hàng nào trước.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'Với người liên hệ pháp lý, điều này thường có nghĩa là: họ giữ các bản niêm phong mà bạn đã thỏa thuận, và biết người thân nhất cùng cộng sự kỹ thuật của bạn là ai.',
     'Whatever this person would need in order to act on the message below.' => 'Bất cứ thứ gì người này cần để hành động theo tin nhắn bên dưới.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Thêm người liên hệ',
@@ -99,7 +93,7 @@ return [
     'Sent only if neither you nor your next of kin confirms you are well.' => 'Chỉ được gửi nếu cả bạn lẫn người thân nhất của bạn đều không xác nhận rằng bạn vẫn ổn.',
     'Say where things are and who to call.' => 'Hãy nói mọi thứ ở đâu và nên gọi cho ai.',
     'Never put a password or login in a message.' => 'Không bao giờ ghi mật khẩu hoặc thông tin đăng nhập vào tin nhắn.',
-    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Hãy thay đoạn trong [ngoặc vuông] bằng nội dung của bạn. Khi đoạn đó còn, công tắc sẽ không bật được.',
+    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Hãy thay đoạn trong [ngoặc vuông] bằng nội dung của bạn. Khi đoạn đó còn, không thể bật báo động.',
     'Words that fill themselves in' => 'Các từ tự động điền',
     'What they hold' => 'Những gì họ đang giữ',
     'I have given {name} what they need' => 'Tôi đã đưa cho {name} những gì họ cần',
@@ -153,4 +147,19 @@ return [
     'Apprise examples: {examples}.' => 'Ví dụ Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook là một địa chỉ {scheme}; mỗi yêu cầu đều được ký, và chữ ký nằm trong tiêu đề {header}.',
     'Add channel' => 'Thêm kênh',
+    'Technical helper' => 'Người hỗ trợ kỹ thuật',
+    'Start with your next of kin' => 'Bắt đầu với người thân nhất của bạn',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'Người thân nhất của bạn được hỏi trước, một cách riêng tư, xem mọi việc có ổn không. Người hỗ trợ kỹ thuật là tùy chọn: người có thể giúp máy chủ, tài khoản hoặc dự án của bạn tiếp tục vận hành. Hãy hỏi ý họ trước khi thêm.',
+    'Add a technical helper' => 'Thêm người hỗ trợ kỹ thuật',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'Với người hỗ trợ kỹ thuật, điều này thường có nghĩa là: họ giữ mật khẩu của tài liệu bàn giao, có thể truy cập máy chủ và tài khoản của bạn, và biết nên xem gì trước.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'Với người liên hệ pháp lý, điều này thường có nghĩa là: họ giữ các bản niêm phong mà bạn đã thỏa thuận, và biết người thân nhất cùng người hỗ trợ kỹ thuật của bạn là ai.',
+    'Trusted people' => 'Người đáng tin cậy',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Những người này lần lượt được hỏi xem mọi việc có ổn không, bắt đầu từ người thân nhất của bạn. Nếu một trong số họ trả lời rằng mọi việc đều ổn, sẽ không ai khác được hỏi. Chỉ những người đã xác nhận mới được hỏi. Khoảng cách giữa các lần hỏi được đặt trong Cài đặt.',
+    'Asked first' => 'Được hỏi đầu tiên',
+    'Asked after {name}' => 'Được hỏi sau {name}',
+    'Move up' => 'Chuyển lên',
+    'Move down' => 'Chuyển xuống',
+    'Remove from trusted people' => 'Xóa khỏi danh sách người đáng tin cậy',
+    'Trusted person {n}' => 'Người đáng tin cậy {n}',
+    'Add to trusted people' => 'Thêm vào danh sách người đáng tin cậy',
 ];

@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'en yakın kişi',
-    'technical 2IC' => 'teknik yardımcı',
     'legal contact' => 'hukuki irtibat kişisi',
     'contact' => 'kişi',
     'Next of kin' => 'En yakın kişi',
-    'Technical 2IC' => 'Teknik yardımcı',
     'Legal contact' => 'Hukuki irtibat kişisi',
     'Other contact' => 'Diğer kişi',
     'Contact' => 'Kişi',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Sunucu bunu kendi başına sınayamadı. Kontrolü Ayarlar’dan çalıştır.',
     'Your next of kin has confirmed' => 'En yakın kişin onay verdi',
     'Add your next of kin.' => 'En yakın kişini ekle.',
-    'Your technical 2IC has confirmed' => 'Teknik yardımcın onay verdi',
-    'Add the person who would look after your clients.' => 'Müşterilerinle ilgilenecek kişiyi ekle.',
     'Every message says where things are' => 'Her mesaj şeylerin nerede olduğunu söylüyor',
     'Still holding starter text in square brackets: {names}.' => 'Hâlâ köşeli parantez içinde örnek metin var: {names}.',
     'Checked once your contacts have confirmed.' => 'Kişilerin onay verdikten sonra kontrol edilir.',
@@ -91,6 +87,11 @@ return [
     'This install is not using HTTPS. Links in its emails can be read in transit.' => 'Bu kurulum HTTPS kullanmıyor. E-postalarındaki bağlantılar yolda okunabilir.',
 
     // Engine: message previews
-    'When you miss a check-in and its reminders' => 'Bir yoklamayı ve hatırlatmalarını kaçırdığında',
+    'When you miss a check-in and its reminders' => 'Bir durum bildirimini ve hatırlatmalarını kaçırdığında',
     'When the switch fires' => 'Anahtar devreye girdiğinde',
+
+    'technical helper' => 'teknik yardımcı',
+    'Technical helper' => 'Teknik yardımcı',
+    'Technical helper (optional)' => 'Teknik yardımcı (isteğe bağlı)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Sunucularının, hesaplarının veya projelerinin çalışmasını sürdürebilecek biri.',
 ];

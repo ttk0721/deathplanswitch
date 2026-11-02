@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Pessoa mais próxima',
-    'Technical 2IC' => 'Substituto técnico',
     'Legal contact' => 'Contato jurídico',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'As pessoas a quem o seu interruptor escreve. Cada uma confirma antes por e-mail e só então passa a valer. Só se escreve a contatos confirmados.',
     'Your yearly review is due.' => 'Está na hora da revisão anual.',
     'Confirm each contact still has what they need' => 'Confirme que cada contato ainda tem o que precisa',
-    'Start with two people' => 'Comece com duas pessoas',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'A sua pessoa mais próxima é consultada primeiro, em particular, sobre se está tudo bem. O seu substituto técnico é quem cuidaria dos seus clientes. Converse com as duas pessoas antes de adicioná-las.',
     'Changing to {email} once they confirm it.' => 'Será alterado para {email} quando essa pessoa confirmar.',
     'Confirmed' => 'Confirmado',
     'Declined' => 'Recusou',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Ainda não recebeu o que precisa',
     'Has what they need' => 'Tem o que precisa',
     'Add your next of kin' => 'Adicione sua pessoa mais próxima',
-    'Add a technical contact' => 'Adicionar um contato técnico',
     'Add a legal contact' => 'Adicionar um contato jurídico',
     'Add someone else' => 'Adicionar outra pessoa',
     'Yearly review' => 'Revisão anual',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Você já tem uma pessoa mais próxima. Edite-a ou exclua-a primeiro.',
     'That contact no longer exists.' => 'Esse contato não existe mais.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Não é possível excluir {name} enquanto o interruptor estiver ativo, porque este papel precisa estar preenchido. Desative o interruptor primeiro ou adicione e confirme um substituto.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => 'Não é possível excluir {name} enquanto o interruptor estiver armado, porque este papel precisa estar preenchido. Desarme o interruptor primeiro ou adicione e confirme um substituto.',
     '{name} has been deleted and will not be contacted.' => '{name} foi excluído(a). Essa pessoa não será contatada.',
     'Confirmation email sent to {email}.' => 'E-mail de confirmação enviado para {email}.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Não foi possível enviar o e-mail de confirmação. Verifique as configurações de e-mail.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'No caso da pessoa mais próxima, isso costuma significar que ela sabe que este interruptor existe, sabe quem são os seus outros contatos e sabe onde estão o seu testamento e os documentos de autorização.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'No caso do substituto técnico, isso costuma significar que ele tem a senha do seu documento de passagem, consegue acessar os seus servidores e sabe para quais clientes ligar primeiro.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'No caso do contato jurídico, isso costuma significar que ele guarda as cópias lacradas combinadas com você e sabe quem são a sua pessoa mais próxima e o seu substituto técnico.',
     'Whatever this person would need in order to act on the message below.' => 'Tudo o que essa pessoa precisaria para agir com base na mensagem abaixo.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Adicionar um contato',
@@ -99,7 +93,7 @@ return [
     'Sent only if neither you nor your next of kin confirms you are well.' => 'Enviada somente se nem você nem a sua pessoa mais próxima confirmarem que está tudo bem.',
     'Say where things are and who to call.' => 'Diga onde estão as coisas e para quem ligar.',
     'Never put a password or login in a message.' => 'Nunca coloque uma senha ou um login em uma mensagem.',
-    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Substitua o texto entre [colchetes] pelo seu. Enquanto ele estiver ali, o interruptor não será ativo.',
+    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => 'Substitua o texto entre [colchetes] pelo seu. Enquanto ele estiver ali, o interruptor não será armado.',
     'Words that fill themselves in' => 'Palavras que se preenchem sozinhas',
     'What they hold' => 'O que essa pessoa tem',
     'I have given {name} what they need' => 'Já entreguei a {name} o que ela precisa',
@@ -153,4 +147,21 @@ return [
     'Apprise examples: {examples}.' => 'Exemplos do Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Um webhook é um endereço {scheme}; cada requisição é assinada e a assinatura fica no cabeçalho {header}.',
     'Add channel' => 'Adicionar canal',
+
+    // technical helper, trusted people
+    'Technical helper' => 'Auxiliar técnico',
+    'Start with your next of kin' => 'Comece pela sua pessoa mais próxima',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'A sua pessoa mais próxima é consultada primeiro, em particular, sobre se está tudo bem. O auxiliar técnico é opcional: alguém que possa manter em funcionamento seus servidores, contas ou projetos. Converse com essa pessoa antes de adicioná-la.',
+    'Add a technical helper' => 'Adicionar um auxiliar técnico',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'No caso do auxiliar técnico, isso costuma significar que ele tem a senha do seu documento de passagem, consegue acessar seus servidores e contas e sabe o que olhar primeiro.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'No caso do contato jurídico, isso costuma significar que ele guarda as cópias lacradas combinadas com você e sabe quem são a sua pessoa mais próxima e o seu auxiliar técnico.',
+    'Trusted people' => 'Pessoas de confiança',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Essas pessoas são consultadas sobre se está tudo bem, uma depois da outra, começando pela sua pessoa mais próxima. Se alguma responder que está tudo bem, ninguém mais é consultado. Só são consultadas pessoas confirmadas. O intervalo entre elas é definido em Configurações.',
+    'Asked first' => 'Consultada primeiro',
+    'Asked after {name}' => 'Consultada depois de {name}',
+    'Move up' => 'Subir',
+    'Move down' => 'Descer',
+    'Remove from trusted people' => 'Remover das pessoas de confiança',
+    'Trusted person {n}' => 'Pessoa de confiança {n}',
+    'Add to trusted people' => 'Adicionar às pessoas de confiança',
 ];

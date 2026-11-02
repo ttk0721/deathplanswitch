@@ -5,7 +5,6 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'En yakın kişi',
-    'Technical 2IC' => 'Teknik yardımcı',
     'Legal contact' => 'Hukuki irtibat kişisi',
 
     // contacts list
@@ -14,8 +13,6 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Anahtarının yazdığı kişiler. Her biri önce e-postayla onay verir ve ancak ondan sonra sayılır. Yalnızca onaylanmış kişilere yazılır.',
     'Your yearly review is due.' => 'Yıllık gözden geçirme zamanı geldi.',
     'Confirm each contact still has what they need' => 'Her kişinin ihtiyaç duyduğu şeylere hâlâ sahip olduğunu doğrula',
-    'Start with two people' => 'İki kişiyle başla',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'En yakın kişine ilk olarak, özel olarak, her şeyin yolunda olup olmadığı sorulur. Teknik yardımcın, müşterilerinle ilgilenecek kişidir. Eklemeden önce ikisine de sor.',
     'Changing to {email} once they confirm it.' => 'Bu adres onaylanınca {email} olarak değişecek.',
     'Confirmed' => 'Onaylandı',
     'Declined' => 'Reddedildi',
@@ -25,7 +22,6 @@ return [
     'Not yet given what they need' => 'Gerekenler henüz verilmedi',
     'Has what they need' => 'Gerekenlere sahip',
     'Add your next of kin' => 'En yakın kişini ekle',
-    'Add a technical contact' => 'Teknik kişi ekle',
     'Add a legal contact' => 'Hukuki irtibat kişisi ekle',
     'Add someone else' => 'Başka birini ekle',
     'Yearly review' => 'Yıllık gözden geçirme',
@@ -35,7 +31,7 @@ return [
     // contact page: messages
     'You already have a next of kin. Edit them, or delete them first.' => 'Zaten bir en yakın kişin var. Onu düzenle ya da önce sil.',
     'That contact no longer exists.' => 'Bu kişi artık yok.',
-    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => '{name} silinemez; anahtar etkinken bu rol dolu olmalıdır. Önce anahtarı devre dışı bırak ya da bir yedek kişi ekleyip onaylat.',
+    '{name} cannot be deleted while the switch is armed, because the switch needs this role filled. Disarm it first, or add and confirm a replacement.' => '{name} silinemez; anahtar kuruluyken bu rol dolu olmalıdır. Önce anahtarı devre dışı bırak ya da bir yedek kişi ekleyip onaylat.',
     '{name} has been deleted and will not be contacted.' => '{name} silindi ve artık kendisine ulaşılmayacak.',
     'Confirmation email sent to {email}.' => '{email} adresine onay e-postası gönderdik.',
     'The confirmation email could not be sent. Check the mail settings.' => 'Onay e-postası gönderilemedi. Posta ayarlarını kontrol et.',
@@ -61,8 +57,6 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'En yakın kişi için bu genellikle şu anlama gelir: bu anahtarın var olduğunu bilir, diğer kişilerinin kim olduğunu bilir ve vasiyetinle yetki belgelerinin nerede durduğunu bilir.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'Teknik yardımcı için bu genellikle şu anlama gelir: devir belgenin parolası onda vardır, sunucularına erişebilir ve önce hangi müşterileri arayacağını bilir.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'Hukuki irtibat kişisi için bu genellikle şu anlama gelir: üzerinde anlaştığınız mühürlü kopyalar onda durur ve en yakın kişinin ile teknik yardımcının kim olduğunu bilir.',
     'Whatever this person would need in order to act on the message below.' => 'Bu kişinin aşağıdaki mesaja göre hareket edebilmesi için gereken her şey.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Kişi ekle',
@@ -90,7 +84,7 @@ return [
     'Role' => 'Rol',
     'How this person is described to them and to your other contacts. Change it to fit, for example "Business partner" or "Accountant".' => 'Bu kişi, kendisine ve diğer kişilerine bu şekilde tanıtılır. Uygun olacak şekilde değiştir, örneğin “İş ortağı” ya da “Muhasebeci”.',
     'The question they are asked first' => 'İlk sorulan soru',
-    'Sent when you have missed a check-in and 72 hours of reminders. Two answer links, "All fine" and "Something\'s wrong", are added beneath your text, with the time by which they need to answer.' => 'Bir yoklamayı kaçırıp 72 saatlik hatırlatmalar geçtiğinde gönderilir. Metninin altına iki yanıt bağlantısı, “Her şey yolunda” ve “Bir sorun var”, ayrıca yanıt vermeleri gereken zaman eklenir.',
+    'Sent when you have missed a check-in and 72 hours of reminders. Two answer links, "All fine" and "Something\'s wrong", are added beneath your text, with the time by which they need to answer.' => 'Bir durum bildirimini kaçırıp 72 saatlik hatırlatmalar geçtiğinde gönderilir. Metninin altına iki yanıt bağlantısı, “Her şey yolunda” ve “Bir sorun var”, ayrıca yanıt vermeleri gereken zaman eklenir.',
     'Subject' => 'Konu',
     'Message' => 'Mesaj',
     'Their message if the switch fires' => 'Anahtar devreye girerse bu kişiye gidecek mesaj',
@@ -99,7 +93,7 @@ return [
     'Sent only if neither you nor your next of kin confirms you are well.' => 'Yalnızca ne sen ne de en yakın kişin iyi olduğunu onaylamazsa gönderilir.',
     'Say where things are and who to call.' => 'Şeylerin nerede olduğunu ve kimin aranacağını yaz.',
     'Never put a password or login in a message.' => 'Mesaja asla parola ya da kullanıcı adı yazma.',
-    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => '[Köşeli parantez] içindeki metni kendi metninle değiştir. O metin orada durdukça anahtar etkinleşmez.',
+    'Replace the text in [square brackets] with your own. The switch will not arm while it is there.' => '[Köşeli parantez] içindeki metni kendi metninle değiştir. O metin orada durdukça anahtar kurulamaz.',
     'Words that fill themselves in' => 'Kendiliğinden dolan sözcükler',
     'What they hold' => 'Bu kişide neler var',
     'I have given {name} what they need' => '{name} kişisine gerekenleri verdim',
@@ -137,8 +131,8 @@ return [
     'Save the review' => 'Gözden geçirmeyi kaydet',
 
     // channel partial
-    'Anyone who can read a channel can follow its links. A check-in link in a shared channel lets them check in for {who}. Use channels only {who} can read: a direct message, a private ntfy topic, or SMS.' => 'Bir kanalı okuyabilen herkes bağlantılarını açabilir. Ortak bir kanaldaki yoklama bağlantısı, {who} yerine yoklama vermelerine olanak tanır. Yalnızca {who} kişisinin okuyabildiği kanalları kullan: doğrudan mesaj, özel bir ntfy konusu ya da SMS.',
-    'Anyone who can read a channel can follow its links. A check-in link in a shared channel lets them check in for you. Use channels only you can read: a direct message, a private ntfy topic, or SMS.' => 'Bir kanalı okuyabilen herkes bağlantılarını açabilir. Ortak bir kanaldaki yoklama bağlantısı, senin yerine yoklama vermelerine olanak tanır. Yalnızca senin okuyabildiğin kanalları kullan: doğrudan mesaj, özel bir ntfy konusu ya da SMS.',
+    'Anyone who can read a channel can follow its links. A check-in link in a shared channel lets them check in for {who}. Use channels only {who} can read: a direct message, a private ntfy topic, or SMS.' => 'Bir kanalı okuyabilen herkes bağlantılarını açabilir. Ortak bir kanaldaki durum bildirimi bağlantısı, {who} yerine durum bildirmelerine olanak tanır. Yalnızca {who} kişisinin okuyabildiği kanalları kullan: doğrudan mesaj, özel bir ntfy konusu ya da SMS.',
+    'Anyone who can read a channel can follow its links. A check-in link in a shared channel lets them check in for you. Use channels only you can read: a direct message, a private ntfy topic, or SMS.' => 'Bir kanalı okuyabilen herkes bağlantılarını açabilir. Ortak bir kanaldaki durum bildirimi bağlantısı, senin yerine durum bildirmelerine olanak tanır. Yalnızca senin okuyabildiğin kanalları kullan: doğrudan mesaj, özel bir ntfy konusu ya da SMS.',
     'Show signing secret' => 'İmza anahtarını göster',
     'Use this to check the {header} header: {prefix} followed by the HMAC-SHA256 of the request body.' => '{header} başlığını doğrulamak için kullan: {prefix} ve ardından istek gövdesinin HMAC-SHA256 değeri.',
     'Test' => 'Test',
@@ -153,4 +147,20 @@ return [
     'Apprise examples: {examples}.' => 'Apprise örnekleri: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook, {scheme} ile başlayan bir adrestir; her istek imzalanır ve imza {header} başlığındadır.',
     'Add channel' => 'Kanal ekle',
+
+    'Technical helper' => 'Teknik yardımcı',
+    'Start with your next of kin' => 'En yakın kişinle başla',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'En yakın kişine ilk olarak, özel olarak, her şeyin yolunda olup olmadığı sorulur. Teknik yardımcı isteğe bağlıdır: sunucularının, hesaplarının veya projelerinin çalışmasını sürdürebilecek biri. Eklemeden önce ona sor.',
+    'Add a technical helper' => 'Teknik yardımcı ekle',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'Teknik yardımcı için bu genellikle şu anlama gelir: devir belgenin parolası onda vardır, sunucularına ve hesaplarına erişebilir ve önce nelere bakacağını bilir.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'Hukuki irtibat kişisi için bu genellikle şu anlama gelir: üzerinde anlaştığınız mühürlü kopyalar onda durur ve en yakın kişinin ile teknik yardımcının kim olduğunu bilir.',
+    'Trusted people' => 'Güvenilir kişiler',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Bu kişilere, en yakın kişinden başlayarak sırayla her şeyin yolunda olup olmadığı sorulur. Biri her şeyin yolunda olduğunu söylerse başka kimseye sorulmaz. Yalnızca onaylanmış kişilere sorulur. Birbirini ne kadar çabuk izleyecekleri Ayarlar’da belirlenir.',
+    'Asked first' => 'İlk olarak sorulur',
+    'Asked after {name}' => 'Şu kişiden sonra sorulur: {name}',
+    'Move up' => 'Yukarı taşı',
+    'Move down' => 'Aşağı taşı',
+    'Remove from trusted people' => 'Güvenilir kişilerden çıkar',
+    'Trusted person {n}' => 'Güvenilir kişi {n}',
+    'Add to trusted people' => 'Güvenilir kişilere ekle',
 ];

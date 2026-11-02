@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'il pannello',
     'the emailed link' => 'il link nell’email',
     'another node' => 'un altro nodo',
-    'arming the switch' => 'l’attivazione dell’interruttore',
+    'arming the switch' => 'l’inserimento dell’interruttore',
     'pausing the switch' => 'la messa in pausa dell’interruttore',
     'ending the pause' => 'la fine della pausa',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'La pausa è terminata. L’interruttore è di nuovo attivo.',
-    'The switch was armed.' => 'L’interruttore è stato attivo.',
-    'The switch was disarmed. {reason}' => 'L’interruttore è stato disattivato. {reason}',
+    'The switch was armed.' => 'L’interruttore è stato inserito.',
+    'The switch was disarmed. {reason}' => 'L’interruttore è stato disinserito. {reason}',
     'The switch was paused for {duration}.' => 'L’interruttore è stato messo in pausa per {duration}.',
     'The pause was ended early.' => 'La pausa è stata terminata in anticipo.',
     'Yearly review completed.' => 'Revisione annuale completata.',
@@ -75,4 +75,12 @@ return [
     'Death Plan Switch {version} was installed.' => 'Death Plan Switch {version} è stato installato.',
     'Vault API error: {detail}' => 'Errore dell’API della cassaforte: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Non è stato possibile leggere {name}.json. È stata usata al suo posto l’ultima copia valida.',
+
+    // Trusted people
+    'another node ({via})' => 'un altro nodo ({via})',
+    '{name} was asked whether {owner} is all right.' => 'È stato chiesto a {name} se {owner} sta bene.',
+    '{name} could not be emailed.' => 'Non è stato possibile inviare l’email a {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} ha risposto «Qualcosa non va». Non viene inviato nulla in anticipo e le altre persone continuano a essere interpellate una dopo l’altra.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name} ha risposto «Va tutto bene». Non verrà chiesto a nessun altro.',
+    'The settings for the trusted people were changed.' => 'Le impostazioni delle persone di fiducia sono state modificate.',
 ];

@@ -7,7 +7,7 @@ return [
     'the dashboard' => 'панель управления',
     'the emailed link' => 'ссылка из письма',
     'another node' => 'другой узел',
-    'arming the switch' => 'активация переключателя',
+    'arming the switch' => 'постановка переключателя на охрану',
     'pausing the switch' => 'приостановка переключателя',
     'ending the pause' => 'завершение приостановки',
 
@@ -31,8 +31,8 @@ return [
 
     // Switch
     'The pause ended. The switch is active again.' => 'Приостановка закончилась. Переключатель снова работает.',
-    'The switch was armed.' => 'Переключатель активирован.',
-    'The switch was disarmed. {reason}' => 'Переключатель деактивирован. {reason}',
+    'The switch was armed.' => 'Переключатель поставлен на охрану.',
+    'The switch was disarmed. {reason}' => 'Переключатель снят с охраны. {reason}',
     'The switch was paused for {duration}.' => 'Переключатель приостановлен на {duration}.',
     'The pause was ended early.' => 'Приостановка завершена досрочно.',
     'Yearly review completed.' => 'Ежегодная проверка завершена.',
@@ -75,4 +75,11 @@ return [
     'Death Plan Switch {version} was installed.' => 'Установлен Death Plan Switch {version}.',
     'Vault API error: {detail}' => 'Ошибка API сейфа: {detail}',
     '{name}.json was unreadable. The last good copy was used instead.' => 'Не удалось прочитать файл {name}.json. Использована последняя исправная копия.',
+
+    'another node ({via})' => 'другой узел ({via})',
+    '{name} was asked whether {owner} is all right.' => 'Вопрос, всё ли у {owner} в порядке, отправлен: {name}.',
+    '{name} could not be emailed.' => 'Не удалось отправить письмо: {name}.',
+    '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name}: ответ «Что-то не так». Ничего не отправляется заранее, остальных по-прежнему спрашивают по очереди.',
+    '{name} answered "All fine". Nobody else will be asked.' => '{name}: ответ «Всё в порядке». Больше никого спрашивать не будут.',
+    'The settings for the trusted people were changed.' => 'Настройки доверенных лиц изменены.',
 ];

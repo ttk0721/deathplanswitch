@@ -5,11 +5,9 @@ declare(strict_types=1);
 return [
     // Contact labels
     'next of kin' => 'kerabat terdekat',
-    'technical 2IC' => 'wakil teknis',
     'legal contact' => 'kontak hukum',
     'contact' => 'kontak',
     'Next of kin' => 'Kerabat terdekat',
-    'Technical 2IC' => 'Wakil teknis',
     'Legal contact' => 'Kontak hukum',
     'Other contact' => 'Kontak lain',
     'Contact' => 'Kontak',
@@ -42,10 +40,10 @@ return [
 
     // Engine: actions
     'Open the vault' => 'Buka brankas',
-    'You disarmed it from the dashboard.' => 'Anda menonaktifkannya dari dasbor.',
+    'You disarmed it from the dashboard.' => 'Anda menonaktifkan alarm dari dasbor.',
     'Their previous address is still in use.' => 'Alamat mereka yang sebelumnya masih dipakai.',
     '{name} declined to be your {role}, so a required contact is missing.' => '{name} menolak menjadi {role} Anda, sehingga ada kontak wajib yang belum ada.',
-    'Your switch has been disarmed, because it needs this role filled.' => 'Sakelar Anda dinonaktifkan, karena peran ini harus terisi.',
+    'Your switch has been disarmed, because it needs this role filled.' => 'Alarm Anda dinonaktifkan, karena peran ini harus terisi.',
 
     // Engine: checklist
     'The scheduler is running' => 'Penjadwal berjalan',
@@ -56,8 +54,6 @@ return [
     'The server could not test this by itself. Run the check from Settings.' => 'Server tidak dapat menguji hal ini sendiri. Jalankan pemeriksaan dari Pengaturan.',
     'Your next of kin has confirmed' => 'Kerabat terdekat Anda sudah mengonfirmasi',
     'Add your next of kin.' => 'Tambahkan kerabat terdekat Anda.',
-    'Your technical 2IC has confirmed' => 'Wakil teknis Anda sudah mengonfirmasi',
-    'Add the person who would look after your clients.' => 'Tambahkan orang yang akan mengurus klien Anda.',
     'Every message says where things are' => 'Setiap pesan menyebutkan di mana barang-barang berada',
     'Still holding starter text in square brackets: {names}.' => 'Masih berisi teks contoh dalam tanda kurung siku: {names}.',
     'Checked once your contacts have confirmed.' => 'Diperiksa setelah kontak Anda mengonfirmasi.',
@@ -93,4 +89,8 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Saat Anda melewatkan check-in beserta pengingatnya',
     'When the switch fires' => 'Saat sakelar dijalankan',
+    'technical helper' => 'asisten teknis',
+    'Technical helper' => 'Asisten teknis',
+    'Technical helper (optional)' => 'Asisten teknis (opsional)',
+    'Someone who can keep your servers, accounts or projects running.' => 'Orang yang dapat menjaga server, akun, atau proyek Anda tetap berjalan.',
 ];

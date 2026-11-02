@@ -60,9 +60,21 @@ if ! getent passwd "$USER_NAME" >/dev/null 2>&1; then
     fi
 fi
 
-install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$DATA"
-chown -hR "$USER_NAME:$USER_NAME" "$DATA"
-chmod 0700 "$DATA"
+# Never recurse into the data dir as root: the service user could plant a hard
+# link to a root-owned file there. Fix up the top directory only.
+if [ -L "$DATA" ]; then
+    echo "refusing: $DATA is a symlink" >&2
+    exit 1
+fi
+if [ ! -d "$DATA" ]; then
+    install -d -m 0700 -o "$USER_NAME" -g "$USER_NAME" "$DATA"
+fi
+if [ "$(stat -c '%U:%G' "$DATA")" != "$USER_NAME:$USER_NAME" ]; then
+    chown -h "$USER_NAME:$USER_NAME" "$DATA"
+fi
+if [ "$(stat -c '%a' "$DATA")" != 700 ]; then
+    chmod 0700 "$DATA"
+fi
 
 # The app: copy beside the old one, then swap, so a failed copy leaves it working.
 NEW="$APP.new"

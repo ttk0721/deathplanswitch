@@ -102,7 +102,7 @@ Skrypt rozpoznaje systemd lub OpenRC (Alpine), tworzy konto i foldery, kopiuje a
 ## FreeBSD
 
 ```
-pkg install php83 php83-curl php83-mbstring php83-openssl php83-sodium
+pkg install php83 php83-curl php83-mbstring php83-sodium php83-session php83-ctype php83-filter php83-posix php83-pcntl php83-tokenizer
 tar xzf deathplanswitch-X.Y.Z-freebsd.tar.gz
 cd deathplanswitch-X.Y.Z
 sudo ./install.sh

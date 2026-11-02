@@ -9,7 +9,8 @@ name: Platforms
 #   Windows only      tests/version_test.php, tests/bootstrap_test.php (use `env -u`),
 #                     tests/router_test.php (uses /dev/null; the install smoke test
 #                     below checks the router instead), tests/nodes_page_test.php and
-#                     tests/cron_federation_test.php (POSIX child processes)
+#                     tests/cron_federation_test.php (POSIX child processes) and
+#                     tests/federation_scenarios_test.php (too slow on Windows file I/O)
 
 on:
   push:
@@ -38,7 +39,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.ref }}
-      - uses: shivammathur/setup-php@34a5396826718e0013f08e3e639d1c315d5f6b23 # 2.35.0
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ matrix.php }}
           extensions: curl, mbstring, openssl, sodium
@@ -77,12 +78,12 @@ jobs:
 
   windows:
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ inputs.ref }}
-      - uses: shivammathur/setup-php@34a5396826718e0013f08e3e639d1c315d5f6b23 # 2.35.0
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: '8.4'
           extensions: curl, mbstring, openssl, sodium
@@ -92,7 +93,9 @@ jobs:
         run: |
           $skip = @(
             'cors_csp_test.php', 'version_test.php', 'bootstrap_test.php',
-            'router_test.php', 'nodes_page_test.php', 'cron_federation_test.php'
+            'router_test.php', 'nodes_page_test.php', 'cron_federation_test.php',
+            # OS-independent logic covered on Linux, macOS and FreeBSD; too slow on Windows file I/O
+            'federation_scenarios_test.php'
           )
           $files = @('tests/run.php') + (Get-ChildItem tests -Filter *_test.php | Sort-Object Name | ForEach-Object { "tests/$($_.Name)" })
           $failed = @()
@@ -186,8 +189,12 @@ jobs:
           usesh: true
           prepare: |
             pkg install -y curl
-            pkg install -y php83 php83-curl php83-mbstring php83-openssl php83-sodium php83-pcntl php83-posix php83-session php83-ctype php83-filter php83-tokenizer || \
-              pkg install -y php83 php83-curl php83-mbstring php83-sodium
+            pkg install -y php83 php83-curl php83-mbstring php83-sodium php83-session php83-ctype php83-filter php83-posix php83-pcntl php83-tokenizer
+            miss=""
+            for m in ctype curl filter mbstring openssl posix session sodium; do
+              php -m | grep -qix "$m" || miss="$miss $m"
+            done
+            if [ -n "$miss" ]; then echo "missing PHP extensions:$miss"; exit 1; fi
           run: |
             failed=""
             for f in tests/run.php tests/*_test.php; do

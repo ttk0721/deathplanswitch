@@ -52,19 +52,19 @@ PHP=${PHP:-}
 [ -n "$PHP" ] || PHP=$(command -v php || true)
 if [ -z "$PHP" ] || [ ! -x "$PHP" ]; then
 	echo "php not found. Install it first:" >&2
-	echo "  pkg install php83 php83-curl php83-mbstring php83-openssl php83-sodium" >&2
+	echo "  pkg install php83 php83-curl php83-mbstring php83-sodium php83-session php83-ctype php83-filter php83-posix php83-pcntl php83-tokenizer" >&2
 	exit 1
 fi
 case "$PHP" in /*) ;; *) die "php path must be absolute: $PHP" ;; esac
 case "$PHP" in *[!A-Za-z0-9/._+-]*) die "unsupported characters in php path: $PHP" ;; esac
 "$PHP" -r 'exit(PHP_VERSION_ID >= 80100 ? 0 : 1);' || die "PHP 8.1 or newer is required"
 missing=
-for ext in curl mbstring openssl sodium; do
+for ext in ctype curl filter mbstring openssl posix session sodium; do
 	"$PHP" -r "exit(extension_loaded('$ext') ? 0 : 1);" || missing="$missing $ext"
 done
 if [ -n "$missing" ]; then
 	echo "missing PHP extensions:$missing" >&2
-	echo "  pkg install php83-curl php83-mbstring php83-openssl php83-sodium" >&2
+	echo "  pkg install php83-curl php83-mbstring php83-sodium php83-session php83-ctype php83-filter php83-posix php83-pcntl php83-tokenizer" >&2
 	exit 1
 fi
 

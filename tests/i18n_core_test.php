@@ -180,7 +180,20 @@ function fixtureLookup(): array
         . ' "none" => DPS\I18n::fromAcceptLanguage("de,fr;q=0.8"), "empty" => DPS\I18n::fromAcceptLanguage("")];'
         . ' DPS\I18n::setLanguage("xx"); $r["xx"] = DPS\lang();'
         . ' DPS\I18n::setLanguage("pl"); $r["dir"] = DPS\I18n::dir(); echo json_encode($r);';
-    $out = (string) shell_exec('env -u DPS_DATA -u DPS_DOCKER ' . escapeshellarg(PHP_BINARY) . ' -r ' . escapeshellarg($code));
+    $script = tempnam(sys_get_temp_dir(), 'dpsi18n') . '.php';
+    file_put_contents($script, '<?php ' . $code);
+    $env = ['PATH' => (string) getenv('PATH')];
+    if (getenv('SystemRoot') !== false) { $env['SystemRoot'] = (string) getenv('SystemRoot'); }
+    $out = '';
+    $p = proc_open([PHP_BINARY, $script], [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, null, $env);
+    if (is_resource($p)) {
+        $out = (string) stream_get_contents($pipes[1]);
+        stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        proc_close($p);
+    }
+    @unlink($script);
     foreach (['en', 'pl'] as $c) {
         if (is_link($root . '/lang/' . $c)) {
             unlink($root . '/lang/' . $c);

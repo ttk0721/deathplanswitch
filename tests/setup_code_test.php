@@ -59,7 +59,8 @@ test('a code is made fresh each time; only a salted hash is stored, readable onl
     $raw = (string) file_get_contents(SetupCode::path($store));
     check(!str_contains($raw, (string) $code) && !str_contains($raw, str_replace('-', '', (string) $code)), 'the plain code is not on disk');
     check(preg_match('/^v1:[0-9a-f]{32}:[0-9a-f]{64}$/D', trim($raw)) === 1, 'salted sha-256 only');
-    same('0600', substr(sprintf('%o', fileperms(SetupCode::path($store))), -4), 'mode');
+    // Windows has no POSIX modes; its protection is the data folder ACL set by install.ps1
+    if (PHP_OS_FAMILY !== 'Windows') { same('0600', substr(sprintf('%o', fileperms(SetupCode::path($store))), -4), 'mode'); }
     $second = SetupCode::rotate($store);
     check($second !== $code, 'a new code each time');
     same(false, SetupCode::matches($store, (string) $code), 'the old code stops working');

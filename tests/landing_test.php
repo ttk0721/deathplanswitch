@@ -75,7 +75,8 @@ test('stored under a random name, mode 0600; the old file goes on replace', func
     check(preg_match('/^background-[a-f0-9]{16}\.png$/D', $a) === 1, "name $a");
     $path = Landing::imagePath($store, $a);
     check($path !== null && is_file($path), 'stored');
-    same('0600', substr(sprintf('%o', fileperms((string) $path)), -4), 'mode');
+    // Windows has no POSIX modes; its protection is the data folder ACL set by install.ps1
+    if (PHP_OS_FAMILY !== 'Windows') { same('0600', substr(sprintf('%o', fileperms((string) $path)), -4), 'mode'); }
     $b = Landing::store($store, file_with(sample('jpg')), 'jpg', $a);
     check($a !== $b && Landing::imagePath($store, $a) === null && Landing::imagePath($store, $b) !== null, 'old removed, new kept');
     same('image/jpeg', Landing::mime($b), 'mime');
@@ -100,25 +101,31 @@ file_put_contents($dir . '/secret.txt', 'SECRET');
 $probe = stream_socket_server('tcp://127.0.0.1:0');
 $port = (int) substr(strrchr((string) stream_socket_get_name($probe, false), ':'), 1);
 fclose($probe);
+$null = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
+$srvEnv = ['DPS_DATA' => $dir, 'PATH' => (string) getenv('PATH')];
+if (getenv('SystemRoot') !== false) { $srvEnv['SystemRoot'] = (string) getenv('SystemRoot'); }
 $proc = proc_open(
     [PHP_BINARY, '-S', "127.0.0.1:$port", '-t', $root, $root . '/bin/router.php'],
-    [0 => ['file', '/dev/null', 'r'], 1 => ['file', '/dev/null', 'w'], 2 => ['file', '/dev/null', 'w']],
+    [0 => ['file', $null, 'r'], 1 => ['file', $null, 'w'], 2 => ['file', $null, 'w']],
     $pipes,
     $root,
-    ['DPS_DATA' => $dir, 'PATH' => (string) getenv('PATH')]
+    $srvEnv
 );
 register_shutdown_function(function () use ($proc): void {
     proc_terminate($proc);
     proc_close($proc);
 });
-for ($i = 0; $i < 100; $i++) {
+$up = false;
+for ($i = 0; $i < 200 && !$up; $i++) {
     $s = @fsockopen('127.0.0.1', $port);
     if ($s) {
         fclose($s);
-        break;
+        $up = true;
+    } else {
+        usleep(50000);
     }
-    usleep(50000);
 }
+if (!$up) { fwrite(STDERR, "test server did not come up\n"); }
 /** @return array{0:int,1:string,2:string} */
 function req(string $target): array
 {

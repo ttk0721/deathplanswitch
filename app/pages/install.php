@@ -1,6 +1,7 @@
 <?php
 /**
- * The installer. Four short steps:
+ * The installer. Four short steps, behind a one-time setup code that only
+ * someone with access to the server's logs or files can read:
  *
  *   1. Check the server, including that the data folder is blocked from
  *      the web. This happens before anything private is written.
@@ -31,11 +32,14 @@ Web::session();
 $errors = [];
 if ($config === []) {
     // No config yet, so no saved language: use the one picked on step 1.
-    if (Web::posted() && in_array(Web::post('language'), ['pl', 'en'], true)) {
+    if (Web::posted() && isset(I18n::available()[Web::post('language')])) {
         $_SESSION['install_lang'] = Web::post('language');
     }
-    I18n::setLanguage((string) ($_SESSION['install_lang'] ?? 'pl'));
+    // First visit: the browser's language when we have it, else Polish.
+    $_SESSION['install_lang_default'] ??= I18n::fromAcceptLanguage((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '')) ?? 'pl';
+    I18n::setLanguage((string) ($_SESSION['install_lang'] ?? $_SESSION['install_lang_default']));
 }
+$installLang = (string) ($_SESSION['install_lang'] ?? $_SESSION['install_lang_default'] ?? 'pl');
 $outbox = new Outbox($store, new SmtpTransport());
 $requirements = Setup::requirements();
 $requirementsOk = array_filter($requirements, static fn (array $r): bool => !$r['ok']) === [];
@@ -43,7 +47,7 @@ $requirementsOk = array_filter($requirements, static fn (array $r): bool => !$r[
 // ---------------------------------------------------------------- which step?
 
 if ($config === []) {
-    $step = !empty($_SESSION['install_checked']) ? 2 : 1;
+    $step = empty($_SESSION['install_code_ok']) ? -1 : (!empty($_SESSION['install_checked']) ? 2 : 1);
 } elseif (!Web::signedIn()) {
     $step = 0; // half-finished install: ask for the owner password
 } else {
@@ -71,6 +75,16 @@ if (Web::posted()) {
         $errors[] = $result;
     }
 
+    if ($step === -1 && $action === 'setup_code') {
+        $result = SetupCode::attempt($store, Web::post('setup_code'));
+        if ($result === true) {
+            session_regenerate_id(true);
+            $_SESSION['install_code_ok'] = true;
+            Web::redirect('install.php');
+        }
+        $errors[] = $result;
+    }
+
     if ($step === 1 && $action === 'check') {
         if (!$requirementsOk) {
             $errors[] = t('Fix the items marked below, then check again.');
@@ -82,7 +96,7 @@ if (Web::posted()) {
             } elseif ($probe['result'] === 'unknown' && $found !== 'protected') {
                 $errors[] = t('The data folder could not be tested. Turn JavaScript on so your browser can run the test, then check again.');
             } elseif (!isset($_POST['separate'])) {
-                $errors[] = t('Confirm that this server is separate from the sites the switch protects.');
+                $errors[] = t('Tick the box to confirm you understand where the switch should run.');
             } else {
                 if ($probe['result'] === 'unknown') {
                     $probe['browser_ok_at'] = Clock::now();
@@ -103,7 +117,7 @@ if (Web::posted()) {
         $dow = (int) Web::post('slot_dow', '1');
         $hour = (int) Web::post('slot_hour', '9');
         $baseUrl = rtrim(Web::post('base_url'), '/');
-        $language = (string) ($_SESSION['install_lang'] ?? 'pl');
+        $language = $installLang;
 
         if ($name === '') {
             $errors[] = t('Enter your name.');
@@ -201,8 +215,9 @@ if (Web::posted()) {
         $config['installed_at'] = Clock::now();
         unset($config['install_step']);
         $store->write('config', $config);
+        SetupCode::delete($store);
         $store->log('installed', t('Death Plan Switch {version} was installed.', ['version' => VERSION]));
-        Web::flash(t('Installed. Next: add your next of kin and your technical 2IC.'));
+        Web::flash(t('Installed. Next: add your next of kin, and a technical helper if you like.'));
         Web::redirect('index.php?p=contacts');
     }
 }
@@ -221,23 +236,41 @@ $ticked = $step === 4 ? $engine->state()['last_tick_at'] : null;
 $smtp = (array) ($config['smtp'] ?? []);
 $posted = static fn (string $key, string $default = ''): string => Web::isPost() ? Web::post($key, $default) : $default;
 
+Web::$layout = 'install';
 Web::$title = t('Install Death Plan Switch');
 ?>
-<h1><?= e(t('Install Death Plan Switch')) ?></h1>
-
+<div class="install">
+<aside class="install-side">
+  <div class="brand"><span class="brand-dot" aria-hidden="true">DPS</span><span class="brand-text"><span class="brand-name">Death Plan Switch</span></span></div>
+  <h1><?= e(t('Install Death Plan Switch')) ?></h1>
 <?php if ($step > 0): ?>
-<ol class="steps">
+  <ol class="steps">
 <?php foreach ($stepNames as $n => $label): ?>
-  <li<?= $n === $step ? ' aria-current="step"' : '' ?>><?= e($label) ?></li>
+    <li<?= $n === $step ? ' aria-current="step"' : ($n < $step ? ' class="done"' : '') ?>><?= e($label) ?></li>
 <?php endforeach ?>
-</ol>
+  </ol>
 <?php endif ?>
+</aside>
+<div class="install-main">
 
 <?php if ($errors): ?>
 <div class="notice notice-bad" role="alert"><ul><?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach ?></ul></div>
 <?php endif ?>
 
-<?php if ($step === 0): ?>
+<?php if ($step === -1): ?>
+<p class="lede"><?= e(t('Before anything is set up, prove you have access to this server. The setup code is in the log of the web container (docker logs), in the service log (journalctl) or from the command line:')) ?></p>
+<pre class="cron">php cli/setup-code.php</pre>
+<form method="post" action="install.php">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="setup_code">
+  <div class="field">
+    <label for="setup_code"><?= e(t('Setup code')) ?></label>
+    <input type="text" id="setup_code" name="setup_code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="40" required autofocus placeholder="XXXX-XXXX-XXXX-XXXX-XXXX">
+  </div>
+  <div class="actions"><button type="submit"><?= e(t('Continue')) ?></button></div>
+</form>
+
+<?php elseif ($step === 0): ?>
 <p><?= e(t('This install was started but not finished. Enter the owner password to carry on.')) ?></p>
 <form method="post" action="install.php">
   <?= Web::csrfField() ?>
@@ -300,15 +333,16 @@ Web::$title = t('Install Death Plan Switch');
   <div class="field">
     <label for="language">Język / Language</label>
     <select id="language" name="language">
-      <option value="pl"<?= ($_SESSION['install_lang'] ?? 'pl') === 'pl' ? ' selected' : '' ?>>Polski</option>
-      <option value="en"<?= ($_SESSION['install_lang'] ?? 'pl') === 'en' ? ' selected' : '' ?>>English</option>
+      <?php foreach (I18n::available() as $code => $info): ?>
+      <option value="<?= e($code) ?>"<?= $installLang === $code ? ' selected' : '' ?>><?= e($info['name']) ?></option>
+      <?php endforeach; ?>
     </select>
     <span class="help"><?= e(t('Used for the pages and the emails. You can change it later in Settings.')) ?></span>
   </div>
   <div class="tick">
     <input type="checkbox" id="separate" name="separate" value="1"<?= isset($_POST['separate']) ? ' checked' : '' ?>>
-    <label for="separate"><?= e(t('This server is separate from the sites the switch protects')) ?></label>
-    <span class="help"><?= e(t('If the switch lives on the same server as your clients\' sites, the outage that takes them down takes the switch down with them, and nobody is told. Use different hosting: a small, cheap server is plenty.')) ?></span>
+    <label for="separate"><?= e(t('I understand the switch must not run on the server it is meant to watch over')) ?></label>
+    <span class="help"><?= e(t('If that server goes down, the switch goes down with it: it will not notice anything and will not warn anyone. Run it on a separate device or hosting. A small, cheap server or a NAS is enough, and a second node in another place is better still.')) ?></span>
   </div>
   <div class="actions"><button type="submit"><?= e($errors ? t('Check again') : t('Continue')) ?></button></div>
 </form>
@@ -443,3 +477,5 @@ Web::$title = t('Install Death Plan Switch');
 </form>
 <?php endif ?>
 <?php endif ?>
+</div>
+</div>

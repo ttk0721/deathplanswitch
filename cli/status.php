@@ -37,7 +37,7 @@ if ($status['mode'] === 'paused') {
 }
 foreach ($status['plan'] as $key => $step) {
     if ($state['cycle'] !== null) {
-        printf("  %-14s %s %s\n", $key, $step['done'] ? 'done' : 'due ', DPS\when($step['at'], $tz, 'D j M, g:ia'));
+        printf("  %-14s %s %s\n", $key, $step['done'] ? 'done' : 'due ', DPS\when($step['at'], $tz, 'brief'));
     }
 }
 echo 'Scheduler ran:   ' . DPS\relative($state['last_tick_at']) . "\n";

@@ -12,11 +12,43 @@ if (!isset($content)) {
 }
 
 $admin = Web::$layout === 'admin';
+$landing = Web::$layout === 'landing';
+$install = Web::$layout === 'install';
 $current = Web::get('p', 'switch');
-$nav = ['switch' => 'Switch', 'contacts' => 'Contacts', 'vault' => 'Vault', 'nodes' => 'Nodes', 'settings' => 'Settings', 'history' => 'History'];
 $navText = ['switch' => t('Switch'), 'contacts' => t('Contacts'), 'vault' => t('Vault'), 'nodes' => t('Nodes'), 'settings' => t('Settings'), 'history' => t('History')];
 $navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
+$page = $current;
 $current = $navFor[$current] ?? $current;
+// The phone header: the screen's name, and an arrow back on detail screens.
+$screenTitle = ['contact' => t('Contact'), 'review' => t('Yearly review')][$page] ?? ($navText[$current] ?? '');
+$back = in_array($page, ['contact', 'review'], true) ? ['index.php?p=contacts', t('All contacts')] : null;
+
+// Line icons for the menus, 24x24, drawn with the text colour.
+$icons = [
+    'switch' => '<path d="M12 2v10"/><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/>',
+    'contacts' => '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+    'vault' => '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    'settings' => '<path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/>',
+    'nodes' => '<rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4"/><path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2"/>',
+    'history' => '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    'logout' => '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/>',
+    'back' => '<path d="M15 18l-6-6 6-6"/>',
+    'more' => '<circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/>',
+];
+$icon = static fn (string $name): string => '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $icons[$name] . '</svg>';
+$tabs = ['switch', 'contacts', 'vault', 'settings'];
+$more = ['nodes', 'history'];
+$href = static fn (string $key): string => 'index.php' . ($key === 'switch' ? '' : '?p=' . $key);
+
+$stageSrc = 'assets/landing/' . Landing::DEFAULT_BACKGROUND . '.svg';
+if (!$admin && !$landing) {
+    try {
+        $landingConfig = (array) (store()->read('config')['landing'] ?? []);
+        $stageSrc = Landing::src(Landing::choice(store(), $landingConfig), $landingConfig);
+    } catch (\Throwable) {
+        // keep the default picture
+    }
+}
 
 $logo = null;
 foreach (['logo.svg', 'logo.png'] as $file) {
@@ -36,6 +68,30 @@ if ($admin) {
     }
 }
 
+// The state of the switch, as one light and one word, for the menus.
+$mode = null;
+$user = ['name' => '', 'line' => ''];
+if ($admin) {
+    try {
+        $mode = engine()->status()['mode'];
+        $config = store()->read('config');
+        $user['name'] = (string) ($config['owner_name'] ?? '');
+        $user['line'] = (string) ($config['owner_email'] ?? '');
+        $identity = Node::publicIdentity(store());
+        if ($identity !== null && trim((string) ($identity['name'] ?? '')) !== '') {
+            $user['line'] = (string) $identity['name'];
+        }
+    } catch (\Throwable) {
+        $mode = null;
+    }
+}
+$modeClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue' => 'overdue', 'verify' => 'verify', 'fired' => 'fired'][$mode ?? ''] ?? 'off';
+$modeText = [
+    'setup' => t('Not armed'), 'paused' => t('Paused'), 'armed' => t('Armed'),
+    'overdue' => t('Check-in overdue'), 'verify' => t('Your next of kin has been asked'), 'fired' => t('The switch has fired'),
+][$mode ?? ''] ?? '';
+$initials = $user['name'] !== '' ? mb_strtoupper(mb_substr($user['name'], 0, 2)) : 'DPS';
+
 // A secondary node mirrors the primary; say so on every admin page.
 $mirrors = null;
 if ($admin) {
@@ -50,28 +106,78 @@ if ($admin) {
 }
 ?>
 <!doctype html>
-<html lang="<?= e(lang()) ?>">
+<html lang="<?= e(lang()) ?>" dir="<?= e(I18n::dir()) ?>">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#14161c">
 <title><?= e(Web::$title) ?></title>
 <link rel="stylesheet" href="assets/app.css?v=<?= e(VERSION) ?>">
+<script src="assets/theme.js?v=<?= e(VERSION) ?>"></script>
 <link rel="icon" href="data:,">
 </head>
-<body class="layout-<?= $admin ? 'admin' : 'plain' ?>">
+<body class="layout-<?= $admin ? 'admin' : ($landing ? 'landing' : ($install ? 'install' : 'plain')) ?>">
 <?php if ($admin): ?>
-<header class="masthead">
-  <a class="wordmark" href="index.php"><?php if ($logo): ?><img src="<?= e($logo) ?>" alt="Death Plan Switch"><?php else: ?>Death Plan Switch<?php endif ?></a>
-  <nav aria-label="Main">
-<?php foreach ($nav as $key => $label): ?>
-    <a href="index.php<?= $key === 'switch' ? '' : '?p=' . $key ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= e($navText[$key]) ?></a>
-<?php endforeach ?>
-    <a href="index.php?p=logout"><?= e(t('Sign out')) ?></a>
-  </nav>
-</header>
+<div class="shell">
+  <header class="topbar">
+    <a class="brand" href="index.php">
+<?php if ($logo): ?>
+      <img src="<?= e($logo) ?>" alt="Death Plan Switch">
+<?php else: ?>
+      <span class="brand-mark" aria-hidden="true">DPS</span>
+      <span class="brand-name">Death Plan Switch</span>
 <?php endif ?>
-<main>
+    </a>
+<?php if ($modeText !== ''): ?>
+    <span class="state-line"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><span><?= e($modeText) ?></span></span>
+<?php endif ?>
+    <span class="top-spacer"></span>
+    <div class="account">
+      <span class="account-text">
+        <span class="account-name"><?= e($user['name'] !== '' ? $user['name'] : 'Death Plan Switch') ?></span>
+        <span class="account-line"><?= e($user['line']) ?></span>
+      </span>
+      <span class="avatar" aria-hidden="true"><?= e($initials) ?></span>
+      <a class="icon-link" href="index.php?p=logout" title="<?= e(t('Sign out')) ?>" aria-label="<?= e(t('Sign out')) ?>"><?= $icon('logout') ?></a>
+    </div>
+  </header>
+  <nav class="tabs" aria-label="<?= e(t('Menu')) ?>">
+    <div class="tab-list">
+<?php foreach ($navText as $key => $label): ?>
+      <a class="tab-link" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><?= e($label) ?></a>
+<?php endforeach ?>
+      <span class="tab-indicator" aria-hidden="true"></span>
+    </div>
+  </nav>
+  <header class="screen-head<?= $back !== null ? ' has-back' : '' ?>">
+<?php if ($back !== null): ?>
+    <a class="screen-back" href="<?= e($back[0]) ?>" aria-label="<?= e($back[1]) ?>"><?= $icon('back') ?></a>
+<?php endif ?>
+    <p class="screen-title"><?= e($screenTitle) ?></p>
+<?php if ($modeText !== ''): ?>
+    <span class="state-line"><span class="dot dot-<?= e($modeClass) ?>" aria-hidden="true"></span><span><?= e($modeText) ?></span></span>
+<?php endif ?>
+  </header>
+  <div class="scroller">
+<?php endif ?>
+<?php if (!$admin && !$landing): ?>
+<div class="stage">
+  <img class="landing-bg" src="<?= e($stageSrc) ?>" alt="">
+  <div class="landing-scrim"></div>
+  <header class="stage-top">
+    <a class="brand" href="index.php">
+<?php if ($logo): ?>
+      <img src="<?= e($logo) ?>" alt="Death Plan Switch">
+<?php else: ?>
+      <span class="brand-mark" aria-hidden="true">DPS</span>
+      <span class="brand-name">Death Plan Switch</span>
+<?php endif ?>
+    </a>
+  </header>
+<?php endif ?>
+<main class="<?= $admin ? 'main' : 'plain-main' ?>">
 <?php foreach (Web::flashes() as [$type, $message]): ?>
   <div class="notice notice-<?= e($type) ?>" role="status"><p><?= e($message) ?></p></div>
 <?php endforeach ?>
@@ -87,7 +193,7 @@ if ($admin) {
     </ul>
   </div>
 <?php endif ?>
-<?php if ($admin): ?>
+<?php if ($admin || $landing || $install): ?>
 <?= $content ?>
 <?php else: ?>
   <div class="sheet">
@@ -95,9 +201,46 @@ if ($admin) {
   </div>
 <?php endif ?>
 </main>
+<?php if (!$landing): ?>
 <footer class="colophon">
   <?= $admin ? e(t('Death Plan Switch {version}. Free software under the MIT licence.', ['version' => VERSION])) : e(t('Death Plan Switch')) ?>
 </footer>
+<?php endif ?>
+<?php if (!$admin && !$landing): ?>
+</div>
+<?php endif ?>
+<?php if ($admin): ?>
+  </div>
+  <nav class="bottombar" aria-label="<?= e(t('Menu')) ?>">
+<?php foreach ($tabs as $key): ?>
+    <a class="tab" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><span class="tab-ico"><?= $icon($key) ?></span><span><?= e($navText[$key]) ?></span></a>
+<?php endforeach ?>
+    <details class="more">
+      <summary class="tab"<?= in_array($current, $more, true) ? ' aria-current="page"' : '' ?>><span class="tab-ico"><?= $icon('more') ?></span><span><?= e(t('More')) ?></span></summary>
+      <div class="more-scrim"></div>
+      <div class="more-sheet">
+<?php foreach ($more as $key): ?>
+        <a class="nav-item" href="<?= e($href($key)) ?>"<?= $current === $key ? ' aria-current="page"' : '' ?>><span class="nav-ico"><?= $icon($key) ?></span><?= e($navText[$key]) ?></a>
+<?php endforeach ?>
+        <div class="sheet-account">
+          <span class="avatar" aria-hidden="true"><?= e($initials) ?></span>
+          <span class="account-text">
+            <span class="account-name"><?= e($user['name'] !== '' ? $user['name'] : 'Death Plan Switch') ?></span>
+            <span class="account-line"><?= e($user['line']) ?></span>
+          </span>
+        </div>
+        <a class="nav-item" href="index.php?p=logout"><span class="nav-ico"><?= $icon('logout') ?></span><?= e(t('Sign out')) ?></a>
+        <span class="sheet-label label-mono"><?= e(t('Theme')) ?></span>
+        <div class="theme-choice" role="group" aria-label="<?= e(t('Theme')) ?>">
+          <button type="button" class="button-quiet" data-theme-set="dark" aria-pressed="true"><?= e(t('Dark')) ?></button>
+          <button type="button" class="button-quiet" data-theme-set="light" aria-pressed="false"><?= e(t('Light')) ?></button>
+          <button type="button" class="button-quiet" data-theme-set="system" aria-pressed="false"><?= e(t('System')) ?></button>
+        </div>
+      </div>
+    </details>
+  </nav>
+</div>
+<?php endif ?>
 <script src="assets/app.js?v=<?= e(VERSION) ?>" defer></script>
 </body>
 </html>

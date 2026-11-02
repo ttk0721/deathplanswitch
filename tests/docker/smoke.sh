@@ -59,6 +59,25 @@ compose up -d --build
 wait_for 60 is_up || true
 if is_up; then pass "install.php answers 200"; else fail "install.php answers 200"; fi
 
+# The one-time setup code reaches the container logs; only its salted hash is in the data folder.
+# Web and scheduler each make a fresh code at start, so the newest line in either log is the valid one.
+logged="$(compose logs --no-color -t web scheduler 2>/dev/null | grep 'Setup code: ' | sed 's/^[^|]*| *//' | sort | tail -n1 | grep -o '[0-9A-Z]\{4\}\(-[0-9A-Z]\{4\}\)\{4\}' || true)"
+stored="$(inspect "$SMOKE_DATA" setup-code | tr -d '\r\n')"
+salt="$(printf '%s' "$stored" | cut -d: -f2)"
+want="$(printf '%s' "$stored" | cut -d: -f3)"
+have="$(printf '%s' "$salt:$(printf '%s' "$logged" | tr -d '-')" | sha256sum | cut -d' ' -f1)"
+if [ -n "$logged" ] && [ -n "$want" ] && [ "$have" = "$want" ] && ! printf '%s' "$stored" | grep -q "$(printf '%s' "$logged" | tr -d '-')"; then
+  pass "newest setup code is in the logs, and /data/setup-code holds only its hash"
+else
+  fail "newest setup code is in the logs, and /data/setup-code holds only its hash (log='$logged')"
+fi
+front="$(curl -s http://127.0.0.1:18080/ || true)"
+if printf '%s' "$front" | grep -q 'landing-signin' && printf '%s' "$front" | grep -q 'install.php' && ! printf '%s' "$front" | grep -q "$logged"; then
+  pass "/ shows the public page in its setup state, without the code"
+else
+  fail "/ shows the public page in its setup state, without the code"
+fi
+
 if [ "$(code /app/bootstrap.php)" = 403 ] && [ "$(code /data/)" = 403 ]; then
   pass "/app/bootstrap.php and /data/ answer 403"
 else
@@ -66,6 +85,12 @@ else
 fi
 
 # Nothing private is served: project files, dotfiles, case/encoding tricks.
+if [ "$(code /data/setup-code)" = 403 ] && [ "$(code /data/landing/background.jpg)" = 403 ]; then
+  pass "/data/setup-code and /data/landing/ answer 403"
+else
+  fail "/data/setup-code and /data/landing/ answer 403"
+fi
+
 leaks=""
 for u in /Dockerfile /docker-compose.yml /.env /.env.example /.git/config /config.local.php /README.md \
          /DATA/ /Data/config.json /data/config.json /data/..%2Fconfig.json /data%2Fconfig.json /data./ /app./Web.php /APP/Web.php \

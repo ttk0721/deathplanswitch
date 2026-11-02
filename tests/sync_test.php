@@ -140,6 +140,20 @@ test('a local check-in is pushed once, not again', function (): void {
     same(1_799_999_000, $w->store->read('sync')['pushed_checkin_at'], 'sync.json');
 });
 
+test('an "all fine" is pushed with the key of the cycle it was given in', function (): void {
+    $w = new SW(null);
+    $w->answerStates();
+    foreach (['p1.example.org', 'p2.example.org'] as $h) {
+        $w->net->routes[$h]['nok'] = fn () => ['ok' => true];
+    }
+    $w->store->log('cycle.vouched', 'Lee answered "All fine". Nobody else will be asked.', ['key' => 1_799_000_000, 'by' => 'c_0123456789']);
+    $w->sync->run();
+    $calls = array_values(array_filter($w->net->calls, fn ($c) => $c['a'] === 'nok'));
+    same(2, count($calls), 'pushed to both peers');
+    $body = json_decode($calls[0]['body'], true);
+    same(['answer' => 'fine', 'key' => 1_799_000_000, 'by' => 'c_0123456789'], ['answer' => $body['answer'], 'key' => $body['key'] ?? null, 'by' => $body['by'] ?? null], 'with its cycle key and who answered');
+});
+
 test('a check-in that came from another node is not echoed back', function (): void {
     $w = new SW(null);
     $w->answerStates();
@@ -316,6 +330,35 @@ test('bundle schema: unknown config keys are dropped, bad contacts or vault refu
         $w2 = new SW(SW::P1);
         $w2->answerStates();
         $bad = $mutate(bundleFrom($w2, 9));
+        $w2->net->routes['p1.example.org']['bundle'] = fn () => $bad;
+        $log = $w2->sync->run();
+        same('Local', $w2->store->read('config')['owner_name'], "$why: not applied");
+        check((bool) array_filter($log, fn ($l) => str_contains($l, 'no valid')), "$why: logged");
+    }
+});
+
+test('bundle schema: the chain settings and the trusted fields are checked', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $b = bundleFrom($w, 41);
+    $b['config']['trust'] = ['mode' => 'all_at_once', 'interval' => 45, 'window' => 36];
+    $b['contacts'] = ['contacts' => [['id' => 'c_1', 'name' => 'Kim', 'trusted' => true, 'trusted_order' => 1], ['id' => 'c_2', 'name' => 'Lee', 'trusted' => false, 'trusted_order' => null]]];
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->sync->run();
+    same(['mode' => 'all_at_once', 'interval' => 45, 'window' => 36], $w->store->read('config')['trust'], 'good settings kept');
+    same(true, $w->store->read('contacts')['contacts'][0]['trusted'], 'trusted flag kept');
+
+    foreach ([
+        'trust not an object' => fn (array $x): array => ['config' => ['trust' => 'yes'] + $x['config']] + $x,
+        'unknown mode' => fn (array $x): array => ['config' => ['trust' => ['mode' => 'x', 'interval' => 'auto', 'window' => 24]] + $x['config']] + $x,
+        'interval too small' => fn (array $x): array => ['config' => ['trust' => ['mode' => 'sequential', 'interval' => 5, 'window' => 24]] + $x['config']] + $x,
+        'window too long' => fn (array $x): array => ['config' => ['trust' => ['mode' => 'sequential', 'interval' => 'auto', 'window' => 500]] + $x['config']] + $x,
+        'trusted not a flag' => fn (array $x): array => ['contacts' => ['contacts' => [['id' => 'c_1', 'name' => 'Kim', 'trusted' => 'yes']]]] + $x,
+        'order not a number' => fn (array $x): array => ['contacts' => ['contacts' => [['id' => 'c_1', 'name' => 'Kim', 'trusted' => true, 'trusted_order' => 'first']]]] + $x,
+    ] as $why => $mutate) {
+        $w2 = new SW(SW::P1);
+        $w2->answerStates();
+        $bad = $mutate(bundleFrom($w2, 42));
         $w2->net->routes['p1.example.org']['bundle'] = fn () => $bad;
         $log = $w2->sync->run();
         same('Local', $w2->store->read('config')['owner_name'], "$why: not applied");

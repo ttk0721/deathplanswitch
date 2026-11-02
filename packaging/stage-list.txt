@@ -15,6 +15,7 @@ cron.php
 health.php
 index.php
 install.php
+landing-bg.php
 node-api.php
 respond.php
 tick.php

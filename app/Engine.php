@@ -68,6 +68,7 @@ final class Engine
             'review_asked_at' => null,
             'after_fire_at' => null,
             'all_clear_queue' => [],
+            'trusted_clear_queue' => [],
         ];
     }
 
@@ -188,16 +189,10 @@ final class Engine
                 $peer = $this->peerDid($key, 'verify', $verifyAt - self::CLOCK_SKEW);
                 if ($peer !== null) {
                     $state['cycle']['stage'] = 'verify';
-                    $state['cycle']['verify'] = [
-                        'asked_at' => $peer,
-                        'reached' => false,
-                        'reminded_at' => null,
-                        'tokens' => [],
-                        'response' => null,
-                        'responded_at' => null,
-                    ];
+                    $state['cycle']['verify'] = $this->newVerify($peer, false, $this->trustDescriptor($config), false);
                     $state['cycle']['steps']['verify'] = $peer;
                     $this->saveState($state);
+                    $this->mergePeerTrust($state);
                     $did[] = 'The next of kin was already asked by another node.';
                 } elseif ($now >= $verifyAt && $this->may($key, 'verify', $verifyAt, $now)) {
                     $this->askNextOfKin($state, $config, $now, $did);
@@ -205,6 +200,13 @@ final class Engine
                 return;
 
             case 'verify':
+                // The trusted people after the first, each asked once.
+                $asked = $this->advanceAsks($state, $config, $now, $did);
+                $this->keepVerifyTokensLive($state);
+                if ($asked) {
+                    return;
+                }
+                $plan = self::plan($state['cycle'], null);
                 if (!$plan['nok_reminder']['done']) {
                     $peer = $this->peerDid($key, 'nok_reminder', $plan['nok_reminder']['at'] - self::CLOCK_SKEW);
                     if ($peer !== null) {
@@ -215,6 +217,10 @@ final class Engine
                     } elseif ($now >= $plan['nok_reminder']['at'] && $this->may($key, 'nok_reminder', $plan['nok_reminder']['at'], $now)) {
                         $this->remindNextOfKin($state, $config, $now, $did);
                     }
+                    return;
+                }
+                // Never before the last trusted person has been asked.
+                if (self::pendingAsks($plan) !== []) {
                     return;
                 }
                 $fireAt = $plan['fire']['at'] + $this->extraDelay('fire', $now);
@@ -295,17 +301,22 @@ final class Engine
 
     private function askNextOfKin(array &$state, array $config, int $now, array &$did): void
     {
-        $fireAt = $now + Schedule::NOK_WINDOW;
-        $nok = $this->confirmedNok();
+        $desc = $this->trustDescriptor($config);
+        $first = $desc['chain'] === [] ? null : $this->contacts->find($desc['chain'][0]);
         $verifyTokens = [];
         $reached = false;
 
-        if ($nok !== null) {
-            [$token, $record] = Tokens::issue(Schedule::NOK_WINDOW + 30 * Schedule::DAY);
-            $verifyTokens[] = $record;
+        // The deadline in the email is the real one: the last trusted person's turn, plus the reply window.
+        $draft = $state['cycle'];
+        $draft['verify'] = $this->newVerify($now, false, $desc, true);
+        $fireAt = self::plan($draft, null)['fire']['at'];
+
+        if ($first !== null) {
+            [$token, $record] = Tokens::issue(max(Schedule::NOK_WINDOW + 30 * Schedule::DAY, $fireAt + self::VERIFY_TOKEN_GRACE - $now));
+            $verifyTokens[] = $record + ['contact' => (string) $first['id']];
             $reached = $this->outbox->send(
-                (string) $nok['email'],
-                $this->verifyEmail($config, $state, $nok, $token, $fireAt, false),
+                (string) $first['email'],
+                $this->verifyEmail($config, $state, $first, $token, $fireAt, false),
                 'contact'
             );
         }
@@ -314,7 +325,7 @@ final class Engine
         [$ownerToken, $ownerRecord] = Tokens::issue(Schedule::CHECKIN_TOKEN_TTL);
         $ownerTold = $this->outbox->send(
             $this->ownerAddresses($config),
-            Messages::ownerVerifyStarted($config, $this->url($config, 'checkin.php', ['t' => $ownerToken]), $nok, $fireAt)
+            Messages::ownerVerifyStarted($config, $this->url($config, 'checkin.php', ['t' => $ownerToken]), $first, $fireAt)
         );
 
         if (!$reached && !$ownerTold) {
@@ -325,14 +336,8 @@ final class Engine
 
         $state['cycle']['tokens'][] = $ownerRecord;
         $state['cycle']['stage'] = 'verify';
-        $state['cycle']['verify'] = [
-            'asked_at' => $now,
-            'reached' => $reached,
-            'reminded_at' => null,
-            'tokens' => $verifyTokens,
-            'response' => null,
-            'responded_at' => null,
-        ];
+        $state['cycle']['verify'] = $this->newVerify($now, $reached, $desc, true);
+        $state['cycle']['verify']['tokens'] = $verifyTokens;
         $state['cycle']['steps']['verify'] = $now;
         $this->saveState($state);
         $this->store->log('cycle.verify', $reached
@@ -341,15 +346,209 @@ final class Engine
         $did[] = $reached ? 'Asked the next of kin.' : 'Could not email the next of kin. Waiting 72 hours before notifying the others.';
     }
 
+    /**
+     * The people who will be asked, and how: the confirmed trusted people in order, and the timing
+     * from Settings. Fixed for the cycle once the first person is asked.
+     *
+     * @return array{chain: string[], mode: string, gap: int, window: int}
+     */
+    private function trustDescriptor(array $config): array
+    {
+        $ids = array_map(static fn (array $c): string => (string) $c['id'], $this->contacts->trustedConfirmed());
+        return ['chain' => $ids] + Trust::timing(Trust::settings($config), count($ids));
+    }
+
+    /** The verify block of a cycle in which the first trusted person has just been asked. */
+    private function newVerify(int $askedAt, bool $reached, array $desc, bool $own): array
+    {
+        $first = $desc['chain'][0] ?? null;
+        return [
+            'asked_at' => $askedAt,
+            'reached' => $reached,
+            'reminded_at' => null,
+            'tokens' => [],
+            'response' => null,
+            'responded_at' => null,
+            'chain' => $desc['chain'],
+            'mode' => $desc['mode'],
+            'gap' => $desc['gap'],
+            'window' => $desc['window'],
+            'asks' => $first === null ? [] : [$first => ['asked_at' => $askedAt, 'reached' => $reached, 'own' => $own]],
+        ];
+    }
+
+    /** How long after the fire time an answer link still works while the cycle waits. */
+    private const VERIFY_TOKEN_GRACE = 7 * Schedule::DAY;
+
+    /**
+     * Keep every answer link of a waiting cycle valid until at least its fire time plus a week. The fire time
+     * moves later as people are asked, so this runs whenever the cycle moves. Saves only when something changed.
+     */
+    private function keepVerifyTokensLive(array &$state): void
+    {
+        if (($state['cycle']['stage'] ?? null) !== 'verify' || !is_array($state['cycle']['verify'] ?? null)) {
+            return;
+        }
+        $until = self::plan($state['cycle'], null)['fire']['at'] + self::VERIFY_TOKEN_GRACE;
+        $changed = false;
+        foreach ((array) ($state['cycle']['verify']['tokens'] ?? []) as $i => $record) {
+            if (is_array($record) && (int) ($record['expires_at'] ?? 0) < $until) {
+                $state['cycle']['verify']['tokens'][$i]['expires_at'] = $until;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            $this->saveState($state);
+        }
+    }
+
+    /** The chain and timing a cycle runs on, as shown to peers. */
+    private static function trustOf(array $verify): array
+    {
+        return [
+            'chain' => array_values(array_map('strval', (array) ($verify['chain'] ?? []))),
+            'mode' => ($verify['mode'] ?? '') === 'all_at_once' ? 'all_at_once' : 'sequential',
+            'gap' => (int) ($verify['gap'] ?? 0),
+            'window' => (int) ($verify['window'] ?? 0),
+        ];
+    }
+
+    /**
+     * Widen this cycle's chain and timing with what peers run on, so every node waits for the latest fire time:
+     * everyone on any node's chain (this node's order first, then the others in theirs), the longest interval,
+     * the longest reply window, and one at a time when any node asks one at a time. Nothing is ever narrowed.
+     *
+     * @return bool true when anything changed
+     */
+    private function mergePeerTrust(array &$state): bool
+    {
+        if (!$this->federated() || !isset($state['cycle']['verify']['chain'])) {
+            return false;
+        }
+        $mine = self::trustOf((array) $state['cycle']['verify']);
+        $merged = $mine;
+        foreach ($this->coordinator->peerTrusts((int) ($state['cycle']['due_at'] ?? 0)) as $t) {
+            $chain = is_array($t['chain'] ?? null) ? array_values(array_filter($t['chain'], static fn ($id): bool =>
+                is_string($id) && preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $id) === 1)) : [];
+            foreach (array_slice($chain, 0, 100) as $id) {
+                if (!in_array($id, $merged['chain'], true)) {
+                    $merged['chain'][] = $id;
+                }
+            }
+            if (is_int($t['gap'] ?? null)) {
+                $merged['gap'] = max($merged['gap'], min($t['gap'], max(Trust::INTERVAL_MAX * 60, Trust::AUTO_SPREAD)));
+            }
+            if (is_int($t['window'] ?? null)) {
+                $merged['window'] = max($merged['window'], min($t['window'], Trust::WINDOW_MAX * Schedule::HOUR));
+            }
+            if (($t['mode'] ?? null) === 'sequential') {
+                $merged['mode'] = 'sequential';
+            }
+        }
+        if ($merged === $mine) {
+            return false;
+        }
+        $state['cycle']['verify'] = $merged + $state['cycle']['verify'];
+        $this->saveState($state);
+        $this->keepVerifyTokensLive($state);
+        return true;
+    }
+
+    /** @return array<string, array> the asks in a plan that have not happened yet, by step name */
+    private static function pendingAsks(array $plan): array
+    {
+        return array_filter($plan, static fn (array $step, string $name): bool => str_starts_with($name, 'ask:') && !$step['done'], ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * Ask the next trusted people who are due. Each is asked once: if a peer node asked them, that is taken in,
+     * but never earlier than this node's own schedule allows.
+     *
+     * @return bool true when anything was done (the tick then ends)
+     */
+    private function advanceAsks(array &$state, array $config, int $now, array &$did): bool
+    {
+        $key = (int) ($state['cycle']['due_at'] ?? 0);
+        $acted = false;
+        $limit = count((array) ($state['cycle']['verify']['chain'] ?? [])) + 1;
+        for ($i = 0; $i < $limit; $i++) {
+            $pending = self::pendingAsks(self::plan($state['cycle'], null));
+            if ($pending === []) {
+                return $acted;
+            }
+            $name = (string) array_key_first($pending);
+            $step = $pending[$name];
+            $id = (string) $step['id'];
+            // A peer's ask is only taken in near this node's own time for it, and never dated earlier than that:
+            // a peer with a fast clock must not pull the later asks, or the fire time, forward.
+            $peer = $now >= $step['at'] - self::CLOCK_SKEW ? $this->peerDid($key, $name, $step['at'] - self::CLOCK_SKEW) : null;
+            if ($peer !== null) {
+                $adopted = max((int) $step['at'], min($peer, $now));
+                $state['cycle']['verify']['asks'][$id] = ['asked_at' => $adopted, 'reached' => false, 'own' => false];
+                $state['cycle']['steps'][$name] = $adopted;
+                $this->saveState($state);
+                $did[] = 'A trusted person was already asked by another node.';
+                $acted = true;
+                continue;
+            }
+            if ($now < $step['at'] || !$this->may($key, $name, $step['at'], $now)) {
+                return $acted;
+            }
+            if (!$this->askTrusted($state, $config, $now, $id, $step['at'], $did)) {
+                return $acted;
+            }
+            $acted = true;
+            if (($state['cycle']['verify']['mode'] ?? 'sequential') !== 'all_at_once') {
+                return true; // one at a time
+            }
+        }
+        return $acted;
+    }
+
+    /** @return bool false when the email failed and the ask will be tried again on the next run */
+    private function askTrusted(array &$state, array $config, int $now, string $id, int $plannedAt, array &$did): bool
+    {
+        $contact = $this->contacts->find($id);
+        $sent = false;
+        if ($contact !== null && ($contact['status'] ?? '') === 'confirmed') {
+            $draft = $state['cycle'];
+            $draft['verify']['asks'][$id] = ['asked_at' => $now, 'reached' => true, 'own' => true];
+            $fireAt = self::plan($draft, null)['fire']['at'];
+            [$token, $record] = Tokens::issue(max(Schedule::NOK_WINDOW + 30 * Schedule::DAY, $fireAt + self::VERIFY_TOKEN_GRACE - $now));
+            $sent = $this->outbox->send(
+                (string) $contact['email'],
+                $this->verifyEmail($config, $state, $contact, $token, $fireAt, false),
+                'contact'
+            );
+            if ($sent) {
+                $state['cycle']['verify']['tokens'][] = $record + ['contact' => $id];
+            } elseif ($now < $plannedAt + Schedule::MIN_STEP_GAP) {
+                $did[] = "Could not email {$contact['name']}. Will try again on the next run.";
+                return false;
+            }
+        }
+        // After a long failure the person counts as asked, so the others are not held up for ever.
+        $state['cycle']['verify']['asks'][$id] = ['asked_at' => $now, 'reached' => $sent, 'own' => true];
+        $state['cycle']['steps']['ask:' . $id] = $now;
+        $this->saveState($state);
+        $name = $contact['name'] ?? $id;
+        $this->store->log('cycle.trusted_asked', $sent
+            ? t('{name} was asked whether {owner} is all right.', ['name' => $name, 'owner' => (string) ($config['owner_name'] ?? '')])
+            : t('{name} could not be emailed.', ['name' => $name]));
+        $did[] = $sent ? "Asked {$name}." : "Could not email {$name}.";
+        return true;
+    }
+
     private function remindNextOfKin(array &$state, array $config, int $now, array &$did): void
     {
-        $nok = $this->confirmedNok();
+        $firstId = $state['cycle']['verify']['chain'][0] ?? null;
+        $nok = is_string($firstId) ? $this->contacts->find($firstId) : $this->confirmedNok();
         $plan = self::plan($state['cycle'], null);
-        $fireAt = max($plan['verify']['at'] + Schedule::NOK_WINDOW, $now + Schedule::MIN_STEP_GAP);
+        $fireAt = max($plan['fire']['at'], $now + Schedule::MIN_STEP_GAP);
 
         if ($nok !== null) {
-            [$token, $record] = Tokens::issue(Schedule::NOK_WINDOW + 30 * Schedule::DAY);
-            $state['cycle']['verify']['tokens'][] = $record;
+            [$token, $record] = Tokens::issue(max(Schedule::NOK_WINDOW + 30 * Schedule::DAY, $fireAt + self::VERIFY_TOKEN_GRACE - $now));
+            $state['cycle']['verify']['tokens'][] = $record + ['contact' => (string) $nok['id']];
             $sent = $this->outbox->send(
                 (string) $nok['email'],
                 $this->verifyEmail($config, $state, $nok, $token, $fireAt, true),
@@ -357,6 +556,9 @@ final class Engine
             );
             if ($sent) {
                 $state['cycle']['verify']['reached'] = true;
+                if (isset($state['cycle']['verify']['asks'][$nok['id']])) {
+                    $state['cycle']['verify']['asks'][$nok['id']]['reached'] = true;
+                }
             }
         }
         // Best effort: a next of kin who cannot be emailed must not hold the switch up for ever.
@@ -468,11 +670,8 @@ final class Engine
             return [];
         }
         $toTell = [];
-        if (!empty($cycle['verify']['reached'])) {
-            $nok = $this->contacts->nok();
-            if ($nok !== null) {
-                $toTell[$nok['id']] = true;
-            }
+        foreach ($this->askedIds($cycle) as $id) {
+            $toTell[$id] = true;
         }
         foreach (array_keys($cycle['notified'] ?? []) as $id) {
             if (!in_array((string) $id, (array) ($cycle['peer_told'] ?? []), true)) {
@@ -511,6 +710,21 @@ final class Engine
             }
         }
         $state['all_clear_queue'] = $remaining;
+        // People asked while another trusted person said "fine": told so, never that the owner checked in.
+        $left = [];
+        foreach ((array) ($state['trusted_clear_queue'] ?? []) as $id => $by) {
+            $contact = $this->contacts->find((string) $id);
+            if ($contact === null) {
+                continue;
+            }
+            if ($this->outbox->send((string) $contact['email'], Messages::trustedClear($config, (string) $by), 'contact')) {
+                $told[] = $contact['name'];
+                $this->store->log('cycle.all_clear', t('{name} was told it was a false alarm.', ['name' => $contact['name']]));
+            } else {
+                $left[$id] = $by;
+            }
+        }
+        $state['trusted_clear_queue'] = $left;
         $this->saveState($state);
         return $told;
     }
@@ -519,7 +733,7 @@ final class Engine
     private function housekeeping(array &$state, array $config, int $now, array &$did): void
     {
         // False-alarm notices that could not be sent earlier.
-        if ($state['all_clear_queue'] !== []) {
+        if ($state['all_clear_queue'] !== [] || $state['trusted_clear_queue'] !== []) {
             $told = $this->sendAllClears($state, $config);
             if ($told) {
                 $did[] = 'Sent false-alarm notices to ' . implode(', ', $told) . '.';
@@ -646,7 +860,7 @@ final class Engine
             $state['last_checkin_via'] = 'pausing the switch';
             $state['paused_until'] = $now + $days * Schedule::DAY;
             $this->saveState($state);
-            $this->store->log('pause.started', t('The switch was paused for {days} days.', ['days' => lang() === 'pl' ? $days . ' ' . plPlural($days, 'dzień', 'dni', 'dni') : $days]));
+            $this->store->log('pause.started', t('The switch was paused for {duration}.', ['duration' => tn('{n} day', '{n} days', $days)]));
             return ['until' => $state['paused_until'], 'told' => $told];
         });
     }
@@ -673,6 +887,15 @@ final class Engine
      *
      * @return array{stage: ?string, told: string[], next_due_at: ?int, armed: bool, paused_until: ?int}
      */
+    /** How a stored check-in method reads to the owner. The stored values stay English. */
+    public static function viaLabel(string $via): string
+    {
+        if (preg_match('/^another node \((.*)\)$/Ds', $via, $m)) {
+            return t('another node ({via})', ['via' => t($m[1])]);
+        }
+        return t($via);
+    }
+
     public function checkIn(string $via): array
     {
         return $this->store->locked(function () use ($via): array {
@@ -687,7 +910,7 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($now, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => self::viaLabel($via)])
                 . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
@@ -721,7 +944,7 @@ final class Engine
                 $state['next_due_at'] = $this->nextSlot($config, max($at, (int) $state['paused_until']));
             }
             $this->saveState($state);
-            $this->store->log('checkin', t('Checked in by {via}.', ['via' => t($via)])
+            $this->store->log('checkin', t('Checked in by {via}.', ['via' => self::viaLabel($via)])
                 . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
             return [
                 'stage' => $stage,
@@ -797,8 +1020,68 @@ final class Engine
             && Tokens::matches($token, (array) ($cycle['verify']['tokens'] ?? []));
     }
 
+    /** The trusted person an answer link was sent to, or null when the link is no longer live. */
+    public function verifyTokenContact(string $token): ?array
+    {
+        return $this->verifyAnswerer($token)['contact'] ?? null;
+    }
+
     /**
-     * Record the next of kin's answer.
+     * Who an answer link belongs to in this cycle, read from the cycle's own chain (never from the contact list):
+     * the contact (null when unknown or removed), their place in the chain, the chain's size, whether anyone else
+     * in the chain has been asked, and whether a "wrong" from them fires at once. Null when the link is not live.
+     *
+     * @return array{contact: ?array, id: ?string, position: ?int, size: int, others_asked: bool, fires: bool}|null
+     */
+    public function verifyAnswerer(string $token): ?array
+    {
+        if (!$this->verifyTokenIsLive($token)) {
+            return null;
+        }
+        return $this->answerer((array) $this->state()['cycle']['verify'], $token);
+    }
+
+    private function answerer(array $verify, string $token): array
+    {
+        if (!isset($verify['chain'])) {
+            // A cycle begun before the chain existed: its only links went to the next of kin.
+            $nok = $this->contacts->nok();
+            return ['contact' => $nok, 'id' => $nok === null ? null : (string) $nok['id'], 'position' => 1, 'size' => 1,
+                'others_asked' => false, 'fires' => $nok !== null];
+        }
+        $id = null;
+        foreach ((array) ($verify['tokens'] ?? []) as $record) {
+            if (is_array($record) && is_string($record['contact'] ?? null) && Tokens::matches($token, [$record])) {
+                $id = $record['contact'];
+            }
+        }
+        $chain = array_values(array_map('strval', (array) $verify['chain']));
+        $at = $id === null ? false : array_search($id, $chain, true);
+        $contact = $id === null ? null : $this->contacts->find($id);
+        $others = array_diff(array_map('strval', array_keys((array) ($verify['asks'] ?? []))), [(string) $id]);
+        return [
+            'contact' => $contact,
+            'id' => $id,
+            'position' => $at === false ? null : $at + 1,
+            'size' => count($chain),
+            'others_asked' => $others !== [],
+            // Only the next of kin, asked first in this very cycle, may fire the switch at once.
+            'fires' => $contact !== null && ($contact['kind'] ?? '') === 'nok' && $at === 0,
+        ];
+    }
+
+    /** How many people are being asked in this cycle (1 for a cycle begun before the chain existed). */
+    public function chainSize(): int
+    {
+        return max(1, count((array) ($this->state()['cycle']['verify']['chain'] ?? [])));
+    }
+
+    /**
+     * Record a trusted person's answer.
+     *
+     * "Fine" from anyone ends the cycle. "Wrong" fires at once only when it comes from the next of kin, asked first
+     * in this cycle. From anyone else it is noted, nothing is sent early, the others are still asked in turn, and
+     * the same link still takes a later "fine".
      *
      * @param string $answer 'fine' or 'wrong'
      * @return string|null 'fine', 'wrong', or null if the link is no longer active
@@ -815,26 +1098,66 @@ final class Engine
             $config = $this->config();
             $state = $this->state();
             $now = Clock::now();
-            $state['cycle']['verify']['response'] = $answer;
-            $state['cycle']['verify']['responded_at'] = $now;
-            $state['cycle']['verify']['tokens'] = [];
+            $role = $this->answerer((array) $state['cycle']['verify'], $token);
+            $who = $role['contact'];
 
             if ($answer === 'wrong') {
-                $did = [];
-                $this->fire($state, $config, 'nok_wrong', $did);
+                if ($role['fires']) {
+                    $state['cycle']['verify']['response'] = $answer;
+                    $state['cycle']['verify']['responded_at'] = $now;
+                    $state['cycle']['verify']['tokens'] = [];
+                    $did = [];
+                    $this->fire($state, $config, 'nok_wrong', $did);
+                    return 'wrong';
+                }
+                // Anyone else is a fallback, not an extra vote to fire. Their link stays live for a later "fine".
+                $state['cycle']['verify']['answers'][$role['id'] ?? '?'] = ['answer' => 'wrong', 'at' => $now];
+                $this->saveState($state);
+                $this->store->log('cycle.trusted_wrong', t('{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.', ['name' => $who['name'] ?? '?']));
                 return 'wrong';
             }
 
-            // "All fine": this cycle ends and nobody else is contacted.
-            $nok = $this->contacts->nok();
-            $this->rememberVouched($state, $now);
+            // "All fine": this cycle ends and nobody else is asked.
+            $whoId = (string) ($role['id'] ?? '');
+            $others = array_diff($this->askedIds($state['cycle']), [$whoId]);
+            $key = (int) ($state['cycle']['due_at'] ?? 0);
+            $state['cycle']['verify']['response'] = $answer;
+            $state['cycle']['verify']['responded_at'] = $now;
+            $state['cycle']['verify']['tokens'] = [];
+            $this->rememberVouched($state, $now, $whoId === '' ? null : $whoId);
             $state['cycle'] = null;
             $state['next_due_at'] = $this->nextSlot($config, $now);
+            foreach ($others as $other) {
+                $state['trusted_clear_queue'][(string) $other] = (string) ($who['name'] ?? '');
+            }
             $this->saveState($state);
-            $this->store->log('cycle.vouched', t('The next of kin answered "All fine". Nobody else was contacted.'));
-            $this->outbox->send($this->ownerAddresses($config), Messages::ownerVouched($config, $nok, $state['next_due_at']));
+            // The cycle key travels with the answer, so a peer applies it to this cycle only.
+            $this->store->log('cycle.vouched', $role['fires']
+                ? t('The next of kin answered "All fine". Nobody else was contacted.')
+                : t('{name} answered "All fine". Nobody else will be asked.', ['name' => $who['name'] ?? '?']),
+                ['key' => $key] + ($whoId === '' ? [] : ['by' => $whoId]));
+            $this->outbox->send($this->ownerAddresses($config), Messages::ownerVouched($config, $who ?? $this->contacts->nok(), $state['next_due_at'], $others !== []));
+            $this->sendAllClears($state, $config);
             return 'fine';
         });
+    }
+
+    /** @return string[] ids of the people this node asked and reached in a cycle (people a peer node asked are not included) */
+    private function askedIds(array $cycle): array
+    {
+        $verify = (array) ($cycle['verify'] ?? []);
+        if (!isset($verify['asks'])) {
+            // A cycle begun before the chain existed: the next of kin is the only person asked.
+            $nok = !empty($verify['reached']) ? $this->contacts->nok() : null;
+            return $nok === null ? [] : [(string) $nok['id']];
+        }
+        $out = [];
+        foreach ((array) $verify['asks'] as $id => $ask) {
+            if (is_array($ask) && !empty($ask['reached']) && ($ask['own'] ?? true)) {
+                $out[] = (string) $id;
+            }
+        }
+        return $out;
     }
 
     // ------------------------------------------------------------------
@@ -939,7 +1262,8 @@ final class Engine
 
     public function requiredContactsConfirmed(): bool
     {
-        return $this->confirmedNok() !== null && $this->contacts->confirmedOfKind('technical') !== [];
+        // Only the next of kin is required. A technical helper is recommended, never blocking.
+        return $this->confirmedNok() !== null;
     }
 
     // ------------------------------------------------------------------
@@ -993,10 +1317,10 @@ final class Engine
         $technical = array_values(array_filter($this->contacts->all(), static fn (array $c): bool => $c['kind'] === 'technical'));
         $items[] = [
             'key' => 'technical',
-            'label' => t('Your technical 2IC has confirmed'),
+            'label' => t('Technical helper (optional)'),
             'ok' => $this->contacts->confirmedOfKind('technical') !== [],
-            'blocking' => true,
-            'hint' => $technical === [] ? t('Add the person who would look after your clients.') : self::contactHint($technical[0]),
+            'blocking' => false,
+            'hint' => $technical === [] ? t('Someone who can keep your servers, accounts or projects running.') : self::contactHint($technical[0]),
         ];
 
         $unwritten = [];
@@ -1149,9 +1473,12 @@ final class Engine
      * The timetable for a cycle: when each step happened, or when it will.
      * Used both to decide what is due and to draw the track on the dashboard.
      *
+     * Each trusted person after the first has an "ask:<id>" step. Before the first is asked, $trust
+     * (chain, mode, gap, window) projects those steps for the dashboard.
+     *
      * @return array<string, array{at: int, done: bool}>
      */
-    public static function plan(?array $cycle, ?int $nextDue): array
+    public static function plan(?array $cycle, ?int $nextDue, ?array $trust = null): array
     {
         $start = $cycle['started_at'] ?? $nextDue;
         if ($start === null) {
@@ -1172,10 +1499,28 @@ final class Engine
         $asked = $verify['asked_at'] ?? max($start + Schedule::OWNER_WINDOW, $previous + $gap);
         $plan['verify'] = ['at' => (int) $asked, 'done' => isset($verify['asked_at'])];
 
+        // The trusted people after the first: one interval after the one before, or all together after one interval.
+        $setup = is_array($verify) && isset($verify['chain']) ? $verify : ($trust ?? []);
+        $ids = array_values(array_map('strval', (array) ($setup['chain'] ?? [])));
+        $lastAsk = (int) $asked;
+        if (count($ids) > 1) {
+            $step = max(60, (int) ($setup['gap'] ?? 0));
+            $together = ($setup['mode'] ?? '') === 'all_at_once';
+            $before = (int) $asked;
+            foreach (array_slice($ids, 1) as $id) {
+                $did = $verify['asks'][$id]['asked_at'] ?? null;
+                $at = (int) ($did ?? ($together ? $asked + $step : $before + $step));
+                $plan['ask:' . $id] = ['at' => $at, 'done' => $did !== null, 'id' => $id];
+                $before = $at;
+                $lastAsk = max($lastAsk, $at);
+            }
+        }
+        $window = (int) ($setup['window'] ?? 0);
+
         $reminded = $verify['reminded_at'] ?? $asked + Schedule::NOK_REMINDER;
         $plan['nok_reminder'] = ['at' => (int) $reminded, 'done' => isset($verify['reminded_at'])];
 
-        $fired = $cycle['fired_at'] ?? max($asked + Schedule::NOK_WINDOW, $reminded + $gap);
+        $fired = $cycle['fired_at'] ?? max($asked + Schedule::NOK_WINDOW, $reminded + $gap, $window > 0 ? $lastAsk + $window : 0);
         $plan['fire'] = ['at' => (int) $fired, 'done' => isset($cycle['fired_at'])];
 
         return $plan;
@@ -1204,7 +1549,9 @@ final class Engine
         return [
             'mode' => $mode,
             'state' => $state,
-            'plan' => $state['armed'] && $state['paused_until'] === null ? self::plan($cycle, $state['next_due_at']) : [],
+            'plan' => $state['armed'] && $state['paused_until'] === null
+                ? self::plan($cycle, $state['next_due_at'], $this->trustDescriptor($this->config()))
+                : [],
         ];
     }
 
@@ -1248,7 +1595,7 @@ final class Engine
         $state = $this->state();
         $vars = Messages::vars($config, $state, $this->contacts->all(), $contact);
         $out = [];
-        if ($contact['kind'] === 'nok') {
+        if ($this->contacts->trustedNumber((string) ($contact['id'] ?? '')) !== null) {
             $out[t('When you miss a check-in and its reminders')] = Messages::nokVerify(
                 $config,
                 $contact,
@@ -1290,7 +1637,12 @@ final class Engine
         if (!$this->federated() || ($cycle['stage'] ?? null) !== 'verify') {
             return null;
         }
-        $due = self::plan($cycle, null)['fire']['at'] + $this->extraDelay('fire', $now);
+        $plan = self::plan($cycle, null);
+        // Never before the last trusted person has been asked on this node's own timeline.
+        if (self::pendingAsks($plan) !== []) {
+            return null;
+        }
+        $due = $plan['fire']['at'] + $this->extraDelay('fire', $now);
         if ($now < $due - self::CLOCK_SKEW) {
             return null;
         }
@@ -1396,6 +1748,11 @@ final class Engine
         if (isset($c['verify']['reminded_at'])) {
             $steps['nok_reminder'] = (int) $c['verify']['reminded_at'];
         }
+        foreach ((array) ($c['verify']['asks'] ?? []) as $id => $ask) {
+            if (is_array($ask) && isset($ask['asked_at']) && ($c['verify']['chain'][0] ?? null) !== $id) {
+                $steps['ask:' . $id] = (int) $ask['asked_at'];
+            }
+        }
         if (isset($c['fired_at'])) {
             $steps['fire'] = (int) $c['fired_at'];
         }
@@ -1405,7 +1762,8 @@ final class Engine
         return array_map('intval', (array) ($c['steps'] ?? []) + $steps);
     }
 
-    private function rememberVouched(array &$state, int $at): void
+    /** @param string|null $by the id of the trusted person who answered, when known */
+    private function rememberVouched(array &$state, int $at, ?string $by = null): void
     {
         if (!is_array($state['cycle'])) {
             return;
@@ -1414,7 +1772,7 @@ final class Engine
             'key' => (int) ($state['cycle']['due_at'] ?? 0),
             'at' => $at,
             'steps' => $this->cycleSteps($state['cycle']),
-        ];
+        ] + ($by === null ? [] : ['by' => $by]);
     }
 
     /** This node's state as peers see it. */
@@ -1434,6 +1792,10 @@ final class Engine
                 'fired_reason' => $c['fired_reason'] ?? null,
                 'nok' => $answer === null ? null : ['answer' => $answer, 'at' => (int) ($c['verify']['responded_at'] ?? 0)],
             ];
+            // The people this cycle asks and its timing, so peers can wait for the longest chain.
+            if (isset($c['verify']['chain'])) {
+                $cycle['trust'] = self::trustOf((array) $c['verify']);
+            }
         }
         return [
             'node' => $nodeId,
@@ -1447,6 +1809,7 @@ final class Engine
             'vouched' => is_array($state['last_vouched'] ?? null)
                 ? ['key' => (int) $state['last_vouched']['key'], 'at' => (int) $state['last_vouched']['at'],
                     'steps' => array_map('intval', (array) $state['last_vouched']['steps'])]
+                    + (is_string($state['last_vouched']['by'] ?? null) ? ['by' => $state['last_vouched']['by']] : [])
                 : null,
         ];
     }
@@ -1481,7 +1844,7 @@ final class Engine
                 $state['last_checkin_via'] = 'another node (' . $latest['via'] . ')';
                 $state['next_due_at'] = $this->nextSlot($config, max($latest['at'], (int) $state['paused_until']));
                 $this->saveState($state);
-                $this->store->log('checkin', t('Checked in by another node ({via}).', ['via' => t((string) $latest['via'])])
+                $this->store->log('checkin', t('Checked in by another node ({via}).', ['via' => self::viaLabel((string) $latest['via'])])
                     . ($told ? ' ' . t('False-alarm notices sent to {names}.', ['names' => implode(', ', $told)]) : ''));
                 $did[] = 'A check-in on another node ended the cycle.';
             }
@@ -1490,40 +1853,50 @@ final class Engine
                 $key = (int) ($state['cycle']['due_at'] ?? 0);
                 $pc = $this->coordinator->peerCycle($key);
 
+                // Only "all fine" is taken from a peer: it can stop this node, never make it fire. It comes first,
+                // so a peer's firing heard in the same sync never wins over a "fine" given elsewhere.
+                foreach ($this->coordinator->peerFines($key) as $fine) {
+                    if ($this->applyPeerNok($state, $config, 'fine', $fine['at'], 'another node', $key, $fine['by'])) {
+                        $did[] = 'The next of kin answered on another node: fine.';
+                        break;
+                    }
+                }
+
+                // The longest chain and timing any node runs this cycle on.
+                if ($state['cycle'] !== null) {
+                    $this->mergePeerTrust($state);
+                }
+
                 // A peer's firing is only taken in when this node would fire now anyway; then it just avoids duplicates.
-                $firedAt = $this->peerFire($state['cycle'], Clock::now());
+                $firedAt = $state['cycle'] === null ? null : $this->peerFire($state['cycle'], Clock::now());
                 if ($pc !== null && $firedAt !== null) {
                     $this->adoptFire($state, $firedAt, (string) ($pc['fired_reason'] ?? 'timeout'), $did);
                     $this->adoptPeerDeliveries($state);
                     $this->saveState($state);
-                }
-
-                // Only "all fine" is taken from a peer: it can stop this node, never make it fire.
-                $nok = $pc['nok'] ?? null;
-                if (is_array($nok) && ($nok['answer'] ?? null) === 'fine') {
-                    if ($this->applyPeerNok($state, $config, (string) $nok['answer'], (int) ($nok['at'] ?? Clock::now()), 'another node', true)) {
-                        $did[] = 'The next of kin answered on another node: ' . $nok['answer'] . '.';
-                    }
                 }
             }
             return $did;
         });
     }
 
-    /** A next-of-kin answer reported by a peer. Only "all fine" counts, and only while the cycle waits for one. */
-    public function recordNokAnswer(string $answer, int $at, string $via): void
+    /**
+     * A trusted person's answer reported by a peer. Only "all fine" counts, only while the cycle waits for one,
+     * and only for the cycle it was given in: $key is that cycle's key (null from a peer too old to send one).
+     */
+    public function recordNokAnswer(string $answer, int $at, string $via, ?int $key = null, ?string $by = null): void
     {
         if ($answer !== 'fine' && $answer !== 'wrong') {
             return;
         }
-        $this->store->locked(function () use ($answer, $at, $via): void {
+        $this->store->locked(function () use ($answer, $at, $via, $key, $by): void {
             $config = $this->config();
             $state = $this->state();
-            $this->applyPeerNok($state, $config, $answer, $at, $via);
+            $this->applyPeerNok($state, $config, $answer, $at, $via, $key, $by);
         });
     }
 
-    private function applyPeerNok(array &$state, array $config, string $answer, int $at, string $via, bool $sameCycle = false): bool
+    /** @param int|null $key the cycle the answer was given in; null when the peer did not say */
+    private function applyPeerNok(array &$state, array $config, string $answer, int $at, string $via, ?int $key = null, ?string $by = null): bool
     {
         $cycle = $state['cycle'];
         // A peer's "something's wrong" never fires this node early: the node where the kin answered
@@ -1531,21 +1904,46 @@ final class Engine
         if ($answer !== 'fine' || $cycle === null || ($cycle['verify']['response'] ?? null) !== null) {
             return false;
         }
+        $cycleKey = (int) ($cycle['due_at'] ?? 0);
+        if ($key !== null && $key !== $cycleKey) {
+            return false; // an answer from another cycle
+        }
         // An answer matched to this very cycle by its key also ends it while this node still lags before verify:
         // the kin was asked by a peer, so "all fine" must not wait for this node to catch up.
-        $lagging = $sameCycle && $cycle['stage'] === 'checkin';
+        $lagging = $key !== null && $cycle['stage'] === 'checkin';
         if ($cycle['stage'] !== 'verify' && !$lagging) {
             return false;
         }
+        // Never an answer older than this cycle's first question.
+        $firstAsk = isset($cycle['verify']['asked_at'])
+            ? (int) $cycle['verify']['asked_at']
+            : min(self::plan($cycle, null)['verify']['at'], $this->peerDid($cycleKey, 'verify') ?? PHP_INT_MAX);
+        if ($at < $firstAsk - self::CLOCK_SKEW) {
+            return false;
+        }
+        // The people this node asked are told it was a false alarm, as when the answer is given here.
+        // Each person is asked by one node only, so nobody is told twice.
+        $byName = '';
+        if ($by !== null) {
+            $byName = (string) ($this->contacts->find($by)['name'] ?? '');
+        }
+        // (A cycle begun before the chain existed asked the next of kin alone, who is the one who answered.)
+        $others = isset($cycle['verify']['chain']) ? array_diff($this->askedIds($cycle), $by === null ? [] : [$by]) : [];
         $state['cycle']['verify'] ??= ['asked_at' => $at, 'reached' => false, 'reminded_at' => null, 'tokens' => [], 'response' => null, 'responded_at' => null];
         $state['cycle']['verify']['response'] = $answer;
         $state['cycle']['verify']['responded_at'] = $at;
         $state['cycle']['verify']['tokens'] = [];
-        $this->rememberVouched($state, $at);
+        $this->rememberVouched($state, $at, $by);
         $state['cycle'] = null;
         $state['next_due_at'] = $this->nextSlot($config, $at);
+        foreach ($others as $other) {
+            $state['trusted_clear_queue'][(string) $other] = $byName;
+        }
         $this->saveState($state);
-        $this->store->log('cycle.vouched', t('The next of kin answered "All fine" ({via}). Nobody else was contacted.', ['via' => t($via)]));
+        $this->store->log('cycle.vouched', t('The next of kin answered "All fine" ({via}). Nobody else was contacted.', ['via' => self::viaLabel($via)]));
+        if ($others !== []) {
+            $this->sendAllClears($state, $config);
+        }
         return true;
     }
 

@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     // role labels (display only)
     'Next of kin' => 'Najbliższa osoba',
-    'Technical 2IC' => 'Zastępca techniczny',
+    'Technical helper' => 'Pomocnik techniczny',
     'Legal contact' => 'Kontakt prawny',
 
     // contacts list
@@ -14,8 +14,8 @@ return [
     'The people your switch writes to. Each one confirms by email before they count, and only confirmed contacts are ever written to.' => 'Osoby, do których pisze twój przełącznik. Każda najpierw potwierdza e-mailem i dopiero wtedy się liczy. Piszemy tylko do potwierdzonych kontaktów.',
     'Your yearly review is due.' => 'Czas na coroczny przegląd.',
     'Confirm each contact still has what they need' => 'Potwierdź, że każdy kontakt nadal ma to, czego potrzebuje',
-    'Start with two people' => 'Zacznij od dwóch osób',
-    'Your next of kin is asked first, privately, whether everything is all right. Your technical 2IC is the person who would look after your clients. Ask them both before you add them.' => 'Twoja najbliższa osoba dostaje jako pierwsza, prywatnie, pytanie, czy wszystko jest w porządku. Twój zastępca techniczny to ktoś, kto zająłby się twoimi klientami. Zapytaj obie te osoby, zanim je dodasz.',
+    'Start with your next of kin' => 'Zacznij od najbliższej osoby',
+    'Your next of kin is asked first, privately, whether everything is all right. A technical helper is optional: someone who can keep your servers, accounts or projects running. Ask them before you add them.' => 'Twoja najbliższa osoba dostaje jako pierwsza, prywatnie, pytanie, czy wszystko jest w porządku. Pomocnik techniczny jest opcjonalny: to osoba, która zadba o twoje serwery, konta albo projekty. Zapytaj ją, zanim ją dodasz.',
     'Changing to {email} once they confirm it.' => 'Zmienimy na {email}, gdy ta osoba to potwierdzi.',
     'Confirmed' => 'Potwierdzone',
     'Declined' => 'Odmówił(a)',
@@ -25,7 +25,7 @@ return [
     'Not yet given what they need' => 'Nie dostała jeszcze tego, czego potrzebuje',
     'Has what they need' => 'Ma to, czego potrzebuje',
     'Add your next of kin' => 'Dodaj najbliższą osobę',
-    'Add a technical contact' => 'Dodaj kontakt techniczny',
+    'Add a technical helper' => 'Dodaj pomocnika technicznego',
     'Add a legal contact' => 'Dodaj kontakt prawny',
     'Add someone else' => 'Dodaj kogoś innego',
     'Yearly review' => 'Coroczny przegląd',
@@ -61,8 +61,8 @@ return [
 
     // contact page: help and layout
     'For a next of kin, that usually means: they know this switch exists, they know who your other contacts are, and they know where your will and authority documents are kept.' => 'W przypadku najbliższej osoby zwykle znaczy to: wie, że ten przełącznik istnieje, wie, kim są twoje pozostałe kontakty, i wie, gdzie leżą testament i dokumenty pełnomocnictw.',
-    'For a technical 2IC, that usually means: they hold the password to your handover document, they can reach your servers, and they know which clients to call first.' => 'W przypadku zastępcy technicznego zwykle znaczy to: ma hasło do dokumentu przekazania, ma dostęp do twoich serwerów i wie, do których klientów zadzwonić najpierw.',
-    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical 2IC are.' => 'W przypadku kontaktu prawnego zwykle znaczy to: ma zapieczętowane kopie, o których się umówiliście, i wie, kim są twoja najbliższa osoba i zastępca techniczny.',
+    'For a technical helper, that usually means: they hold the password to your handover document, they can reach your servers and accounts, and they know what to look at first.' => 'W przypadku pomocnika technicznego zwykle znaczy to: ma hasło do dokumentu przekazania, ma dostęp do twoich serwerów i kont i wie, czym zająć się najpierw.',
+    'For a legal contact, that usually means: they hold whatever sealed copies you agreed on, and they know who your next of kin and technical helper are.' => 'W przypadku kontaktu prawnego zwykle znaczy to: ma zapieczętowane kopie, o których się umówiliście, i wie, kim są twoja najbliższa osoba i pomocnik techniczny.',
     'Whatever this person would need in order to act on the message below.' => 'Wszystko, czego ta osoba potrzebuje, żeby zadziałać na podstawie wiadomości poniżej.',
     '{page}: Death Plan Switch' => '{page}: Death Plan Switch',
     'Add a contact' => 'Dodaj kontakt',
@@ -153,4 +153,14 @@ return [
     'Apprise examples: {examples}.' => 'Przykłady Apprise: {examples}.',
     'A webhook is an {scheme} address; each request is signed, and the signature is in the {header} header.' => 'Webhook to adres {scheme}; każde żądanie jest podpisane, a podpis jest w nagłówku {header}.',
     'Add channel' => 'Dodaj kanał',
+    // trusted people
+    'Trusted people' => 'Zaufane osoby',
+    'These people are asked whether everything is all right, one after another, starting with your next of kin. If any of them says all is fine, nobody else is asked. Only confirmed people are asked. How quickly they follow each other is set in Settings.' => 'Te osoby dostają pytanie, czy wszystko w porządku, po kolei, zaczynając od najbliższej osoby. Jeśli któraś odpowie, że jest dobrze, nikt więcej nie dostaje pytania. Pytamy tylko potwierdzone osoby. Odstęp między nimi ustawisz w Ustawieniach.',
+    'Asked first' => 'Pytana jako pierwsza',
+    'Asked after {name}' => 'Pytana po: {name}',
+    'Move up' => 'W górę',
+    'Move down' => 'W dół',
+    'Remove from trusted people' => 'Usuń z zaufanych osób',
+    'Trusted person {n}' => 'Zaufana osoba {n}',
+    'Add to trusted people' => 'Dodaj do zaufanych osób',
 ];

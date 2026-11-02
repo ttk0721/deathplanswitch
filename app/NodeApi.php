@@ -142,10 +142,15 @@ final class NodeApi
         $b = self::json($req);
         $at = $b['at'] ?? null;
         $answer = $b['answer'] ?? null;
-        if (!is_int($at) || $at <= 0 || $at > $this->now($req) + 60 || !in_array($answer, ['fine', 'wrong'], true)) {
+        // The cycle the answer was given in, and who gave it: optional, as older nodes send neither.
+        $key = $b['key'] ?? null;
+        $by = $b['by'] ?? null;
+        if (!is_int($at) || $at <= 0 || $at > $this->now($req) + 60 || !in_array($answer, ['fine', 'wrong'], true)
+            || ($key !== null && (!is_int($key) || $key <= 0))
+            || ($by !== null && (!is_string($by) || !preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $by)))) {
             return self::err(400, 'bad input');
         }
-        ($this->handlers['nok'])($answer, $at);
+        ($this->handlers['nok'])($answer, $at, $key, $by);
         return ['status' => 200, 'json' => ['ok' => true]];
     }
 

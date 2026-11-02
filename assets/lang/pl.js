@@ -1,4 +1,4 @@
-// Polish strings for the vault pages. Keys are the English source text.
+// Polish strings for the vault pages. Keys are the English source text; a list of forms is a plural entry (rule: pl).
 export default {
   'Add a recipient': 'Dodaj odbiorcę',
   'Add a recipient first.': 'Najpierw dodaj odbiorcę.',
@@ -88,3 +88,5 @@ export default {
   'Your code or password': 'Twój kod lub hasło',
   'Your code still works too.': 'Twój kod nadal też działa.',
 };
+
+export const plural = 'pl';

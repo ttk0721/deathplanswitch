@@ -11,6 +11,12 @@ return [
     'Settings' => 'Ustawienia',
     'History' => 'Historia',
     'Sign out' => 'Wyloguj się',
+    'More' => 'Więcej',
+    'Menu' => 'Menu',
+    'Theme' => 'Motyw',
+    'Dark' => 'Ciemny',
+    'Light' => 'Jasny',
+    'System' => 'Systemowy',
     'the primary' => 'węzeł główny',
     'This node mirrors {name}. Change settings there; check-ins here count everywhere.' => 'Ten węzeł jest kopią węzła {name}. Ustawienia zmieniaj tam; potwierdzenia obecności zrobione tutaj liczą się wszędzie.',
     'Death Plan Switch {version}. Free software under the MIT licence.' => 'Death Plan Switch {version}. Wolne oprogramowanie na licencji MIT.',
@@ -37,16 +43,13 @@ return [
     '{names} have been told it was a false alarm.' => 'Osoby, które dostały informację o fałszywym alarmie: {names}.',
     'Your next of kin' => 'Twoja najbliższa osoba',
 
-    // dashboard: date formats
-    'l j F \a\t g:ia' => 'l j F, G:i',
-    'D j M, g:ia' => 'D j M, G:i',
 
     // dashboard: pilot light
     'Not armed' => 'Nieuzbrojony',
     'Nobody will be contacted while the switch is not armed.' => 'Dopóki przełącznik nie jest uzbrojony, nikt nie dostanie wiadomości.',
     'Everything is in place: arm it when you are ready.' => 'Wszystko gotowe: uzbrój go, gdy będziesz chcieć.',
     'Finish the list below, then arm it.' => 'Dokończ listę poniżej, potem go uzbrój.',
-    'Armed' => 'Czuwa',
+    'Armed' => 'Uzbrojony',
     'Your next check-in email arrives on {date}.' => 'Następny e-mail z prośbą o potwierdzenie obecności dostaniesz {date}.',
     'Check in now' => 'Potwierdź obecność',
     'Paused' => 'Wstrzymany',
@@ -92,7 +95,7 @@ return [
     // dashboard: contacts and details
     'Who is told' => 'Kto dostaje wiadomość',
     'Nobody yet.' => 'Jeszcze nikt.',
-    'Add your next of kin and your technical 2IC' => 'Dodaj najbliższą osobę i zastępcę technicznego',
+    'Add your next of kin, and a technical helper if you like' => 'Dodaj najbliższą osobę, a jeśli chcesz, także pomocnika technicznego',
     'Asked first, after you miss a check-in and 72 hours of reminders.' => 'Pytana jako pierwsza, gdy pominiesz potwierdzenie obecności i minie 72 godziny przypomnień.',
     'Sent their message if neither you nor your next of kin confirms you are well.' => 'Dostaje swoją wiadomość, jeśli ani ty, ani twoja najbliższa osoba nie potwierdzicie, że wszystko jest w porządku.',
     'Confirmed' => 'Potwierdzone',
@@ -125,8 +128,13 @@ return [
     'Change the pause' => 'Zmień wstrzymanie',
     'Pause the switch' => 'Wstrzymaj przełącznik',
     'Disarm' => 'Rozbrojenie',
-    'Turn the switch off' => 'Wyłącz przełącznik',
     'A disarmed switch sends no check-in emails and contacts nobody. It stays off until you arm it again. If you only need a break, pause it instead.' => 'Rozbrojony przełącznik nie wysyła e-maili z prośbą o potwierdzenie i nikogo nie powiadamia. Zostaje wyłączony, dopóki go znowu nie uzbroisz. Jeśli potrzebujesz tylko przerwy, wstrzymaj go.',
     'Your password' => 'Twoje hasło',
     'Disarm the switch' => 'Rozbrój przełącznik',
+    // trusted people
+    'Trusted people' => 'Zaufane osoby',
+    'This is what happens if you miss the next check-in. Your other contacts would be told on {date}.' => 'Tak będzie, jeśli pominiesz następne potwierdzenie. Pozostałe kontakty dostałyby wiadomość: {date}.',
+    'Will be asked {when}' => 'Dostanie pytanie: {when}',
+    'Asked {when}' => 'Zapytano {when}',
+    'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Zaufana osoba {n}: dostaje pytanie, czy u ciebie wszystko w porządku, po osobach przed nią. Dostaje swoją wiadomość, jeśli nikt nie potwierdzi, że jesteś cały i zdrowy.',
 ];

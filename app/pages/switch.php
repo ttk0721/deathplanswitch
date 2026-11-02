@@ -86,8 +86,8 @@ $nokName = $nok['name'] ?? t('Your next of kin');
 $warnings = array_values(array_filter($engine->warnings(), static fn (array $w): bool => $w['level'] === 'warn'));
 $checklist = $engine->checklist();
 $canArm = array_filter($checklist, static fn (array $i): bool => !$i['ok'] && $i['blocking']) === [];
-$long = t('l j F \a\t g:ia');
-$short = t('D j M, g:ia');
+$long = 'long';
+$short = 'brief';
 
 // How far along the six-day track we are, in nominal hours (0 to 144).
 $progress = 0.0;
@@ -115,6 +115,19 @@ foreach ($plan as $key => $step) {
     }
 }
 
+// The trusted people, in the order they are asked, with the real (or expected) time of each ask.
+$askRows = [];
+$chainIds = $cycle['verify']['chain'] ?? array_column($engine->contacts()->trustedConfirmed(), 'id');
+if (count($chainIds) > 1 && $plan !== []) {
+    foreach (array_values($chainIds) as $i => $id) {
+        $person = $engine->contacts()->find((string) $id);
+        $step = $i === 0 ? $plan['verify'] : ($plan['ask:' . $id] ?? null);
+        if ($person !== null && $step !== null) {
+            $askRows[] = [$person, $step['at'], $step['done']];
+        }
+    }
+}
+
 $notified = [];
 foreach ($contacts as $contact) {
     if (isset($cycle['notified'][$contact['id']])) {
@@ -127,7 +140,28 @@ Web::$title = t('Death Plan Switch');
 <?php
 $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue' => 'overdue', 'verify' => 'verify'][$mode] ?? 'fired';
 ?>
-<section class="pilot pilot-<?= e($pilotClass) ?>" aria-live="polite">
+<?php if ($state['after_fire_at'] !== null): ?>
+<div class="notice notice-warn">
+  <p><strong><?= e(t('Your contacts have read their messages.')) ?></strong> <?= e(t('Any link or pointer in those messages has now been seen. If a message pointed to a document, move the document so the old link stops working, and change its password. Then update the message.')) ?></p>
+  <form method="post" action="index.php"><?= Web::csrfField() ?><input type="hidden" name="action" value="dismiss_after_fire"><button class="link" type="submit"><?= e(t('I have done this')) ?></button></form>
+</div>
+<?php endif ?>
+
+<?php if (count($warnings) === 1): ?>
+<div class="notice notice-warn"><p><?= e($warnings[0]['text']) ?></p></div>
+<?php elseif ($warnings): ?>
+<div class="notice notice-warn">
+  <ul>
+<?php foreach ($warnings as $warning): ?>
+    <li><?= e($warning['text']) ?></li>
+<?php endforeach ?>
+  </ul>
+</div>
+<?php endif ?>
+
+<div class="dash">
+<div class="col col-status">
+<section class="card pilot pilot-<?= e($pilotClass) ?>" aria-live="polite">
 <?php if ($mode === 'setup'): ?>
   <span class="pilot-dot" aria-hidden="true"></span>
   <h1 class="pilot-state"><?= e(t('Not armed')) ?></h1>
@@ -181,7 +215,7 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 </section>
 
 <?php if ($plan !== []): ?>
-<div class="track">
+<div class="track card">
   <progress max="144" value="<?= e(round($progress, 1)) ?>" aria-hidden="true"></progress>
   <ol aria-label="<?= e($cycle === null ? t('What happens if you miss the next check-in') : t('Where this check-in stands')) ?>">
 <?php
@@ -203,31 +237,30 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <?php endforeach ?>
   </ol>
 <?php if ($cycle === null): ?>
-  <p class="small muted"><?= e(t('This is what happens if you miss the next check-in. Your other contacts would be told 6 days after the email, at most 13 days after your last check-in.')) ?></p>
+  <p class="small muted"><?= e($askRows
+      ? t('This is what happens if you miss the next check-in. Your other contacts would be told on {date}.', ['date' => when($plan['fire']['at'], $tz, $long)])
+      : t('This is what happens if you miss the next check-in. Your other contacts would be told 6 days after the email, at most 13 days after your last check-in.')) ?></p>
 <?php endif ?>
 </div>
-<?php endif ?>
-
-<?php if ($state['after_fire_at'] !== null): ?>
-<div class="notice notice-warn">
-  <p><strong><?= e(t('Your contacts have read their messages.')) ?></strong> <?= e(t('Any link or pointer in those messages has now been seen. If a message pointed to a document, move the document so the old link stops working, and change its password. Then update the message.')) ?></p>
-  <form method="post" action="index.php"><?= Web::csrfField() ?><input type="hidden" name="action" value="dismiss_after_fire"><button class="link" type="submit"><?= e(t('I have done this')) ?></button></form>
-</div>
-<?php endif ?>
-
-<?php if (count($warnings) === 1): ?>
-<div class="notice notice-warn"><p><?= e($warnings[0]['text']) ?></p></div>
-<?php elseif ($warnings): ?>
-<div class="notice notice-warn">
-  <ul>
-<?php foreach ($warnings as $warning): ?>
-    <li><?= e($warning['text']) ?></li>
+<?php if ($askRows): ?>
+<section class="card">
+  <h2><?= e(t('Trusted people')) ?></h2>
+  <div class="rows">
+<?php foreach ($askRows as $n => [$person, $at, $done]): ?>
+    <div class="row">
+      <div>
+        <h3><?= e((string) ($n + 1)) ?>. <a href="index.php?p=contact&amp;id=<?= e($person['id']) ?>"><?= e($person['name']) ?></a></h3>
+        <p class="role"><?= e($done ? t('Asked {when}', ['when' => when($at, $tz, $short)]) : t('Will be asked {when}', ['when' => when($at, $tz, $short)])) ?></p>
+      </div>
+    </div>
 <?php endforeach ?>
-  </ul>
-</div>
+  </div>
+</section>
+<?php endif ?>
 <?php endif ?>
 
 <?php if ($mode === 'setup'): ?>
+<section class="card">
 <h2><?= e(t('Before you can arm it')) ?></h2>
 <ul class="checklist">
 <?php foreach ($checklist as $item): ?>
@@ -248,20 +281,25 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
   <a class="button button-quiet" href="index.php?p=settings"><?= e(t('Go to settings')) ?></a>
 <?php endif ?>
 </div>
+</section>
 <?php endif ?>
-
+</div>
+<div class="col col-who">
+<section class="card">
 <h2><?= e(t('Who is told')) ?></h2>
 <?php if ($contacts === []): ?>
-<p><?= e(t('Nobody yet.')) ?> <a href="index.php?p=contacts"><?= e(t('Add your next of kin and your technical 2IC')) ?></a>.</p>
+<p><?= e(t('Nobody yet.')) ?> <a href="index.php?p=contacts"><?= e(t('Add your next of kin, and a technical helper if you like')) ?></a>.</p>
 <?php else: ?>
 <div class="rows">
 <?php foreach ($contacts as $contact): ?>
   <div class="row">
     <div>
       <h3><a href="index.php?p=contact&amp;id=<?= e($contact['id']) ?>"><?= e($contact['name']) ?></a></h3>
-      <p class="role"><?= e($contact['role_label']) ?>. <?= e($contact['kind'] === 'nok'
+      <p class="role"><?= e(Contacts::label((string) $contact['role_label'])) ?>. <?= e($contact['kind'] === 'nok'
           ? t('Asked first, after you miss a check-in and 72 hours of reminders.')
-          : t('Sent their message if neither you nor your next of kin confirms you are well.')) ?></p>
+          : (($number = $engine->contacts()->trustedNumber((string) $contact['id'])) !== null
+              ? t('Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.', ['n' => $number])
+              : t('Sent their message if neither you nor your next of kin confirms you are well.'))) ?></p>
     </div>
     <div class="side">
 <?php if ($contact['status'] === 'confirmed'): ?>
@@ -276,18 +314,23 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <?php endforeach ?>
 </div>
 <?php endif ?>
+</section>
 
+<section class="card">
 <h2><?= e(t('Details')) ?></h2>
 <dl class="facts">
   <dt><?= e(t('Last check-in')) ?></dt>
-  <dd><?= e($state['last_checkin_at'] ? t('{when}, by {via}', ['when' => when($state['last_checkin_at'], $tz), 'via' => (string) $state['last_checkin_via']]) : t('None yet')) ?></dd>
+  <dd><?= e($state['last_checkin_at'] ? t('{when}, by {via}', ['when' => when($state['last_checkin_at'], $tz), 'via' => \DPS\Engine::viaLabel((string) $state['last_checkin_via'])]) : t('None yet')) ?></dd>
   <dt><?= e(t('Weekly email')) ?></dt>
   <dd><?= e(t('{day}s at {hour} ({tz})', ['day' => $dayNames[(int) ($config['slot_dow'] ?? 1)] ?? '', 'hour' => hourLabel((int) ($config['slot_hour'] ?? 9)), 'tz' => $tz])) ?></dd>
   <dt><?= e(t('Scheduler last ran')) ?></dt>
   <dd><?= e($state['last_tick_at'] ? t('{when}, by {source}', ['when' => ucfirst(relative($state['last_tick_at'])), 'source' => $state['last_tick_source'] === 'cron' ? t('cron') : t('the trigger URL')]) : t('Never')) ?></dd>
 </dl>
-
+</section>
+</div>
 <?php if ($state['armed']): ?>
+<div class="col col-away">
+<section class="card">
 <h2><?= e(t('Going away?')) ?></h2>
 <p><?= e(t('Pause the switch for a set number of days. It starts again by itself, so it cannot be left off by accident. The longest pause is {days} days.', ['days' => Schedule::PAUSE_MAX_DAYS])) ?></p>
 <form method="post" action="index.php">
@@ -300,10 +343,12 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
     <button class="button-quiet" type="submit"><?= e($mode === 'paused' ? t('Change the pause') : t('Pause the switch')) ?></button>
   </div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Disarm')) ?></h2>
 <details>
-  <summary><?= e(t('Turn the switch off')) ?></summary>
+  <summary><?= e(t('Disarm the switch')) ?></summary>
   <p><?= e(t('A disarmed switch sends no check-in emails and contacts nobody. It stays off until you arm it again. If you only need a break, pause it instead.')) ?></p>
   <form method="post" action="index.php">
     <?= Web::csrfField() ?>
@@ -315,4 +360,7 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
     <button class="button-danger" type="submit"><?= e(t('Disarm the switch')) ?></button>
   </form>
 </details>
+</section>
+</div>
 <?php endif ?>
+</div>

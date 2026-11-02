@@ -726,6 +726,19 @@ test('the switch will not arm while the scheduler is not running', function (): 
     same(['The scheduler is running'], $w->engine->arm(), 'a stale run is not good enough');
 });
 
+test('a technical helper is optional: the switch arms and stays armed without one', function (): void {
+    $w = new World();
+    $w->contact('nok', 'Kim Rivers', World::NOK);
+    $w->engine->tick();
+    same([], $w->engine->arm(), 'armed with a next of kin alone');
+    check($w->engine->requiredContactsConfirmed(), 'only the next of kin is required');
+    $item = array_values(array_filter($w->engine->checklist(), static fn (array $i): bool => $i['key'] === 'technical'))[0];
+    same(false, $item['blocking'], 'the technical item no longer blocks');
+    same(false, $item['ok'], 'and shows as not done');
+    same('Technical helper (optional)', $item['label'], 'under its neutral name');
+    check(!str_contains($item['hint'], 'client'), 'with no mention of clients');
+});
+
 // ---------------------------------------------------------------------------
 // Contacts
 // ---------------------------------------------------------------------------
@@ -834,7 +847,7 @@ test('placeholders are filled in for each recipient', function (): void {
     check(str_contains($legal['text'], 'Technical contact: Tao Chen, ' . World::TECH), 'technical details');
     check(!preg_match('/\{[a-z_]+\}/', $legal['text'] . $legal['subject']), 'no unfilled placeholder is left');
     $nok = $w->to(World::NOK)[2];
-    check(str_contains($nok['text'], 'Technical 2IC: Tao Chen'), 'the next of kin is told who the others are');
+    check(str_contains($nok['text'], 'Technical helper: Tao Chen'), 'the next of kin is told who the others are');
     check(!str_contains($nok['text'], 'Next of kin: Kim Rivers'), 'but is not listed to themselves');
     // Armed (the last proof of life) on Wed 7 Oct at 1pm; asked on Thu 15 Oct at 9am.
     check(str_contains(str_replace("\n", ' ', $w->to(World::NOK)[0]['text']), 'for 7 days'), 'whole days since the last check-in');

@@ -16,16 +16,18 @@ Web::$title = t('History: Death Plan Switch');
 <h1><?= e(t('History')) ?></h1>
 <p class="lede"><?= e(t('Everything the switch has done, newest first. Scheduler runs that found nothing to do are not listed.')) ?></p>
 <?php if ($rows === []): ?>
-<p><?= e(t('Nothing has happened yet.')) ?></p>
+<div class="card empty"><p><?= e(t('Nothing has happened yet.')) ?></p></div>
 <?php else: ?>
+<div class="card card-tight">
 <table class="log">
   <tbody>
 <?php foreach ($rows as $row): ?>
     <tr>
-      <td><?= e(when((int) ($row['at'] ?? 0), $tz, 'j M Y, g:ia')) ?></td>
+      <td><?= e(when((int) ($row['at'] ?? 0), $tz, 'stamp')) ?></td>
       <td><?= e((string) ($row['text'] ?? '')) ?></td>
     </tr>
 <?php endforeach ?>
   </tbody>
 </table>
+</div>
 <?php endif ?>

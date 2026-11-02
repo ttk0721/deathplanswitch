@@ -142,6 +142,9 @@ function ping(string $url, string $body): bool
     }
 }
 
+// Native installs have no container log, so the service log carries the setup code.
+DPS\SetupCode::announce(new Store(DPS_DATA));
+
 $interval = tickInterval();
 $heartbeat = trim((string) getenv('HEARTBEAT_URL'));
 

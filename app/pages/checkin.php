@@ -43,9 +43,9 @@ Web::$title = t('Check in: Death Plan Switch');
 <p><?= e(t('Thank you. Nobody was contacted.')) ?></p>
 <?php endif ?>
 <?php if ($result['paused_until']): ?>
-<p><?= e(t('Your switch is paused until {date}.', ['date' => when($result['paused_until'], $tz, 'l j F')])) ?></p>
+<p><?= e(t('Your switch is paused until {date}.', ['date' => when($result['paused_until'], $tz, 'day')])) ?></p>
 <?php elseif ($result['next_due_at']): ?>
-<p><?= e(t('Your next check-in email arrives on {date} at {time}.', ['date' => when($result['next_due_at'], $tz, 'l j F'), 'time' => when($result['next_due_at'], $tz, 'g:ia')])) ?></p>
+<p><?= e(t('Your next check-in email arrives on {date} at {time}.', ['date' => when($result['next_due_at'], $tz, 'day'), 'time' => when($result['next_due_at'], $tz, 'time')])) ?></p>
 <?php endif ?>
 
 <?php elseif ($live): ?>

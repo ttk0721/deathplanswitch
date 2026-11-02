@@ -46,7 +46,7 @@ final class Messages
             'technical' => [
                 'subject' => t('{owner_name} has stopped checking in: please read'),
                 'body' => t('{owner_name} set up Death Plan Switch so that you would be told if they became unavailable. That has now happened.')
-                    . $sep . t('They asked you to look after their clients\' websites. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what clients need first]')
+                    . $sep . t('They asked you to keep their servers, accounts or projects running. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what needs attention first]')
                     . $sep . t('Next of kin:') . ' {nok_details}',
             ],
             'legal' => [
@@ -69,6 +69,15 @@ final class Messages
         return [
             'subject' => t('Is {owner_name} all right?'),
             'body' => t('{owner_name} hasn\'t checked in with Death Plan Switch for {days} days. You\'re listed as their next of kin. Is everything all right?'),
+        ];
+    }
+
+    /** The question put to a trusted person who is not the next of kin. */
+    public static function verifyTrusted(): array
+    {
+        return [
+            'subject' => t('Is {owner_name} all right?'),
+            'body' => t('{owner_name} hasn\'t checked in with Death Plan Switch for {days} days. You\'re one of the people they trust to be asked. Is everything all right?'),
         ];
     }
 
@@ -116,7 +125,7 @@ final class Messages
             '{owner_name}' => (string) ($config['owner_name'] ?? ''),
             '{your_name}' => (string) ($recipient['name'] ?? ''),
             '{days}' => (string) $days,
-            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), t('l j F Y')) : t('an unknown date'),
+            '{last_checkin_date}' => $last ? when($last, (string) ($config['timezone'] ?? 'UTC'), 'letter_date') : t('an unknown date'),
             '{nok_details}' => Contacts::details($nok),
             '{technical_details}' => Contacts::details($technical),
             '{contacts_list}' => $others ? implode("\n", $others) : t('(nobody else is listed)'),
@@ -154,7 +163,7 @@ final class Messages
 
         if ($number === 0) {
             // The date keeps each week's email distinct, so mail apps do not fold it into last week's.
-            $email = (new Email(t('Check in with Death Plan Switch: {date}', ['date' => when(Clock::now(), $tz, t('l j F'))])))
+            $email = (new Email(t('Check in with Death Plan Switch: {date}', ['date' => when(Clock::now(), $tz, 'letter_day')])))
                 ->p(t('This is your weekly check-in. Open the page and press the button to confirm you are here.'))
                 ->link(t('Open the check-in page'), $url)
                 ->p(t('Opening the page is not enough: press the button. If you have not checked in by {deadline}, {who} will be asked whether everything is all right.', $vars));
@@ -223,13 +232,19 @@ final class Messages
             ->p(t('The pause has ended and your switch is armed. Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
-    public static function ownerVouched(array $config, ?array $nok, int $nextAt): Email
+    /** @param bool $othersAsked other trusted people were asked before this one answered */
+    public static function ownerVouched(array $config, ?array $nok, int $nextAt, bool $othersAsked = false): Email
     {
         $who = $nok['name'] ?? t('Your next of kin');
         $next = self::at($nextAt, (string) ($config['timezone'] ?? 'UTC'));
-        return (new Email(t('{who} confirmed you are all right', ['who' => $who])))
-            ->p(t('You missed this week\'s check-in, so {who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.', ['who' => $who]))
-            ->p(t('Your next check-in email arrives on {next}.', ['next' => $next]));
+        $email = new Email(t('{who} confirmed you are all right', ['who' => $who]));
+        if ($othersAsked) {
+            $email->p(t('You missed this week\'s check-in, so the people you trust were asked in turn whether everything is all right. {who} answered that all is fine, and nobody else will be asked.', ['who' => $who]))
+                ->p(t('The other trusted people who were asked before them have been told it was a false alarm.'));
+        } else {
+            $email->p(t('You missed this week\'s check-in, so {who} was asked whether everything is all right. They answered that all is fine, and nobody else has been contacted.', ['who' => $who]));
+        }
+        return $email->p(t('Your next check-in email arrives on {next}.', ['next' => $next]));
     }
 
     public static function ownerContactAnswered(array $contact, bool $accepted, string $extra = ''): Email
@@ -292,7 +307,7 @@ final class Messages
     public static function nokVerify(array $config, array $contact, array $vars, string $fineUrl, string $wrongUrl, int $fireAt, bool $reminder): Email
     {
         $owner = (string) $config['owner_name'];
-        $message = $contact['verify_message'] ?? self::verifyDefault();
+        $message = $contact['verify_message'] ?? (($contact['kind'] ?? '') === 'nok' ? self::verifyDefault() : self::verifyTrusted());
         $deadline = self::at($fireAt, (string) ($config['timezone'] ?? 'UTC'))
             . ' (' . self::zoneLabel((string) ($config['timezone'] ?? 'UTC')) . ')';
 
@@ -301,7 +316,8 @@ final class Messages
             ->prose(self::fill((string) $message['body'], $vars))
             ->link(t('All fine'), $fineUrl)
             ->link(t('Something\'s wrong'), $wrongUrl)
-            ->p(t('Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.', ['owner' => $owner, 'deadline' => $deadline]));
+            ->p(t('Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.', ['owner' => $owner, 'deadline' => $deadline]))
+            ->p(t('You can use this link until the matter is settled.'));
 
         return $email->note(self::footer($config, $vars));
     }
@@ -324,6 +340,16 @@ final class Messages
             ->note(t('This link works once, within 30 days.'));
     }
 
+    /** To people who were asked, when another trusted person has confirmed the owner is all right. */
+    public static function trustedClear(array $config, string $by): Email
+    {
+        $owner = (string) $config['owner_name'];
+        return (new Email(t('False alarm: {owner} is all right', ['owner' => $owner])))
+            ->p($by === ''
+                ? t('Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.', ['owner' => $owner])
+                : t('{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.', ['name' => $by, 'owner' => $owner]));
+    }
+
     public static function allClear(array $config): Email
     {
         $owner = (string) $config['owner_name'];
@@ -343,7 +369,7 @@ final class Messages
     /** A date and time for the owner's emails. Polish uses numbers, so no English day or month names appear. */
     private static function at(int $ts, string $tz): string
     {
-        return when($ts, $tz, t('l j F \a\t g:ia'));
+        return when($ts, $tz, 'long');
     }
 
     private static function zoneLabel(string $tz): string

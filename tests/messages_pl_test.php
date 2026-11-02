@@ -52,4 +52,16 @@ test('en: output is unchanged', function () use ($config): void {
     I18n::setLanguage(null);
 });
 
+test('pl: owner vocabulary, check-in method labels and the answer-link note', function () use ($config): void {
+    I18n::setLanguage('pl');
+    same('Uzbrojony', I18n::t('Armed'), 'armed word');
+    same('Rozbrój przełącznik', I18n::t('Disarm the switch'), 'disarm action');
+    same('panel', \DPS\Engine::viaLabel('the dashboard'), 'dashboard via');
+    same('link z e-maila', \DPS\Engine::viaLabel('the emailed link'), 'link via');
+    same('inny węzeł (link z e-maila)', \DPS\Engine::viaLabel('another node (the emailed link)'), 'peer via');
+    $m = Messages::nokVerify($config, ['kind' => 'nok'], ['owner_name' => 'Tomasz'], 'https://x/f', 'https://x/w', Clock::now() + 86400, false);
+    check(str_contains($m->text(), 'Z tego linku możesz skorzystać, dopóki sprawa się nie wyjaśni.'), 'link lifetime');
+    I18n::setLanguage(null);
+});
+
 finish();

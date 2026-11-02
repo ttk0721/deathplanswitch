@@ -44,10 +44,26 @@ if (Web::posted()) {
             Web::flash(t('Saved.'));
             break;
 
+        case 'trust_save':
+            [$settings, $errors] = Trust::fromPost(
+                Web::post('trust_mode'),
+                Web::post('trust_interval_kind'),
+                Web::post('trust_interval_minutes'),
+                Web::post('trust_window')
+            );
+            if ($errors) {
+                Web::flash(implode(' ', $errors), 'bad');
+                break;
+            }
+            Trust::save($store, $settings);
+            $store->log('settings.trust', t('The settings for the trusted people were changed.'));
+            Web::flash(t('Saved.'));
+            break;
+
         case 'language_save':
             $language = Web::post('language');
-            if ($language !== 'pl' && $language !== 'en') {
-                Web::flash(t('Choose Polski or English.'), 'bad');
+            if (!isset(I18n::available()[$language])) {
+                Web::flash(t('Choose one of the listed languages.'), 'bad');
                 break;
             }
             $store->locked(static function () use ($store, $language): void {
@@ -118,15 +134,59 @@ if (Web::posted()) {
         case 'landing_save':
             $title = trim(Web::post('landing_title'));
             $text = trim(str_replace("\r\n", "\n", Web::post('landing_text')));
+            $quote = trim((string) preg_replace('/\s+/u', ' ', Web::post('landing_quote')));
+            $by = trim((string) preg_replace('/\s+/u', ' ', Web::post('landing_by')));
+            $background = Web::post('landing_background', Landing::DEFAULT_BACKGROUND);
             if (mb_strlen($title) > 80 || mb_strlen($text) > 2000) {
                 Web::flash(t('The title can be up to 80 characters and the text up to 2000.'), 'bad');
                 break;
             }
-            $store->locked(static function () use ($store, $title, $text): void {
+            if (mb_strlen($quote) > 280 || mb_strlen($by) > 80) {
+                Web::flash(t('The quote can be up to 280 characters and the name up to 80.'), 'bad');
+                break;
+            }
+            if ($background !== 'own' && !in_array($background, Landing::BUILT_IN, true)) {
+                $background = Landing::DEFAULT_BACKGROUND;
+            }
+            $upload = $_FILES['landing_image'] ?? null;
+            $uploaded = null;
+            if (is_array($upload) && (int) ($upload['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                if ((int) $upload['error'] === UPLOAD_ERR_INI_SIZE || (int) $upload['error'] === UPLOAD_ERR_FORM_SIZE) {
+                    Web::flash(t('The image can be up to 3 MB.'), 'bad');
+                    break;
+                }
+                if ((int) $upload['error'] !== UPLOAD_ERR_OK || !is_uploaded_file((string) $upload['tmp_name'])) {
+                    Web::flash(t('The image could not be uploaded. Try again.'), 'bad');
+                    break;
+                }
+                $uploaded = Landing::inspect((string) $upload['tmp_name']);
+                if (is_string($uploaded)) {
+                    Web::flash($uploaded, 'bad');
+                    break;
+                }
+                $background = 'own';
+            }
+            $problem = $store->locked(static function () use ($store, $title, $text, $quote, $by, $background, $upload, $uploaded): ?string {
                 $config = $store->read('config');
-                $config['landing'] = ['title' => $title, 'text' => $text];
+                $old = $config['landing']['image'] ?? null;
+                $image = is_string($old) ? $old : null;
+                if ($uploaded !== null) {
+                    $image = Landing::store($store, (string) $upload['tmp_name'], $uploaded['ext'], $image);
+                } elseif ($background === 'own' && Landing::imagePath($store, $image) === null) {
+                    return t('Choose an image to upload.');
+                }
+                $landing = ['title' => $title, 'text' => $text, 'quote' => $quote, 'by' => $by, 'background' => $background];
+                if ($image !== null) {
+                    $landing['image'] = $image;
+                }
+                $config['landing'] = $landing;
                 $store->write('config', $config);
+                return null;
             });
+            if ($problem !== null) {
+                Web::flash($problem, 'bad');
+                break;
+            }
             Web::flash(t('Saved. This is what visitors see at the front of this install.'));
             break;
 
@@ -261,6 +321,9 @@ if (Web::posted()) {
 }
 
 $state = $engine->state();
+$trust = Trust::settings($config);
+$trustCount = max(1, count($engine->contacts()->trusted()));
+$trustTiming = Trust::timing($trust, $trustCount);
 $smtp = (array) ($config['smtp'] ?? []);
 $pending = is_array($config['pending_email'] ?? null) && $config['pending_email']['expires_at'] > Clock::now() ? $config['pending_email'] : null;
 $probe = (array) ($state['probe'] ?? []);
@@ -272,6 +335,8 @@ Web::$title = t('Settings: Death Plan Switch');
 ?>
 <h1><?= e(t('Settings')) ?></h1>
 
+<div class="masonry">
+<section class="card">
 <h2>Język / Language</h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -279,13 +344,25 @@ Web::$title = t('Settings: Death Plan Switch');
   <div class="field">
     <label for="language">Język / Language</label>
     <select id="language" name="language">
-      <option value="pl"<?= lang() === 'pl' ? ' selected' : '' ?>>Polski</option>
-      <option value="en"<?= lang() === 'en' ? ' selected' : '' ?>>English</option>
+      <?php foreach (I18n::available() as $code => $info): ?>
+      <option value="<?= e($code) ?>"<?= lang() === $code ? ' selected' : '' ?>><?= e($info['name']) ?></option>
+      <?php endforeach; ?>
     </select>
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
+<h2><?= e(t('Theme')) ?></h2>
+<div class="theme-choice" role="group" aria-label="<?= e(t('Theme')) ?>">
+  <button type="button" class="button-quiet" data-theme-set="dark" aria-pressed="true"><?= e(t('Dark')) ?></button>
+  <button type="button" class="button-quiet" data-theme-set="light" aria-pressed="false"><?= e(t('Light')) ?></button>
+  <button type="button" class="button-quiet" data-theme-set="system" aria-pressed="false"><?= e(t('System')) ?></button>
+</div>
+</section>
+
+<section class="card">
 <h2><?= e(t('You, and your weekly email')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -322,7 +399,49 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
+<h2><?= e(t('Trusted people')) ?></h2>
+<p><?= e(t('When you miss a check-in, your next of kin is asked first whether everything is all right. If nobody says all is fine, the other trusted people from the Contacts page are asked too. Anyone who says all is fine ends it at once, and nobody else is asked.')) ?></p>
+<form method="post" action="index.php?p=settings">
+  <?= Web::csrfField() ?>
+  <input type="hidden" name="action" value="trust_save">
+  <p class="help"><?= e(t('If your next of kin answers "Something\'s wrong", the others are told at once. If anyone else on the list says that, it is only recorded and the others are still asked: they are a fallback when your next of kin is silent.')) ?></p>
+  <fieldset class="field">
+    <legend class="label"><?= e(t('How they are asked')) ?></legend>
+    <label><input type="radio" name="trust_mode" value="sequential"<?= $trust['mode'] === 'sequential' ? ' checked' : '' ?>> <?= e(t('One after another')) ?></label>
+    <span class="help"><?= e(t('The next person is asked a set time after the one before, unless someone has said all is fine.')) ?></span>
+    <label><input type="radio" name="trust_mode" value="all_at_once"<?= $trust['mode'] === 'all_at_once' ? ' checked' : '' ?>> <?= e(t('The first alone, then everyone together')) ?></label>
+    <span class="help"><?= e(t('Your next of kin is asked first. If nobody says all is fine within that time, everyone else is asked at once.')) ?></span>
+  </fieldset>
+  <fieldset class="field">
+    <legend class="label"><?= e(t('Time between two people')) ?></legend>
+    <label><input type="radio" name="trust_interval_kind" value="auto"<?= $trust['interval'] === null ? ' checked' : '' ?>> <?= e(t('Automatic: spread over 12 hours')) ?></label>
+    <div class="inline">
+      <label><input type="radio" name="trust_interval_kind" value="fixed"<?= $trust['interval'] !== null ? ' checked' : '' ?>> <?= e(t('Fixed')) ?></label>
+      <input type="number" name="trust_interval_minutes" min="<?= Trust::INTERVAL_MIN ?>" max="<?= Trust::INTERVAL_MAX ?>" value="<?= e((string) ($trust['interval'] ?? 60)) ?>" aria-label="<?= e(t('Minutes between two people')) ?>">
+      <span><?= e(t('minutes')) ?></span>
+    </div>
+    <span class="help"><?= e($trust['mode'] === 'all_at_once'
+        ? t('The first person is asked alone. If nobody says all is fine, everyone else is asked together {interval} later.', ['interval' => duration($trustTiming['gap'])])
+        : ($trustCount < 2
+            ? t('With only one person on the list, nobody is asked after them.')
+            : t('{people}, the next person is asked every {interval}.', ['people' => tn('With {n} person', 'With {n} people', $trustCount), 'interval' => duration($trustTiming['gap'])]))) ?></span>
+  </fieldset>
+  <div class="field">
+    <label for="trust_window"><?= e(t('Reply window')) ?></label>
+    <div class="inline">
+      <input type="number" id="trust_window" name="trust_window" min="<?= Trust::WINDOW_MIN ?>" max="<?= Trust::WINDOW_MAX ?>" value="<?= e((string) $trust['window']) ?>" required>
+      <span><?= e(t('hours')) ?></span>
+    </div>
+    <span class="help"><?= e(t('The switch never fires before the last person has been asked and this time has passed. Between 6 and 72 hours.')) ?></span>
+  </div>
+  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
+</form>
+</section>
+
+<section class="card">
 <h2><?= e(t('Your email addresses')) ?></h2>
 <p><?= e(t('Check-in emails go to your main address. Reminders also go to the backup, so one failed mailbox cannot set the switch off. Use a different provider for the backup.')) ?></p>
 <?php if ($pending): ?>
@@ -367,7 +486,9 @@ Web::$title = t('Settings: Death Plan Switch');
   <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="backup_remove"><button class="link" type="submit"><?= e(t('Remove the backup address')) ?></button></form>
 <?php endif ?>
 </details>
+</section>
 
+<section class="card">
 <h2><?= e(t('Notification channels')) ?></h2>
 <p><?= e(t('Every email to you can also arrive on a channel such as Discord, Telegram, ntfy, SMS or a webhook. The message carries the subject and the link only, never the text of the email. A step counts as delivered when the email or any channel gets through.')) ?></p>
 <?php $channels = array_values(array_filter((array) ($config['channels'] ?? []), 'is_array')); $self = 'index.php?p=settings'; require __DIR__ . '/_channels.php' ?>
@@ -392,7 +513,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Mail server')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -401,7 +524,9 @@ Web::$title = t('Settings: Death Plan Switch');
   <div class="actions"><button type="submit"><?= e(t('Test and save')) ?></button></div>
   <p class="small muted"><?= e(t('The new settings are saved only if a test email to {address} is accepted.', ['address' => $config['owner_email']])) ?></p>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Scheduler')) ?></h2>
 <p><?= e(t('The switch does nothing by itself. Every 15 minutes, something has to run it.')) ?> <?= e($state['last_tick_at']
     ? ($state['last_tick_source'] === 'cron'
@@ -428,7 +553,9 @@ Web::$title = t('Settings: Death Plan Switch');
 <p><?= t('Set {variable} in {file} to have every run reported to Healthchecks.io.', ['variable' => '<code>HEARTBEAT_URL</code>', 'file' => '<code>.env</code>']) ?></p>
 <?php endif ?>
 <form method="post" action="index.php?p=settings"><?= Web::csrfField() ?><input type="hidden" name="action" value="rekey"><button class="link" type="submit" data-confirm="<?= e(t('Make new addresses? The current ones will stop working.')) ?>"><?= e(t('Make new secret addresses')) ?></button></form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Data folder')) ?></h2>
 <p><?= t('Your contacts and their messages are stored as files in {folder}. They must not be readable from the web. The switch tests this every day by requesting one of its own files.', ['folder' => '<code>' . e($store->dir()) . '</code>']) ?></p>
 <dl class="facts">
@@ -457,23 +584,70 @@ Web::$title = t('Settings: Death Plan Switch');
   </form>
 <?php endif ?>
 </div>
+</section>
 
+<section class="card">
 <h2><?= e(t('Public page')) ?></h2>
-<form method="post" action="index.php?p=settings">
+<?php
+$landingSaved = (array) ($config['landing'] ?? []);
+$landingChoice = Landing::choice($store, $landingSaved);
+$hasOwnImage = Landing::imagePath($store, $landingSaved['image'] ?? null) !== null;
+?>
+<form method="post" action="index.php?p=settings" enctype="multipart/form-data">
   <?= Web::csrfField() ?>
   <input type="hidden" name="action" value="landing_save">
+  <div class="field field-wide">
+    <label for="landing_quote"><?= e(t('Quote')) ?></label>
+    <textarea id="landing_quote" name="landing_quote" rows="3" maxlength="280" class="short"><?= e($landingSaved['quote'] ?? '') ?></textarea>
+    <span class="help"><?= e(t('Shown large in the middle of the page, in your own words. Up to 280 characters.')) ?></span>
+  </div>
+  <div class="field">
+    <label for="landing_by"><?= e(t('Name under the quote')) ?></label>
+    <input type="text" id="landing_by" name="landing_by" maxlength="80" value="<?= e($landingSaved['by'] ?? '') ?>" placeholder="<?= e((string) ($config['owner_name'] ?? '')) ?>">
+  </div>
+  <fieldset class="backgrounds">
+    <legend><?= e(t('Background')) ?></legend>
+    <div class="background-grid">
+<?php foreach (Landing::builtIn() as $id => $label): ?>
+      <label class="background-card">
+        <input type="radio" name="landing_background" value="<?= e($id) ?>"<?= $landingChoice === $id ? ' checked' : '' ?>>
+        <img src="assets/landing/<?= e($id) ?>.svg" alt="" width="160" height="100" loading="lazy">
+        <span><?= e($label) ?></span>
+      </label>
+<?php endforeach ?>
+      <label class="background-card">
+        <input type="radio" name="landing_background" value="own"<?= $landingChoice === 'own' ? ' checked' : '' ?>>
+<?php if ($hasOwnImage): ?>
+        <img src="<?= e(Landing::src('own', $landingSaved)) ?>" alt="" width="160" height="100" loading="lazy">
+<?php else: ?>
+        <span class="background-empty" aria-hidden="true"></span>
+<?php endif ?>
+        <span><?= e(t('Own image')) ?></span>
+      </label>
+    </div>
+    <div class="field">
+      <label for="landing_image"><?= e(t('Upload your own image')) ?></label>
+      <input type="file" id="landing_image" name="landing_image" accept="image/jpeg,image/png,image/webp">
+      <span class="help"><?= e(t('JPEG, PNG or WebP, up to 3 MB. A calm picture works best: text is placed over it.')) ?></span>
+    </div>
+  </fieldset>
   <div class="field">
     <label for="landing_title"><?= e(t('Title')) ?></label>
-    <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($config['landing']['title'] ?? '') ?>" placeholder="Death Plan Switch">
+    <input type="text" id="landing_title" name="landing_title" maxlength="80" value="<?= e($landingSaved['title'] ?? '') ?>" placeholder="Death Plan Switch">
   </div>
   <div class="field">
     <label for="landing_text"><?= e(t('Text')) ?></label>
-    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="<?= e(t('This switch is not active.')) ?>"><?= e($config['landing']['text'] ?? '') ?></textarea>
+    <textarea id="landing_text" name="landing_text" rows="5" maxlength="2000" placeholder="<?= e(t('This switch is not active.')) ?>"><?= e($landingSaved['text'] ?? '') ?></textarea>
     <span class="help"><?= e(t('What visitors see at this address before the switch has fired. Leave empty for the defaults. A blank line starts a new paragraph.')) ?></span>
   </div>
-  <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
+  <div class="actions">
+    <button type="submit"><?= e(t('Save')) ?></button>
+    <a class="button button-quiet" href="index.php?p=public" target="_blank" rel="noopener"><?= e(t('Preview the page')) ?></a>
+  </div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Address of this install')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -485,7 +659,9 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Save')) ?></button></div>
 </form>
+</section>
 
+<section class="card">
 <h2><?= e(t('Password')) ?></h2>
 <form method="post" action="index.php?p=settings">
   <?= Web::csrfField() ?>
@@ -501,3 +677,5 @@ Web::$title = t('Settings: Death Plan Switch');
   </div>
   <div class="actions"><button type="submit"><?= e(t('Change password')) ?></button></div>
 </form>
+</section>
+</div>

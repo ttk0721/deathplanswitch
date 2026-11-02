@@ -10,7 +10,7 @@ return [
     'The documents that give you authority to act are kept here: [write here: where the authority documents are kept, and who to call]' => 'Dokumenty, które dają ci prawo do działania, znajdują się tutaj: [write here: gdzie leżą dokumenty upoważniające i do kogo zadzwonić]',
     '{owner_name} has stopped checking in: please read' => '{owner_name} nie potwierdza już, że wszystko w porządku: prosimy o przeczytanie',
     '{owner_name} set up Death Plan Switch so that you would be told if they became unavailable. That has now happened.' => 'Z programu Death Plan Switch korzysta {owner_name}. Ustawiono go tak, żebyś dostał(a) wiadomość, gdyby nie było z nią lub z nim kontaktu. Właśnie tak się stało.',
-    'They asked you to look after their clients\' websites. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what clients need first]' => 'Prosiła lub prosił, żebyś zaopiekował(a) się stronami jej lub jego klientów. Instrukcje i dane dostępowe są tutaj: [write here: gdzie jest dokument przekazania, jak zdobyć do niego hasło i czego klienci potrzebują najpierw]',
+    'They asked you to keep their servers, accounts or projects running. The instructions and access details are here: [write here: where the handover document is, how to obtain its password, and what needs attention first]' => 'Prosiła lub prosił, żebyś zadbał(a) o jej lub jego serwery, konta albo projekty. Instrukcje i dane dostępowe są tutaj: [write here: gdzie jest dokument przekazania, jak zdobyć do niego hasło i czym zająć się najpierw]',
     'Next of kin:' => 'Najbliższa osoba:',
     'Technical contact:' => 'Kontakt techniczny:',
     'Death Plan Switch has fired for {owner_name}' => 'Death Plan Switch został uruchomiony: {owner_name}',
@@ -24,9 +24,6 @@ return [
     // Placeholder values
     'an unknown date' => 'nieznana data',
     '(nobody else is listed)' => '(nikogo więcej nie wpisano)',
-    'l j F Y' => 'j.m.Y',
-    'l j F' => 'j.m.Y',
-    'l j F \a\t g:ia' => 'l j F, G:i',
 
     // Owner emails
     'Death Plan Switch: your confirmation code is {code}' => 'Death Plan Switch: twój kod potwierdzenia to {code}',
@@ -96,6 +93,7 @@ return [
     'All fine' => 'Wszystko w porządku',
     'Something\'s wrong' => 'Coś jest nie tak',
     'Each link opens a page where you confirm your answer. If neither you nor {owner} answers by {deadline}, the other people {owner} chose will be sent their instructions.' => 'Każdy link otwiera stronę, na której potwierdzasz odpowiedź. Jeśli do {deadline} nie odpowie ani ty, ani {owner}, pozostałe osoby wskazane przez {owner} dostaną swoje instrukcje.',
+    'You can use this link until the matter is settled.' => 'Z tego linku możesz skorzystać, dopóki sprawa się nie wyjaśni.',
     '{owner} asks you to set a password for their vault' => '{owner} prosi o ustawienie hasła do sejfu',
     '{owner} left some things for you in a private vault. You can set a password of your own, so you do not have to rely on the code card you were given.' => '{owner} zostawiła lub zostawił dla ciebie rzeczy w prywatnym sejfie. Możesz ustawić własne hasło, żeby nie polegać na karcie z kodem, którą dostałeś(-aś).',
     'You will need the code on that card once, to set the password.' => 'Kod z tej karty będzie potrzebny jeden raz, do ustawienia hasła.',
@@ -105,4 +103,11 @@ return [
     '{owner} has checked in with Death Plan Switch. The earlier message was a false alarm, and you do not need to do anything.' => '{owner} potwierdza w programie Death Plan Switch, że wszystko w porządku. Wcześniejsza wiadomość była fałszywym alarmem i nic nie musisz robić.',
     '{owner} will be in touch. You can reply to this email to reach them.' => '{owner} odezwie się sama lub sam. Możesz też odpowiedzieć na ten e-mail, żeby się skontaktować.',
     'Death Plan Switch is software {owner} runs on their own server. It sent this automatically because {owner} last checked in on {date} and has not answered its emails since. It cannot know why.' => 'Death Plan Switch to oprogramowanie, które {owner} uruchamia na własnym serwerze. Ta wiadomość poszła automatycznie, ponieważ {owner} ostatni raz potwierdziła lub potwierdził obecność {date} i od tego czasu nie odpowiada na jego e-maile. Program nie może wiedzieć, dlaczego.',
+    // trusted people
+    '{owner_name} hasn\'t checked in with Death Plan Switch for {days} days. You\'re one of the people they trust to be asked. Is everything all right?' => '{owner_name} od {days} dni nie potwierdza obecności w Death Plan Switch. Jesteś jedną z osób, które darzy zaufaniem i prosi o odpowiedź. Czy wszystko w porządku?',
+    'You missed this week\'s check-in, so the people you trust were asked in turn whether everything is all right. {who} answered that all is fine, and nobody else will be asked.' => 'Pominięto tygodniowe potwierdzenie, więc zaufane osoby dostawały pytanie po kolei, czy wszystko w porządku. {who} odpowiedział(a), że wszystko dobrze, i nikt więcej nie dostanie pytania.',
+    'The other trusted people who were asked before them have been told it was a false alarm.' => 'Pozostałe zaufane osoby, które dostały pytanie wcześniej, dostały wiadomość, że to był fałszywy alarm.',
+    'False alarm: {owner} is all right' => 'Fałszywy alarm: u {owner} wszystko w porządku',
+    '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} potwierdził(a), że u {owner} wszystko w porządku. Nic więcej nie musisz robić. Dziękujemy.',
+    'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Jedna z zaufanych osób potwierdziła, że u {owner} wszystko w porządku. Nic więcej nie musisz robić. Dziękujemy.',
 ];

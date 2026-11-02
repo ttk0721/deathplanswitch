@@ -68,6 +68,6 @@ test('data attributes are escaped, and contacts are id and name only', function 
 });
 test('the nav lists Vault after Contacts', function (): void {
     $source = (string) file_get_contents(dirname(__DIR__) . '/app/pages/_layout.php');
-    check(preg_match("~'contacts' => 'Contacts', 'vault' => 'Vault'~", $source) === 1, 'nav order');
+    check(preg_match("~'contacts' => t\\('Contacts'\\), 'vault' => t\\('Vault'\\)~", $source) === 1, 'nav order');
 });
 finish();

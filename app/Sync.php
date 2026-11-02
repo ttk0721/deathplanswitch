@@ -23,6 +23,7 @@ final class Sync
         'owner_name', 'owner_email', 'backup_email', 'owner_phone', 'timezone', 'slot_dow', 'slot_hour',
         'base_url', 'password_hash', 'smtp', 'tick_key', 'health_key', 'pending_email', 'landing', 'channels',
         'sms_template', 'apprise_url', 'separate_hosting_confirmed_at', 'install_step', 'installed_at', 'created_at',
+        'trust',
     ];
 
     public function __construct(
@@ -121,25 +122,34 @@ final class Sync
         }
 
         // A next-of-kin answer given here.
+        // Each answer carries the key of the cycle it was given in, so a peer never applies it to a later cycle.
         $pushedNok = (int) ($sync['pushed_nok_at'] ?? 0);
         $answers = [];
-        $nok = $this->engine->nodeState($this->nodeId)['cycle']['nok'] ?? null;
+        $own = $this->engine->nodeState($this->nodeId)['cycle'] ?? null;
+        $nok = $own['nok'] ?? null;
         if (is_array($nok) && $nok['at'] > $pushedNok) {
-            $answers[] = [(string) $nok['answer'], (int) $nok['at']];
+            $answers[] = [(string) $nok['answer'], (int) $nok['at'], ['key' => (int) $own['key']]];
         }
         foreach ($this->store->history(50) as $row) {
             // "All fine" ends the cycle, so only the history remembers it. Answers taken from a peer carry "(via)".
             if (($row['event'] ?? '') === 'cycle.vouched' && (int) $row['at'] > $pushedNok
                 && !str_contains((string) ($row['text'] ?? ''), '" (')) {
-                $answers[] = ['fine', (int) $row['at']];
+                $extra = [];
+                if (is_int($row['key'] ?? null)) {
+                    $extra['key'] = $row['key'];
+                }
+                if (is_string($row['by'] ?? null)) {
+                    $extra['by'] = $row['by'];
+                }
+                $answers[] = ['fine', (int) $row['at'], $extra];
             }
         }
         if ($answers) {
             $ok = true;
-            foreach ($answers as [$answer, $when]) {
+            foreach ($answers as [$answer, $when, $extra]) {
                 foreach ($peers as $peer) {
                     try {
-                        $this->client->post($peer, 'nok', ['answer' => $answer, 'at' => $when]);
+                        $this->client->post($peer, 'nok', ['answer' => $answer, 'at' => $when] + $extra);
                     } catch (\Throwable $e) {
                         $ok = false;
                         $log[] = "Could not send the next of kin's answer to {$peer['name']}: " . $e->getMessage();
@@ -174,9 +184,15 @@ final class Sync
             throw new \RuntimeException('the bundle has no valid contacts');
         }
         foreach ($contacts as $c) {
-            if (!is_array($c)) {
+            // The chain of trusted people: a flag and an order number, or neither (older data).
+            if (!is_array($c)
+                || (array_key_exists('trusted', $c) && !is_bool($c['trusted']))
+                || (($c['trusted_order'] ?? null) !== null && (!is_int($c['trusted_order']) || $c['trusted_order'] < 1 || $c['trusted_order'] > 100000))) {
                 throw new \RuntimeException('the bundle has no valid contacts');
             }
+        }
+        if (array_key_exists('trust', $config) && !self::validTrust($config['trust'])) {
+            throw new \RuntimeException('the bundle has no valid trust settings');
         }
         $vault = self::cleanVault($b['vault']);
         $log = [];
@@ -218,6 +234,18 @@ final class Sync
             $log[] = 'Copied the settings, contacts and vault from the primary.';
         });
         return $log;
+    }
+
+    /** The chain settings of a bundle: a known mode, an interval of "auto" or 15 to 1440 minutes, a window of 6 to 72 hours. */
+    private static function validTrust(mixed $t): bool
+    {
+        if (!is_array($t)) {
+            return false;
+        }
+        $interval = $t['interval'] ?? 'auto';
+        return in_array($t['mode'] ?? null, Trust::MODES, true)
+            && ($interval === 'auto' || (is_int($interval) && $interval >= Trust::INTERVAL_MIN && $interval <= Trust::INTERVAL_MAX))
+            && is_int($t['window'] ?? null) && $t['window'] >= Trust::WINDOW_MIN && $t['window'] <= Trust::WINDOW_MAX;
     }
 
     /**
@@ -381,8 +409,8 @@ function federation(): array
             }
             $engine->checkInFromPeer($at, 'another node');
         },
-        'nok' => static function (string $answer, int $at): void {
-            federatedEngine()->recordNokAnswer($answer, $at, 'another node');
+        'nok' => static function (string $answer, int $at, ?int $key = null, ?string $by = null): void {
+            federatedEngine()->recordNokAnswer($answer, $at, 'another node', $key, $by);
         },
         'bundle' => static fn (int $since): array => Sync::bundle($store, $since),
         'blob' => static fn (string $fileId, int $n): ?string => (new Vault($store))->chunkPath($fileId, $n),

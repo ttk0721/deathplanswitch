@@ -62,7 +62,9 @@ if (Web::posted()) {
     }
 
     if ($action === 'send' && !$isNew) {
-        if ($engine->sendConfirmation($contact['id'])) {
+        if (Contacts::isSilent($contact)) {
+            Web::flash(t('{name} is set not to be told in advance, so no confirmation email is sent.', ['name' => $contact['name']]), 'warn');
+        } elseif ($engine->sendConfirmation($contact['id'])) {
             Web::flash(t('Confirmation email sent to {email}.', ['email' => $contact['pending_email'] ?: $contact['email']]));
         } else {
             Web::flash(t('The confirmation email could not be sent. Check the mail settings.'), 'bad');
@@ -147,6 +149,12 @@ if (Web::posted()) {
     if (in_array($email, array_map('strtolower', $engine->ownerAddresses($config)), true)) {
         $errors[] = t('That is one of your own addresses. A contact has to be someone else.');
     }
+    // "Don't tell them in advance": refused for anyone who has to know beforehand.
+    $wasSilent = Contacts::isSilent($contact);
+    $silent = isset($_POST['silent']);
+    if ($silent && ($why = $book->silentBlocker($contact)) !== null) {
+        $errors[] = $why;
+    }
 
     $contact['name'] = $name;
     $contact['phone'] = Web::post('phone');
@@ -165,9 +173,19 @@ if (Web::posted()) {
     $pending = strtolower((string) ($contact['pending_email'] ?? ''));
     $sendNow = false;
     if ($errors === []) {
+        $contact['silent'] = $silent;
         if ($isNew) {
             $contact['email'] = $email;
-            $sendNow = isset($_POST['send_now']);
+            $sendNow = isset($_POST['send_now']) && !$silent;
+        } elseif ($silent) {
+            // Nobody is asked, so a new address is used as typed. It has not been confirmed, and is no longer marked so.
+            if ($email !== $current) {
+                $contact['email'] = $email;
+                $contact['status'] = $contact['status'] === 'declined' ? 'declined' : 'unconfirmed';
+                $contact['token'] = null;
+                $contact['confirm_sent_at'] = null;
+            }
+            $contact['pending_email'] = null;
         } elseif ($contact['status'] === 'confirmed') {
             if ($email === $current) {
                 // Back to the confirmed address: drop any change that was waiting.
@@ -187,7 +205,19 @@ if (Web::posted()) {
             $contact['confirm_sent_at'] = null;
         }
 
-        $book->save($contact);
+        // Turning the option off starts the usual invitation for anyone who has not confirmed.
+        if (!$isNew && $wasSilent && !$silent && $contact['status'] === 'unconfirmed') {
+            $sendNow = true;
+        }
+
+        try {
+            // Checked again under the lock: the early check above may have raced another change.
+            $book->save($contact, true);
+        } catch (\InvalidArgumentException $e) {
+            $errors[] = $e->getMessage();
+        }
+    }
+    if ($errors === []) {
         if ($isNew) {
             store()->log('contact.added', t('{name} was added as {role}.', ['name' => $contact['name'], 'role' => Contacts::label((string) $contact['role_label'])]));
         }
@@ -239,7 +269,10 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
 <div class="split-main">
 <?php if (!$isNew): ?>
 <div class="panel">
-<?php if ($contact['status'] === 'confirmed'): ?>
+<?php if (Contacts::isSilent($contact) && $contact['status'] !== 'declined'): ?>
+  <p><span class="tag"><?= e(t('Not told in advance')) ?></span> <?= e(t('{name} gets no invitation and no confirmation request. The first thing they receive is their message, when the switch fires.', ['name' => $contact['name']])) ?></p>
+  <p class="notice notice-warn"><?= e(t('Their address cannot be checked beforehand, so a typo would only come to light after the switch has fired. If you can, add a second channel for them under Channels.')) ?></p>
+<?php elseif ($contact['status'] === 'confirmed'): ?>
   <p><span class="tag tag-ok"><?= e(t('Confirmed')) ?></span> <?= e(t('on {date}. They will be asked to reconfirm once a year.', ['date' => when($contact['reconfirmed_at'] ?? $contact['confirmed_at'], (string) $engine->config()['timezone'], 'date')])) ?></p>
 <?php if (!empty($contact['pending_email'])): ?>
   <p><?= e(t('Waiting for them to confirm {new}. Until they do, the switch keeps using {old}.', ['new' => $contact['pending_email'], 'old' => $contact['email']])) ?></p>
@@ -320,6 +353,14 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
     </dl>
   </details>
 
+  <h2><?= e(t('Telling them in advance')) ?></h2>
+<?php $silentWhy = $book->silentBlocker($contact); ?>
+  <div class="tick">
+    <input type="checkbox" id="silent" name="silent" value="1"<?= Contacts::isSilent($contact) && $silentWhy === null ? ' checked' : '' ?><?= $silentWhy !== null ? ' disabled aria-describedby="silent-help"' : '' ?>>
+    <label for="silent"><?= e(t('Don\'t tell them in advance')) ?></label>
+    <span class="help" id="silent-help"><?= e($silentWhy ?? t('They get no invitation and no confirmation request, and are not asked to confirm each year. The first thing they receive is their message, when the switch fires. Turning this off later sends them the usual confirmation request.')) ?></span>
+  </div>
+
   <h2><?= e(t('What they hold')) ?></h2>
   <div class="tick">
     <input type="checkbox" id="has_needs" name="has_needs" value="1"<?= !empty($contact['has_needs_at']) ? ' checked' : '' ?>>
@@ -331,7 +372,7 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
   <div class="tick">
     <input type="checkbox" id="send_now" name="send_now" value="1" checked>
     <label for="send_now"><?= e(t('Email them a confirmation request now')) ?></label>
-    <span class="help"><?= e(t('They get a short explanation and a link to confirm. Their message above is not shown to them.')) ?></span>
+    <span class="help"><?= e(t('They get a short explanation and a link to confirm. Their message above is not shown to them.')) ?> <?= e(t('Not sent when they are not to be told in advance.')) ?></span>
   </div>
 <?php endif ?>
 
@@ -355,7 +396,7 @@ Web::$title = t('{page}: Death Plan Switch', ['page' => $isNew ? t('Add a contac
 <?php if ($previews): ?>
 <section class="card">
 <h2><?= e(t('What {name} would receive', ['name' => $contact['name']])) ?></h2>
-<p><?= e(t('As saved. Names are filled in now; the number of days and the date are worked out when the message is sent.')) ?> <?= $contact['status'] !== 'confirmed' ? e(t('Until they confirm, they receive nothing.')) : '' ?></p>
+<p><?= e(t('As saved. Names are filled in now; the number of days and the date are worked out when the message is sent.')) ?> <?= !Contacts::receives($contact) ? e(t('Until they confirm, they receive nothing.')) : '' ?></p>
 <?php foreach ($previews as $label => $email): ?>
 <div class="preview">
   <header><?= e($label) ?><strong><?= e($email->subject) ?></strong></header>

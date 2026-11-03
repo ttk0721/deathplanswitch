@@ -16,7 +16,7 @@ $landing = Web::$layout === 'landing';
 $install = Web::$layout === 'install';
 $current = Web::get('p', 'switch');
 $navText = ['switch' => t('Switch'), 'contacts' => t('Contacts'), 'vault' => t('Vault'), 'nodes' => t('Nodes'), 'settings' => t('Settings'), 'history' => t('History')];
-$navFor = ['contact' => 'contacts', 'review' => 'contacts', 'login' => ''];
+$navFor = ['contact' => 'contacts', 'group' => 'contacts', 'review' => 'contacts', 'login' => ''];
 $page = $current;
 $current = $navFor[$current] ?? $current;
 // The phone header: the screen's name, and an arrow back on detail screens.

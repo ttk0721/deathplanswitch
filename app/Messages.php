@@ -107,7 +107,8 @@ final class Messages
         $technical = null;
         $others = [];
         foreach ($contacts as $contact) {
-            if (($contact['status'] ?? '') !== 'confirmed') {
+            // Only the people who will be sent a message are named in one.
+            if (!Contacts::receives($contact)) {
                 continue;
             }
             if ($contact['kind'] === 'nok') {
@@ -206,6 +207,33 @@ final class Messages
             ->p(t('Your switch has fired. Messages have been sent to: {names}.', ['names' => implode(', ', $names)]))
             ->p(t('If you are reading this, press the button on this page. Everyone who was contacted will be told it was a false alarm.'))
             ->link(t('Tell them I am here'), $url);
+    }
+
+    /**
+     * After a false alarm: the group channels that had received the message, and their corrections.
+     *
+     * @param list<array{name: string, status: string}> $groups
+     */
+    public static function ownerGroupsCorrected(array $groups): Email
+    {
+        $email = (new Email(t('Death Plan Switch: your group channels and their corrections')))
+            ->p(t('Your switch had fired, so these group channels had received your message:'));
+        foreach ($groups as $group) {
+            $email->p(self::correctionLine($group));
+        }
+        return $email;
+    }
+
+    /** One line on a group channel's correction, for the owner. @param array{name: string, status: string} $group */
+    public static function correctionLine(array $group): string
+    {
+        $name = ['name' => (string) $group['name']];
+        return match ($group['status']) {
+            'sent' => t('{name}: a correction was sent.', $name),
+            'off' => t('{name}: no correction, as you turned it off for this channel.', $name),
+            'failed' => t('{name}: the correction could not be sent.', $name),
+            default => t('{name}: a correction will be sent shortly.', $name),
+        };
     }
 
     public static function ownerArmed(array $config, int $firstEmailAt): Email

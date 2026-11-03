@@ -18,6 +18,10 @@ final class Outbox
     /** Seconds one process may spend on failing channels; later channels are skipped. */
     public float $channelBudget = 120.0;
     private float $channelSpent = 0.0;
+    /** Seconds to wait between two parts of a long group message, so the platform does not refuse them as a flood. */
+    public float $partPause = 1.0;
+    /** @var null|callable(float): void how to wait; tests replace it */
+    public $pause = null;
 
     public function __construct(private Store $store, private Transport $transport, private ?Notifier $notifier = null)
     {
@@ -94,7 +98,41 @@ final class Outbox
         return $any;
     }
 
-    private function recordChannel(array $channel, string $error): void
+    /** Is there time left in this run for another channel? */
+    public function hasChannelBudget(): bool
+    {
+        return $this->channelSpent < $this->channelBudget;
+    }
+
+    /**
+     * Send one part of a group channel's message. Never throws. All the time it takes, the pause before it
+     * included, counts against the channel budget, so a long message cannot outlast the run.
+     *
+     * @param bool $pauseFirst wait $partPause seconds first: a part has just gone to this channel
+     * @return string '' when it got through, else the reason
+     */
+    public function sendPart(array $channel, string $text, bool $pauseFirst): string
+    {
+        if ($this->notifier === null) {
+            return 'Notification channels are not set up';
+        }
+        $started = microtime(true);
+        if ($pauseFirst && $this->partPause > 0) {
+            $this->pause !== null ? ($this->pause)($this->partPause) : usleep((int) ($this->partPause * 1_000_000));
+        }
+        try {
+            $this->notifier->notify($channel, new Notice('', $text, null), 'group');
+            $error = '';
+        } catch (\Throwable $e) {
+            $error = $e->getMessage() !== '' ? $e->getMessage() : 'Unknown error';
+        }
+        $this->channelSpent += microtime(true) - $started;
+        // The engine writes one history line for the whole message, not one per part.
+        $this->recordChannel($channel, $error, false);
+        return $error;
+    }
+
+    private function recordChannel(array $channel, string $error, bool $log = true): void
     {
         $id = (string) ($channel['id'] ?? '');
         $label = mb_substr((string) ($channel['label'] ?? ''), 0, 60);
@@ -114,6 +152,9 @@ final class Outbox
             });
         } catch (\Throwable) {
             // Best effort, like record().
+        }
+        if (!$log) {
+            return;
         }
         try {
             // Only the scheme: masked() would show a short address in full.

@@ -25,6 +25,10 @@ if (Web::posted()) {
             } else {
                 Web::flash(t('Checked in. {names} have been told it was a false alarm.', ['names' => implode(', ', $result['told'])]));
             }
+            if (!empty($result['groups'])) {
+                Web::flash(t('Your switch had fired, so these group channels had received your message:') . ' '
+                    . implode(' ', array_map([Messages::class, 'correctionLine'], $result['groups'])));
+            }
             break;
 
         case 'arm':
@@ -128,12 +132,14 @@ if (count($chainIds) > 1 && $plan !== []) {
     }
 }
 
+$groups = (new Groups(store()))->all();
 $notified = [];
 foreach ($contacts as $contact) {
     if (isset($cycle['notified'][$contact['id']])) {
         $notified[] = $contact['name'];
     }
 }
+array_push($notified, ...Engine::groupsSent($cycle, $groups));
 
 Web::$title = t('Death Plan Switch');
 ?>
@@ -287,7 +293,7 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
 <div class="col col-who">
 <section class="card">
 <h2><?= e(t('Who is told')) ?></h2>
-<?php if ($contacts === []): ?>
+<?php if ($contacts === [] && $groups === []): ?>
 <p><?= e(t('Nobody yet.')) ?> <a href="index.php?p=contacts"><?= e(t('Add your next of kin, and a technical helper if you like')) ?></a>.</p>
 <?php else: ?>
 <div class="rows">
@@ -302,14 +308,25 @@ $pilotClass = ['setup' => 'off', 'paused' => 'off', 'armed' => 'armed', 'overdue
               : t('Sent their message if neither you nor your next of kin confirms you are well.'))) ?></p>
     </div>
     <div class="side">
-<?php if ($contact['status'] === 'confirmed'): ?>
-      <span class="tag tag-ok"><?= e(t('Confirmed')) ?></span>
-<?php elseif ($contact['status'] === 'declined'): ?>
+<?php if ($contact['status'] === 'declined'): ?>
       <span class="tag tag-bad"><?= e(t('Declined')) ?></span>
+<?php elseif (Contacts::isSilent($contact)): ?>
+      <span class="tag"><?= e(t('Not told in advance')) ?></span>
+<?php elseif ($contact['status'] === 'confirmed'): ?>
+      <span class="tag tag-ok"><?= e(t('Confirmed')) ?></span>
 <?php else: ?>
       <span class="tag tag-warn"><?= e(t('Not confirmed')) ?></span>
 <?php endif ?>
     </div>
+  </div>
+<?php endforeach ?>
+<?php foreach ($groups as $group): ?>
+  <div class="row">
+    <div>
+      <h3><a href="index.php?p=group&amp;id=<?= e($group['id']) ?>"><?= e($group['name']) ?></a></h3>
+      <p class="role"><?= e(t('Group channel')) ?>. <?= e(t('Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.')) ?></p>
+    </div>
+    <div class="side"><span class="tag"><?= e(t('Group channel')) ?></span></div>
   </div>
 <?php endforeach ?>
 </div>

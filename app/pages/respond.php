@@ -39,7 +39,7 @@ $waitText = $laterPeople
     ? t('The other trusted people are still asked in turn, and nobody is sent anything early.')
     : t('Nobody is sent anything early. If {owner} does not check in and nobody answers "All fine" by the time given in the email, the people {owner} chose are sent their instructions.', ['owner' => $owner]);
 if (($live && $firesNow) || ($answer === 'wrong' && $firedNow)) {
-    foreach ($engine->contacts()->confirmed() as $contact) {
+    foreach ($engine->contacts()->recipients() as $contact) {
         if ($contact['kind'] !== 'nok') {
             $others[] = $contact['name'] . ' (' . $contact['role_label'] . ')';
         }

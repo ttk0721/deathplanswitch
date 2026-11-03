@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace DPS\Tests;
-use DPS\{Clock, Cluster, Coordinator, Engine, Node, NodeApi, Outbox, PeerClient, Store, Sync, Transport, Email};
+use DPS\{Clock, Cluster, Coordinator, Engine, Groups, Node, NodeApi, Outbox, PeerClient, Store, Sync, Transport, Email};
 require __DIR__ . '/lib.php';
 
 final class NullMail implements Transport
@@ -399,6 +399,136 @@ test('invalid shares refuse the whole bundle', function (): void {
     check((bool) array_filter($log, fn ($l) => str_contains($l, 'no valid')), 'logged');
 });
 
+/** A group channel as the primary saves it. */
+function grp(string $type = 'webhook', string $url = 'https://hooks.example.test/in/SECRETPATH'): array
+{
+    [$g] = Groups::fromInput(null, 'Work – Slack', $type, $url, "Hello all.\n\nThe notes are in the blue folder.");
+    return $g;
+}
+
+test('bundle schema: a secondary mirrors the primary\'s group channels, secret included', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $hook = grp();
+    $apprise = grp('apprise', 'discord://111/TOKEN');
+    (new Groups($w->store))->save(grp('apprise', 'ntfy://local-only'));
+    $w->net->routes['p1.example.org']['bundle'] = fn () => bundleFrom($w, 41) + ['groups' => ['groups' => [$hook, $apprise]]];
+    $w->sync->run();
+    $got = (new Groups($w->store))->all();
+    same([$hook['id'], $apprise['id']], array_column($got, 'id'), 'the primary\'s list replaces the local one');
+    same($hook['channel']['secret'], $got[0]['channel']['secret'], 'the signing secret is copied');
+    same($hook['text'], $got[0]['text'], 'the text is copied');
+    if (PHP_OS_FAMILY !== 'Windows') {
+        same('0600', substr(sprintf('%o', fileperms($w->store->path('groups'))), -4), 'groups.json is private');
+    }
+    check(!str_contains((string) json_encode($w->store->history()), 'SECRETPATH'), 'no address in the history');
+    // A primary from before group channels sends none: the local list is left alone.
+    $w->net->routes['p1.example.org']['bundle'] = fn () => bundleFrom($w, 42);
+    $w->sync->run();
+    same(2, count((new Groups($w->store))->all()), 'kept');
+    // An empty document from the primary empties the list.
+    $w->net->routes['p1.example.org']['bundle'] = fn () => bundleFrom($w, 43) + ['groups' => []];
+    $w->sync->run();
+    same([], (new Groups($w->store))->all(), 'emptied');
+});
+
+test('finding 5: bundle schema: a group channel the form would refuse is skipped and logged; the bundle and the other groups are kept', function (): void {
+    $bad = [
+        'generic forwarder' => fn (array $g): array => ['channel' => ['type' => 'apprise', 'url' => 'json://internal.host/x', 'secret' => null] + $g['channel']] + $g,
+        'second address' => fn (array $g): array => ['channel' => ['type' => 'apprise', 'url' => 'discord://a/b,json://x/y', 'secret' => null] + $g['channel']] + $g,
+        'webhook without a secret' => fn (array $g): array => ['channel' => ['secret' => null] + $g['channel']] + $g,
+        'apprise with a secret' => fn (array $g): array => ['channel' => ['type' => 'apprise', 'url' => 'discord://1/2', 'secret' => 'abc'] + $g['channel']] + $g,
+        'bad id' => fn (array $g): array => ['id' => '../g'] + $g,
+        'no text' => fn (array $g): array => ['text' => ''] + $g,
+        'text too long' => fn (array $g): array => ['text' => str_repeat('a', Groups::TEXT_MAX + 1)] + $g,
+        'no name' => fn (array $g): array => ['name' => 7] + $g,
+        'a contact placeholder' => fn (array $g): array => ['text' => 'Call {nok_details}.'] + $g,
+    ];
+    foreach ($bad as $why => $mutate) {
+        $w = new SW(SW::P1);
+        $w->answerStates();
+        $good = grp('apprise', 'discord://111/TOKEN');
+        $b = bundleFrom($w, 9) + ['groups' => ['groups' => [$mutate(grp()), $good]]];
+        $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+        $log = $w->sync->run();
+        same('Primary Owner', $w->store->read('config')['owner_name'], "$why: the bundle is applied");
+        same([$good['id']], array_column((new Groups($w->store))->all(), 'id'), "$why: only the valid group channel");
+        check((bool) array_filter($log, fn ($l) => str_contains($l, 'Skipped group channel 1')), "$why: logged");
+    }
+    // The same id twice: the first is kept. Control characters leave the name. More than 50: the first 50.
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $one = grp();
+    $list = [['name' => "Bad\x1b[2Jname\x07"] + $one, ['name' => 'Twin'] + $one];
+    for ($i = 0; $i < 55; $i++) {
+        $list[] = ['id' => sprintf('g_%010x', $i + 1)] + grp('apprise', 'ntfy://topic' . $i);
+    }
+    $w->net->routes['p1.example.org']['bundle'] = fn () => bundleFrom($w, 10) + ['groups' => ['groups' => $list]];
+    $log = $w->sync->run();
+    $got = (new Groups($w->store))->all();
+    same(50, count($got), 'at most 50');
+    same(50, count(array_unique(array_column($got, 'id'))), 'no id twice');
+    same(0, preg_match('/[\x00-\x1f\x7f]/', $got[0]['name']), 'no control character in the name: ' . json_encode($got[0]['name']));
+    check(str_contains($got[0]['name'], 'Bad') && str_contains($got[0]['name'], 'name'), 'the rest of the name kept');
+    check((bool) array_filter($log, fn ($l) => str_contains($l, 'the same id twice')), 'the twin is logged');
+    check((bool) array_filter($log, fn ($l) => str_contains($l, 'more than 50')), 'the extra ones are logged');
+    foreach (['not a list' => ['groups' => ['a' => grp()]], 'wrong shape' => ['people' => []], 'a string' => 'x'] as $why => $doc) {
+        $w = new SW(SW::P1);
+        $w->answerStates();
+        $b = bundleFrom($w, 9) + ['groups' => $doc];
+        $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+        $w->sync->run();
+        same('Local', $w->store->read('config')['owner_name'], "$why: not applied");
+    }
+});
+
+test('bundle schema: the "not told in advance" flag must be true or false', function (): void {
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $b = bundleFrom($w, 9);
+    $b['contacts']['contacts'][0]['silent'] = 'yes';
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->sync->run();
+    same('Local', $w->store->read('config')['owner_name'], 'refused');
+    $b['contacts']['contacts'][0]['silent'] = true;
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $w->sync->run();
+    same(true, $w->store->read('contacts')['contacts'][0]['silent'], 'a boolean is copied');
+});
+
+test('finding 8: bundle schema: a contact both silent and trusted, the next of kin, or a vault recipient loses the silent flag, logged', function (): void {
+    $b64 = static fn (int $n): string => rtrim(strtr(base64_encode(str_repeat('a', $n)), '+/', '-_'), '=');
+    $w = new SW(SW::P1);
+    $w->answerStates();
+    $b = bundleFrom($w, 11);
+    $b['contacts']['contacts'] = [
+        ['id' => 'c_1', 'name' => 'Kim', 'kind' => 'nok', 'silent' => true],
+        ['id' => 'c_2', 'name' => 'Lee', 'kind' => 'other', 'silent' => true, 'trusted' => true, 'trusted_order' => 2],
+        ['id' => 'c_3', 'name' => 'Bo', 'kind' => 'other', 'silent' => true],
+        ['id' => 'c_4', 'name' => 'Ola', 'kind' => 'other', 'silent' => true],
+    ];
+    $b['vault']['recipients'] = [['id' => 'r_0123456789abcdef', 'contact_id' => 'c_3', 'label' => 'Bo',
+        'code' => ['salt' => $b64(16), 'iv' => $b64(12), 'ct' => $b64(48)], 'password' => null, 'owner_wrapped' => ['iv' => $b64(12), 'ct' => $b64(20)]]];
+    $w->net->routes['p1.example.org']['bundle'] = fn () => $b;
+    $log = $w->sync->run();
+    same('Primary Owner', $w->store->read('config')['owner_name'], 'the bundle is applied');
+    $silent = array_column($w->store->read('contacts')['contacts'], 'silent', 'id');
+    same(['c_1' => false, 'c_2' => false, 'c_3' => false, 'c_4' => true], $silent, 'only the one who may stay untold');
+    same(3, count(array_filter($log, fn ($l) => str_contains($l, 'as not told in advance'))), 'each one logged');
+});
+
+test('Sync::bundle carries the group channels and changes with them', function (): void {
+    $p = new SW(null);
+    $c = Cluster::read($p->store);
+    $c['primary'] = $p->id;
+    Cluster::save($p->store, $c);
+    $b = Sync::bundle($p->store, 0);
+    (new Groups($p->store))->save(grp());
+    $b2 = Sync::bundle($p->store, $b['version']);
+    check(isset($b2['version']) && $b2['version'] !== $b['version'], 'a new version');
+    same(1, count($b2['groups']['groups']), 'the group channel is in it');
+});
+
 test('Sync::bundle is for the primary, and unchanged on the same version', function (): void {
     $w = new SW(SW::P1);
     try {
@@ -414,7 +544,8 @@ test('Sync::bundle is for the primary, and unchanged on the same version', funct
     $p->store->write('contacts', ['contacts' => []]);
     $b = Sync::bundle($p->store, 0);
     check(isset($b['version']) && is_int($b['version']) && $b['version'] > 0, 'version');
-    same(['version', 'config', 'contacts', 'vault', 'cluster'], array_keys($b), 'keys');
+    same(['version', 'config', 'contacts', 'groups', 'vault', 'cluster'], array_keys($b), 'keys');
+    same([], $b['groups'], 'no group channels yet');
     same(['unchanged' => true], Sync::bundle($p->store, $b['version']), 'unchanged');
     $p->store->write('contacts', ['contacts' => [['id' => 'c_9']]]);
     check(isset(Sync::bundle($p->store, $b['version'])['version']), 'changed after edit');

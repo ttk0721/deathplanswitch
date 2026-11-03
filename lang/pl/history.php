@@ -82,4 +82,21 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} odpowiedział(a): „Coś jest nie tak”. Nic nie jest wysyłane wcześniej, a kolejne osoby nadal dostają pytanie po kolei.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name} odpowiedział(a): „Wszystko w porządku”. Nikt więcej nie dostanie pytania.',
     'The settings for the trusted people were changed.' => 'Zmieniono ustawienia zaufanych osób.',
+
+    // Group channels
+    'Could not send the message to the group channel {name}.' => 'Nie udało się wysłać wiadomości do kanału grupowego {name}.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => 'Nie udało się wysłać części {part} z {parts} do kanału grupowego {name}.',
+    'No more attempts will be made.' => 'Nie będzie kolejnych prób.',
+    'It will be tried again on the next run.' => 'Kolejna próba nastąpi przy następnym uruchomieniu harmonogramu.',
+    'The message to the group channel {name} was sent by another node.' => 'Wiadomość do kanału grupowego {name} wysłał inny węzeł.',
+    'The message was sent to the group channel {name} in {n} part.' => [
+        'Wysłano wiadomość do kanału grupowego {name} w {n} części.',
+        'Wysłano wiadomość do kanału grupowego {name} w {n} częściach.',
+        'Wysłano wiadomość do kanału grupowego {name} w {n} częściach.',
+    ],
+    'The group channel {name} was added.' => 'Dodano kanał grupowy {name}.',
+    'The group channel {name} was deleted.' => 'Usunięto kanał grupowy {name}.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Inny węzeł przestał wysyłać wiadomość do kanału grupowego {name}, więc dalej wysyła ją ten węzeł.',
+    'The group channel {name} was sent the correction.' => 'Wysłano sprostowanie do kanału grupowego {name}.',
+    'Could not send the correction to the group channel {name}.' => 'Nie udało się wysłać sprostowania do kanału grupowego {name}.',
 ];

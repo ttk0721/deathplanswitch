@@ -101,10 +101,18 @@ final class Contacts
         return null;
     }
 
-    /** Add a contact to the end of the chain, or take them off it. The next of kin is always on it. */
+    /**
+     * Add a contact to the end of the chain, or take them off it. The next of kin is always on it.
+     *
+     * @throws \InvalidArgumentException when the contact is set not to be told in advance
+     */
     public function setTrusted(string $id, bool $trusted): void
     {
         $this->store->locked(function () use ($id, $trusted): void {
+            $contact = $this->find($id);
+            if ($trusted && $contact !== null && self::isSilent($contact)) {
+                throw new \InvalidArgumentException(t('{name} is set not to be told in advance, and trusted people have to know. Turn that option off first.', ['name' => (string) $contact['name']]));
+            }
             $doc = $this->store->read('contacts');
             $list = array_values(array_filter((array) ($doc['contacts'] ?? []), 'is_array'));
             $next = 1;
@@ -151,6 +159,58 @@ final class Contacts
         });
     }
 
+    /** True for a contact the owner chose not to tell in advance: no invitation, no confirmation request. */
+    public static function isSilent(array $contact): bool
+    {
+        return ($contact['silent'] ?? false) === true;
+    }
+
+    /**
+     * Will this contact be sent their message when the switch fires? A confirmed contact will, and so
+     * will a silent one, who is never asked to confirm. Someone who declined never is.
+     */
+    public static function receives(array $contact): bool
+    {
+        $status = (string) ($contact['status'] ?? '');
+        return $status === 'confirmed' || (self::isSilent($contact) && $status !== 'declined');
+    }
+
+    /** @return array<int, array> everyone sent a message when the switch fires, in the usual order */
+    public function recipients(): array
+    {
+        return array_values(array_filter($this->all(), [self::class, 'receives']));
+    }
+
+    /** Is this contact linked to a vault recipient, and so holds vault packages? */
+    public function inVault(string $id): bool
+    {
+        foreach ((array) ($this->store->read('vault')['recipients'] ?? []) as $recipient) {
+            if (is_array($recipient) && ($recipient['contact_id'] ?? null) === $id) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Why this contact cannot be left untold until the switch fires, or null if they can be.
+     * Anyone asked whether the owner is all right, and anyone holding vault packages, has to know in advance.
+     */
+    public function silentBlocker(array $contact): ?string
+    {
+        $id = (string) ($contact['id'] ?? '');
+        if (($contact['kind'] ?? '') === 'nok') {
+            return t('Your next of kin is asked first whether you are all right, so they have to know about the switch in advance.');
+        }
+        if (($contact['trusted'] ?? false) === true || ($id !== '' && $this->trustedNumber($id) !== null)) {
+            return t('Trusted people are asked whether you are all right, so they have to know about the switch in advance. Remove them from trusted people first.');
+        }
+        if ($id !== '' && $this->inVault($id)) {
+            return t('They hold vault packages, and opening those needs a code given to them in advance. Remove them from the vault first.');
+        }
+        return null;
+    }
+
     /** @return array<int, array> contacts who have confirmed, and so will be written to */
     public function confirmed(): array
     {
@@ -182,6 +242,7 @@ final class Contacts
             'reconfirm_asked_at' => null,
             'reconfirm_nudged_at' => null,
             'has_needs_at' => null,         // when the owner last ticked "has what they need"
+            'silent' => false,              // true: never told in advance; their first message is the one sent when the switch fires
             'message' => Messages::defaults($kind),
             'created_at' => Clock::now(),
             'updated_at' => Clock::now(),
@@ -195,9 +256,21 @@ final class Contacts
         return $contact;
     }
 
-    public function save(array $contact): void
+    /**
+     * @param bool $checkSilent refuse a contact set not to be told in advance who has to be told: checked
+     *                          under the same lock as the write, so a change made meanwhile is seen
+     * @throws \InvalidArgumentException when $checkSilent and the contact cannot be left untold
+     */
+    public function save(array $contact, bool $checkSilent = false): void
     {
-        $this->store->locked(function () use ($contact): void {
+        $this->store->locked(function () use ($contact, $checkSilent): void {
+            if ($checkSilent && self::isSilent($contact)) {
+                $fresh = $this->find((string) ($contact['id'] ?? '')) ?? [];
+                $why = $this->silentBlocker(array_intersect_key($fresh, ['trusted' => true, 'trusted_order' => true]) + $contact);
+                if ($why !== null) {
+                    throw new \InvalidArgumentException($why);
+                }
+            }
             $doc = $this->store->read('contacts');
             $list = array_values(array_filter((array) ($doc['contacts'] ?? []), 'is_array'));
             $contact['updated_at'] = Clock::now();

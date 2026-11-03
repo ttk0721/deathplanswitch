@@ -110,4 +110,12 @@ return [
     'False alarm: {owner} is all right' => 'Fałszywy alarm: u {owner} wszystko w porządku',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} potwierdził(a), że u {owner} wszystko w porządku. Nic więcej nie musisz robić. Dziękujemy.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Jedna z zaufanych osób potwierdziła, że u {owner} wszystko w porządku. Nic więcej nie musisz robić. Dziękujemy.',
+
+    // Group channels: the correction after a false alarm
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: twoje kanały grupowe i sprostowania',
+    'Your switch had fired, so these group channels had received your message:' => 'Twój przełącznik się uruchomił, więc te kanały grupowe dostały twoją wiadomość:',
+    '{name}: a correction was sent.' => '{name}: wysłano sprostowanie.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: bez sprostowania, bo wyłączyłeś(-łaś) je dla tego kanału.',
+    '{name}: the correction could not be sent.' => '{name}: nie udało się wysłać sprostowania.',
+    '{name}: a correction will be sent shortly.' => '{name}: sprostowanie zostanie wkrótce wysłane.',
 ];

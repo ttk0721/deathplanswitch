@@ -95,4 +95,20 @@ return [
     'Technical helper' => 'Referente tecnico',
     'Technical helper (optional)' => 'Referente tecnico (facoltativo)',
     'Someone who can keep your servers, accounts or projects running.' => 'Qualcuno che possa mantenere in funzione i tuoi server, account o progetti.',
+
+    // not told in advance, group channels
+    '{name} is set not to be told in advance, and trusted people have to know. Turn that option off first.' => '{name} ha l’opzione «Senza preavviso», e le persone di fiducia devono sapere. Disattiva prima quell’opzione.',
+    'Your next of kin is asked first whether you are all right, so they have to know about the switch in advance.' => 'Alla tua persona più vicina viene chiesto per prima se stai bene, quindi deve conoscere l’interruttore in anticipo.',
+    'Trusted people are asked whether you are all right, so they have to know about the switch in advance. Remove them from trusted people first.' => 'Alle persone di fiducia viene chiesto se stai bene, quindi devono conoscere l’interruttore in anticipo. Rimuovi prima questa persona dalle persone di fiducia.',
+    'They hold vault packages, and opening those needs a code given to them in advance. Remove them from the vault first.' => 'Questa persona ha pacchetti nella cassaforte e per aprirli serve un codice consegnato in anticipo. Rimuovila prima dalla cassaforte.',
+    '{name} is set not to be told in advance, so they cannot hold vault packages. Turn that option off on their contact page first.' => '{name} ha l’opzione «Senza preavviso», quindi non può avere pacchetti nella cassaforte. Disattiva prima quell’opzione nella pagina di questo contatto.',
+    'Enter a name for the group channel.' => 'Inserisci un nome per il canale di gruppo.',
+    'The name can be at most {max} characters.' => 'Il nome può contenere al massimo {max} caratteri.',
+    'Write the message the group channel is sent.' => 'Scrivi il messaggio che riceverà il canale di gruppo.',
+    'The message can be at most {max} characters.' => 'Il messaggio può contenere al massimo {max} caratteri.',
+    'A test was sent less than a minute ago. Try again in a minute.' => 'Una prova è stata inviata meno di un minuto fa. Riprova tra un minuto.',
+    'This is a test message. Nothing has happened and nothing needs to be done.' => 'Questo è un messaggio di prova. Non è successo nulla e non c’è nulla da fare.',
+    'You can have at most {max} group channels.' => 'Puoi avere al massimo {max} canali di gruppo.',
+    'Please disregard the earlier message from {owner}: it was sent by mistake, and {owner} is fine.' => 'Si prega di ignorare il messaggio precedente di {owner}: è stato inviato per errore e {owner} sta bene.',
+    'A group channel message cannot use {refused}: everyone in the channel would see it. Only these fill themselves in here: {allowed}.' => 'Un messaggio per un canale di gruppo non può usare {refused}: lo vedrebbe tutto il canale. Qui si compilano da sole solo queste parole: {allowed}.',
 ];

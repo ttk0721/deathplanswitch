@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => 'Loos alarm: met {owner} is alles goed',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} heeft bevestigd dat alles goed is met {owner}. Van u is verder niets nodig. Dank u wel.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Een vertrouwenspersoon van {owner} heeft bevestigd dat alles goed is met {owner}. Van u is verder niets nodig. Dank u wel.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: je groepskanalen en hun correcties',
+    'Your switch had fired, so these group channels had received your message:' => 'Je schakelaar was geactiveerd, dus deze groepskanalen hadden je bericht ontvangen:',
+    '{name}: a correction was sent.' => '{name}: er is een correctie verstuurd.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: geen correctie, omdat je die voor dit kanaal hebt uitgezet.',
+    '{name}: the correction could not be sent.' => '{name}: de correctie kon niet worden verstuurd.',
+    '{name}: a correction will be sent shortly.' => '{name}: er wordt binnenkort een correctie verstuurd.',
 ];

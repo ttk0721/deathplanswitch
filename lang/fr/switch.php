@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => 'Sera interrogé {when}',
     'Asked {when}' => 'Sollicité {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Personne de confiance {n} : interrogée pour savoir si tout va bien pour toi, après les personnes qui la précèdent. Reçoit son message si personne ne confirme que tout va bien.',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Reçoit ton message destiné au groupe si ni toi ni ton proche ne confirmez que tout va bien. Rien d’autre n’y est jamais envoyé, sauf ta correction si tu confirmes ta présence ensuite.',
 ];

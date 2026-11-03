@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => 'سيُسأل {when}',
     'Asked {when}' => 'تم السؤال {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'الشخص الموثوق {n}: يُسأل عمّا إذا كان كل شيء على ما يرام معك، بعد الأشخاص الذين قبله. تصله رسالته إذا لم يؤكد أحد أن كل شيء على ما يرام معك.',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'تصل إليها رسالتك المخصصة للمجموعة إذا لم تؤكد أنت ولا أقرب شخص إليك أن كل شيء على ما يرام. ولا يُرسل إليها شيء آخر أبدًا، سوى تصحيحك إذا أكدت حضورك بعد ذلك.',
 ];

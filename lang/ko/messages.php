@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => '오경보: {owner} 님은 괜찮습니다',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} 님이 {owner} 님이 괜찮다고 확인했습니다. 더 하실 일은 없습니다. 감사합니다.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{owner} 님이 신뢰하는 분 중 한 분이 {owner} 님이 괜찮다고 확인했습니다. 더 하실 일은 없습니다. 감사합니다.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: 그룹 채널과 정정 메시지',
+    'Your switch had fired, so these group channels had received your message:' => '스위치가 작동하여 다음 그룹 채널이 작성하신 메시지를 받았습니다.',
+    '{name}: a correction was sent.' => '{name}: 정정 메시지를 보냈습니다.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: 이 채널에서는 정정을 끄셨으므로 보내지 않았습니다.',
+    '{name}: the correction could not be sent.' => '{name}: 정정 메시지를 보내지 못했습니다.',
+    '{name}: a correction will be sent shortly.' => '{name}: 곧 정정 메시지를 보냅니다.',
 ];

@@ -109,4 +109,10 @@ return [
     'False alarm: {owner} is all right' => 'Báo động nhầm: {owner} vẫn ổn',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} đã xác nhận rằng {owner} vẫn ổn. Quý vị không cần làm gì thêm. Xin cảm ơn.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Một người mà {owner} tin cậy đã xác nhận rằng {owner} vẫn ổn. Quý vị không cần làm gì thêm. Xin cảm ơn.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: các kênh nhóm của bạn và lời đính chính',
+    'Your switch had fired, so these group channels had received your message:' => 'Công tắc của bạn đã được kích hoạt, nên các kênh nhóm sau đã nhận tin nhắn của bạn:',
+    '{name}: a correction was sent.' => '{name}: đã gửi lời đính chính.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: không đính chính, vì bạn đã tắt tùy chọn này cho kênh.',
+    '{name}: the correction could not be sent.' => '{name}: không gửi được lời đính chính.',
+    '{name}: a correction will be sent shortly.' => '{name}: lời đính chính sẽ sớm được gửi.',
 ];

@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => 'Fausse alerte : tout va bien pour {owner}',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} a confirmé que tout va bien pour {owner}. Vous n’avez plus rien à faire. Merci.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Une personne de confiance de {owner} a confirmé que tout va bien pour {owner}. Vous n’avez plus rien à faire. Merci.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch : tes canaux de groupe et leurs corrections',
+    'Your switch had fired, so these group channels had received your message:' => 'Ton interrupteur s’était déclenché ; ces canaux de groupe avaient donc reçu ton message :',
+    '{name}: a correction was sent.' => '{name} : une correction a été envoyée.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name} : pas de correction, car tu l’as désactivée pour ce canal.',
+    '{name}: the correction could not be sent.' => '{name} : la correction n’a pas pu être envoyée.',
+    '{name}: a correction will be sent shortly.' => '{name} : une correction sera envoyée sous peu.',
 ];

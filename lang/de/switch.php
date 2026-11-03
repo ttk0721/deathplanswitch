@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => 'Wird {when} gefragt',
     'Asked {when}' => 'Gefragt {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Vertrauensperson {n}: wird nach den Personen davor gefragt, ob bei dir alles in Ordnung ist. Erhält ihre Nachricht, wenn niemand bestätigt, dass alles in Ordnung ist.',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Erhält deine Nachricht für die Gruppe, wenn weder du noch deine nahestehende Person bestätigt, dass alles in Ordnung ist. Sonst wird dorthin nie etwas gesendet, außer deiner Korrektur, falls du dich danach eincheckst.',
 ];

@@ -137,4 +137,6 @@ return [
     'Will be asked {when}' => 'Получит запрос {when}',
     'Asked {when}' => 'Запрос отправлен {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Доверенное лицо {n}: получает вопрос, всё ли с тобой в порядке, после людей перед ним. Получает своё сообщение, если никто не подтвердит, что всё в порядке.',
+
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Получает твоё сообщение для группы, если ни ты, ни твой близкий человек не подтвердите, что всё в порядке. Ничего другого туда никогда не отправляется, кроме твоего исправления, если ты после этого подтвердишь присутствие.',
 ];

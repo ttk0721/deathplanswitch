@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => 'झूठा अलार्म: {owner} ठीक हैं',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} ने पुष्टि की है कि {owner} ठीक हैं। आपको और कुछ करने की ज़रूरत नहीं है। धन्यवाद।',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{owner} के किसी भरोसेमंद व्यक्ति ने पुष्टि की है कि {owner} ठीक हैं। आपको और कुछ करने की ज़रूरत नहीं है। धन्यवाद।',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: आपके समूह चैनल और उनके सुधार',
+    'Your switch had fired, so these group channels had received your message:' => 'आपका स्विच चालू हो गया था, इसलिए इन समूह चैनलों को आपका संदेश मिल चुका है:',
+    '{name}: a correction was sent.' => '{name}: सुधार भेज दिया गया।',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: कोई सुधार नहीं, क्योंकि आपने इस चैनल के लिए उसे बंद कर रखा है।',
+    '{name}: the correction could not be sent.' => '{name}: सुधार भेजा नहीं जा सका।',
+    '{name}: a correction will be sent shortly.' => '{name}: सुधार थोड़ी देर में भेजा जाएगा।',
 ];

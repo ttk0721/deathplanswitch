@@ -110,4 +110,11 @@ return [
     'False alarm: {owner} is all right' => 'Ложная тревога: у {owner} всё в порядке',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name}: подтверждено, что у {owner} всё в порядке. От вас больше ничего не требуется. Спасибо.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Одно из доверенных лиц подтвердило, что у {owner} всё в порядке. От вас больше ничего не требуется. Спасибо.',
+
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: твои групповые каналы и исправления',
+    'Your switch had fired, so these group channels had received your message:' => 'Твой переключатель сработал, поэтому эти групповые каналы получили твоё сообщение:',
+    '{name}: a correction was sent.' => '{name}: исправление отправлено.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: без исправления, потому что эта опция отключена для этого канала.',
+    '{name}: the correction could not be sent.' => '{name}: не удалось отправить исправление.',
+    '{name}: a correction will be sent shortly.' => '{name}: исправление будет отправлено в ближайшее время.',
 ];

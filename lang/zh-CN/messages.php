@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => '误报：{owner}一切安好',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} 已确认{owner}一切安好。您无需再做任何事情。谢谢您。',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{owner}信任的一位人士已确认{owner}一切安好。您无需再做任何事情。谢谢您。',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch：你的群组频道及其更正说明',
+    'Your switch had fired, so these group channels had received your message:' => '你的开关已触发，因此以下群组频道已收到你的消息：',
+    '{name}: a correction was sent.' => '{name}：已发送更正说明。',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}：未发送更正说明，因为你已为该频道关闭了它。',
+    '{name}: the correction could not be sent.' => '{name}：更正说明未能发出。',
+    '{name}: a correction will be sent shortly.' => '{name}：更正说明即将发出。',
 ];

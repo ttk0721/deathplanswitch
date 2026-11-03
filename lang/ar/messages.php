@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => 'إنذار خاطئ: {owner} بخير',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'أكّد {name} أن {owner} بخير. لا يلزمك فعل أي شيء آخر. شكرًا لك.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'أكّد أحد الأشخاص الذين يثق بهم {owner} أن {owner} بخير. لا يلزمك فعل أي شيء آخر. شكرًا لك.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: قنوات مجموعاتك وتصحيحاتها',
+    'Your switch had fired, so these group channels had received your message:' => 'كان المُبدِّل الخاص بك قد أُطلق، لذا وصلت رسالتك إلى قنوات المجموعات هذه:',
+    '{name}: a correction was sent.' => '{name}: أُرسل تصحيح.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: لا تصحيح، لأنك أوقفته لهذه القناة.',
+    '{name}: the correction could not be sent.' => '{name}: تعذّر إرسال التصحيح.',
+    '{name}: a correction will be sent shortly.' => '{name}: سيُرسل تصحيح بعد قليل.',
 ];

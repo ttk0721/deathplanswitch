@@ -82,4 +82,16 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name}: ответ «Что-то не так». Ничего не отправляется заранее, остальных по-прежнему спрашивают по очереди.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name}: ответ «Всё в порядке». Больше никого спрашивать не будут.',
     'The settings for the trusted people were changed.' => 'Настройки доверенных лиц изменены.',
+
+    'Could not send the message to the group channel {name}.' => 'Не удалось отправить сообщение в групповой канал {name}.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => 'Не удалось отправить часть {part} из {parts} в групповой канал {name}.',
+    'No more attempts will be made.' => 'Других попыток не будет.',
+    'It will be tried again on the next run.' => 'Следующая попытка будет при следующем запуске.',
+    'The message to the group channel {name} was sent by another node.' => 'Сообщение в групповой канал {name} отправил другой узел.',
+    'The message was sent to the group channel {name} in {n} part.' => ['Сообщение отправлено в групповой канал {name} в {n} части.', 'Сообщение отправлено в групповой канал {name} в {n} частях.', 'Сообщение отправлено в групповой канал {name} в {n} частях.'],
+    'The group channel {name} was added.' => 'Групповой канал {name} добавлен.',
+    'The group channel {name} was deleted.' => 'Групповой канал {name} удалён.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Другой узел перестал отправлять сообщение в групповой канал {name}, поэтому дальше его отправляет этот узел.',
+    'The group channel {name} was sent the correction.' => 'В групповой канал {name} отправлено исправление.',
+    'Could not send the correction to the group channel {name}.' => 'Не удалось отправить исправление в групповой канал {name}.',
 ];

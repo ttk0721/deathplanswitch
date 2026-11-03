@@ -82,4 +82,16 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name}: відповідь «Щось не так». Нічого не надсилається завчасно, решту й далі питають по черзі.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name}: відповідь «Усе гаразд». Більше нікого не питатимуть.',
     'The settings for the trusted people were changed.' => 'Налаштування довірених осіб змінено.',
+
+    'Could not send the message to the group channel {name}.' => 'Не вдалося надіслати повідомлення в груповий канал {name}.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => 'Не вдалося надіслати частину {part} з {parts} у груповий канал {name}.',
+    'No more attempts will be made.' => 'Інших спроб не буде.',
+    'It will be tried again on the next run.' => 'Наступну спробу буде зроблено під час наступного запуску.',
+    'The message to the group channel {name} was sent by another node.' => 'Повідомлення в груповий канал {name} надіслав інший вузол.',
+    'The message was sent to the group channel {name} in {n} part.' => ['Повідомлення надіслано в груповий канал {name} в {n} частині.', 'Повідомлення надіслано в груповий канал {name} у {n} частинах.', 'Повідомлення надіслано в груповий канал {name} у {n} частинах.'],
+    'The group channel {name} was added.' => 'Груповий канал {name} додано.',
+    'The group channel {name} was deleted.' => 'Груповий канал {name} видалено.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Інший вузол припинив надсилати повідомлення в груповий канал {name}, тож надалі його надсилає цей вузол.',
+    'The group channel {name} was sent the correction.' => 'У груповий канал {name} надіслано виправлення.',
+    'Could not send the correction to the group channel {name}.' => 'Не вдалося надіслати виправлення в груповий канал {name}.',
 ];

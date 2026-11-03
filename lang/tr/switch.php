@@ -137,4 +137,6 @@ return [
     'Will be asked {when}' => 'Şu zamanda sorulacak: {when}',
     'Asked {when}' => 'Sorulma zamanı: {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Güvenilir kişi {n}: kendisinden öncekilerden sonra, iyi olup olmadığın sorulur. Kimse iyi olduğunu onaylamazsa kendi mesajı gönderilir.',
+
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Sen de en yakın kişin de iyi olduğunu onaylamazsa grup için yazdığın mesaj gönderilir. Oraya başka hiçbir şey gönderilmez; yalnızca sonradan durum bildirimi verirsen düzeltmen gönderilir.',
 ];

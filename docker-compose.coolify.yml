@@ -1,0 +1,51 @@
+# Build from source and run, for Coolify or any host that has the repository checked out.
+# Coolify: build pack "Docker Compose", compose file /docker-compose.coolify.yml.
+# The web listens on DPS_PORT (default 8080); put a reverse proxy with HTTPS in front of it.
+# The NAS guide uses docker-compose.yml instead, which pulls the published image.
+
+x-healthcheck: &hc
+  interval: 60s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+services:
+  web:
+    build: .
+    image: deathplanswitch:source
+    init: true
+    restart: unless-stopped
+    command: web
+    ports: ["${DPS_PORT:-8080}:80"]
+    volumes: ["dps-data:/data"]
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      DPS_APPRISE_URL: http://apprise:8000
+    healthcheck:
+      test: ["CMD", "php", "/var/www/html/bin/healthcheck.php", "web"]
+      <<: *hc
+
+  scheduler:
+    build: .
+    image: deathplanswitch:source
+    init: true
+    restart: unless-stopped
+    command: scheduler
+    volumes: ["dps-data:/data"]
+    environment:
+      TZ: ${TZ:-Europe/Warsaw}
+      DPS_APPRISE_URL: http://apprise:8000
+      HEARTBEAT_URL: ${HEARTBEAT_URL:-}
+    healthcheck:
+      test: ["CMD", "php", "/var/www/html/bin/healthcheck.php", "scheduler"]
+      <<: *hc
+
+  apprise:
+    image: caronc/apprise:2.0.2
+    init: true
+    restart: unless-stopped
+    environment:
+      APPRISE_STATEFUL_MODE: disabled
+
+volumes:
+  dps-data:

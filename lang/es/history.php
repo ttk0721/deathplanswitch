@@ -83,4 +83,18 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} respondió «Algo no va bien». No se envía nada antes de tiempo y se sigue preguntando a las demás personas por turnos.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name} respondió «Todo va bien». No se preguntará a nadie más.',
     'The settings for the trusted people were changed.' => 'Se cambiaron los ajustes de las personas de confianza.',
+
+    // group channels
+    'Could not send the message to the group channel {name}.' => 'No se pudo enviar el mensaje al canal de grupo {name}.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => 'No se pudo enviar la parte {part} de {parts} al canal de grupo {name}.',
+    'No more attempts will be made.' => 'No se harán más intentos.',
+    'It will be tried again on the next run.' => 'Se volverá a intentar en la próxima ejecución.',
+    'The message to the group channel {name} was sent by another node.' => 'Otro nodo envió el mensaje al canal de grupo {name}.',
+    // plural forms: one, other
+    'The message was sent to the group channel {name} in {n} part.' => ['Se envió el mensaje al canal de grupo {name} en {n} parte.', 'Se envió el mensaje al canal de grupo {name} en {n} partes.'],
+    'The group channel {name} was added.' => 'Se añadió el canal de grupo {name}.',
+    'The group channel {name} was deleted.' => 'Se eliminó el canal de grupo {name}.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Otro nodo dejó de enviar el mensaje al canal de grupo {name}, así que este nodo continúa con el envío.',
+    'The group channel {name} was sent the correction.' => 'Se envió la rectificación al canal de grupo {name}.',
+    'Could not send the correction to the group channel {name}.' => 'No se pudo enviar la rectificación al canal de grupo {name}.',
 ];

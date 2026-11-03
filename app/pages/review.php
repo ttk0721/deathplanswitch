@@ -49,7 +49,7 @@ Web::$title = t('Yearly review: Death Plan Switch');
     <input type="checkbox" id="has-<?= e($contact['id']) ?>" name="has[]" value="<?= e($contact['id']) ?>">
     <label for="has-<?= e($contact['id']) ?>"><?= e(t('{name} still has what they need', ['name' => $contact['name']])) ?></label>
     <span class="help"><?= e(Contacts::label((string) $contact['role_label'])) ?>, <?= e($contact['email']) ?><?= $contact['phone'] !== '' ? ', ' . e($contact['phone']) : '' ?>.
-      <?= $contact['status'] !== 'confirmed' ? e(t('Not confirmed, so not written to.')) : '' ?>
+      <?= Contacts::isSilent($contact) && $contact['status'] !== 'declined' ? e(t('Not told in advance: written to only when the switch fires.')) : ($contact['status'] !== 'confirmed' ? e(t('Not confirmed, so not written to.')) : '') ?>
       <?= !empty($contact['has_needs_at']) ? e(t('Last ticked {date}.', ['date' => when($contact['has_needs_at'], (string) $config['timezone'], 'date')])) : e(t('Never ticked.')) ?>
       <a href="index.php?p=contact&amp;id=<?= e($contact['id']) ?>"><?= e(t('Read their message')) ?></a></span>
   </div>

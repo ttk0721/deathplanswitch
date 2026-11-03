@@ -110,4 +110,11 @@ return [
     'False alarm: {owner} is all right' => 'Yanlış alarm: {owner} iyi',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name}, {owner} kişisinin iyi olduğunu onayladı. Sizden başka bir şey gerekmiyor. Teşekkür ederiz.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{owner} kişisinin güvendiği biri, {owner} kişisinin iyi olduğunu onayladı. Sizden başka bir şey gerekmiyor. Teşekkür ederiz.',
+
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: grup kanallarının ve düzeltmelerin',
+    'Your switch had fired, so these group channels had received your message:' => 'Anahtarın devreye girmişti; bu yüzden şu grup kanalları mesajını aldı:',
+    '{name}: a correction was sent.' => '{name}: düzeltme gönderildi.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: düzeltme yok; çünkü bu kanal için kapatmıştın.',
+    '{name}: the correction could not be sent.' => '{name}: düzeltme gönderilemedi.',
+    '{name}: a correction will be sent shortly.' => '{name}: düzeltme kısa süre içinde gönderilecek.',
 ];

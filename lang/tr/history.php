@@ -82,4 +82,16 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name}: “Bir sorun var” yanıtı verildi. Erkenden bir şey gönderilmez; diğerlerine sırayla sorulmaya devam edilir.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name}: “Her şey yolunda” yanıtı verildi. Başka kimseye sorulmayacak.',
     'The settings for the trusted people were changed.' => 'Güvenilir kişilerin ayarları değiştirildi.',
+
+    'Could not send the message to the group channel {name}.' => '{name} grup kanalına mesaj gönderilemedi.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => '{name} grup kanalına {part}. bölüm ({parts} bölümden) gönderilemedi.',
+    'No more attempts will be made.' => 'Başka deneme yapılmayacak.',
+    'It will be tried again on the next run.' => 'Bir sonraki çalıştırmada yeniden denenecek.',
+    'The message to the group channel {name} was sent by another node.' => '{name} grup kanalına mesajı başka bir düğüm gönderdi.',
+    'The message was sent to the group channel {name} in {n} part.' => ['Mesaj, {name} grup kanalına {n} parça hâlinde gönderildi.', 'Mesaj, {name} grup kanalına {n} parça hâlinde gönderildi.'],
+    'The group channel {name} was added.' => '{name} grup kanalı eklendi.',
+    'The group channel {name} was deleted.' => '{name} grup kanalı silindi.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Başka bir düğüm {name} grup kanalına mesaj göndermeyi bıraktı; bu yüzden gönderime bu düğüm devam ediyor.',
+    'The group channel {name} was sent the correction.' => '{name} grup kanalına düzeltme gönderildi.',
+    'Could not send the correction to the group channel {name}.' => '{name} grup kanalına düzeltme gönderilemedi.',
 ];

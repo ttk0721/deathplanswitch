@@ -58,6 +58,78 @@ final class Coordinator
         return $now >= $dueAt + $rank * $c['step_delay_min'] * 60;
     }
 
+    public function nodeId(): string
+    {
+        return $this->nodeId;
+    }
+
+    /** Seconds this node waits after a lower-ranked node before it acts on a step: 0 for the first node. */
+    public function rankDelay(): int
+    {
+        if (!Cluster::enabled($this->store)) {
+            return 0;
+        }
+        return Cluster::rank($this->store, $this->nodeId) * Cluster::read($this->store)['step_delay_min'] * 60;
+    }
+
+    /**
+     * What peers report of one group channel's delivery in cycle $cycleKey: the frozen text a peer sends,
+     * and the latest lease on it. A record whose hash does not match its text is not believed. When peers
+     * froze different texts, the one with a lease wins, then the one frozen first.
+     *
+     * @return array{hash: string, text: string, limit: int, utf16: bool, frozen_at: int, lease: ?string, lease_at: ?int}|null
+     */
+    public function peerGroup(int $cycleKey, string $id): ?array
+    {
+        $best = null;
+        $records = [];
+        foreach ($this->peerCycles($cycleKey) as $cy) {
+            $g = $cy['groups'][$id] ?? null;
+            if (!is_array($g) || !is_string($g['hash'] ?? null) || !is_string($g['text'] ?? null)
+                || !hash_equals((string) $g['hash'], hash('sha256', $g['text']))
+                || !is_int($g['limit'] ?? null) || $g['limit'] < 100 || $g['limit'] > 40000
+                || !is_int($g['frozen_at'] ?? null) || mb_strlen($g['text']) > 2 * Groups::TEXT_MAX) {
+                continue;
+            }
+            $lease = is_string($g['lease'] ?? null) && preg_match('/^[A-Za-z0-9_-]{1,64}$/D', $g['lease']) === 1 && is_int($g['lease_at'] ?? null)
+                ? [$g['lease'], $g['lease_at']] : [null, null];
+            $records[] = ['hash' => $g['hash'], 'text' => $g['text'], 'limit' => $g['limit'], 'utf16' => ($g['utf16'] ?? false) === true,
+                'frozen_at' => $g['frozen_at'], 'lease' => $lease[0], 'lease_at' => $lease[1]];
+        }
+        // Better: has a lease, then frozen earlier, then the smaller hash, so every node picks the same one.
+        $rank = static fn (array $r): array => [$r['lease'] === null ? 1 : 0, $r['frozen_at'], $r['hash']];
+        foreach ($records as $r) {
+            if ($best === null || $rank($r) < $rank($best)) {
+                $best = $r;
+            }
+        }
+        if ($best === null) {
+            return null;
+        }
+        // The latest lease on that text: a node that took the delivery over holds it now.
+        foreach ($records as $r) {
+            if ($r['hash'] === $best['hash'] && $r['lease'] !== null
+                && ($best['lease'] === null || [$r['lease_at'], $r['lease']] > [$best['lease_at'], $best['lease']])) {
+                $best['lease'] = $r['lease'];
+                $best['lease_at'] = $r['lease_at'];
+            }
+        }
+        return $best;
+    }
+
+    /** The earliest time any peer reports having sent the correction $step, or null. */
+    public function peerCorrection(string $step): ?int
+    {
+        $best = null;
+        foreach ($this->peers() as $p) {
+            $t = $p['state']['corrections'][$step] ?? null;
+            if (is_int($t) && ($best === null || $t < $best)) {
+                $best = $t;
+            }
+        }
+        return $best;
+    }
+
     /** Federation is on and no peer was heard from in the last 6 hours. */
     public function isolated(int $now): bool
     {

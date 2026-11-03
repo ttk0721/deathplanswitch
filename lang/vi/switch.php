@@ -136,4 +136,5 @@ return [
     'Will be asked {when}' => 'Sẽ được hỏi {when}',
     'Asked {when}' => 'Đã hỏi {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Người đáng tin cậy {n}: được hỏi xem bạn có ổn không, sau những người đứng trước. Nhận tin nhắn của họ nếu không ai xác nhận rằng bạn vẫn ổn.',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Nhận tin nhắn của bạn dành cho nhóm nếu cả bạn lẫn người thân nhất của bạn đều không xác nhận rằng bạn vẫn ổn. Không có gì khác được gửi đến đó, ngoại trừ lời đính chính của bạn nếu sau đó bạn check-in.',
 ];

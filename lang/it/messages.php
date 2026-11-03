@@ -111,4 +111,12 @@ return [
     'False alarm: {owner} is all right' => 'Falso allarme: {owner} sta bene',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} ha confermato che {owner} sta bene. Non deve fare altro. Grazie.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Una persona di fiducia di {owner} ha confermato che {owner} sta bene. Non deve fare altro. Grazie.',
+
+    // group channels
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: i tuoi canali di gruppo e le rettifiche',
+    'Your switch had fired, so these group channels had received your message:' => 'Il tuo interruttore era scattato, quindi questi canali di gruppo hanno ricevuto il tuo messaggio:',
+    '{name}: a correction was sent.' => '{name}: è stata inviata una rettifica.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: nessuna rettifica, perché l’hai disattivata per questo canale.',
+    '{name}: the correction could not be sent.' => '{name}: non è stato possibile inviare la rettifica.',
+    '{name}: a correction will be sent shortly.' => '{name}: una rettifica sarà inviata a breve.',
 ];

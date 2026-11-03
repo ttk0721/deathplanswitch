@@ -12,8 +12,8 @@ return [
     'More' => '더보기',
     'Menu' => '메뉴',
     'Theme' => '테마',
-    'Dark' => '어둡게',
-    'Light' => '밝게',
+    'Dark' => '어두운 모드',
+    'Light' => '밝은 모드',
     'System' => '시스템',
     'the primary' => '기본 노드',
     'This node mirrors {name}. Change settings there; check-ins here count everywhere.' => '이 노드는 {name}의 사본입니다. 설정은 그곳에서 변경해 주세요. 여기서 한 체크인은 모든 노드에서 인정됩니다.',
@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => '{when}에 문의 예정',
     'Asked {when}' => '문의 일시: {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => '신뢰하는 분 {n}: 앞선 분들 다음에 괜찮으신지 여쭙니다. 아무도 잘 지내고 있다고 확인하지 않으면 이 분의 메시지가 전달됩니다.',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => '본인도, 가장 가까운 분도 잘 지내고 있다고 확인하지 않으면 그룹에 보낼 메시지가 전송됩니다. 그 밖의 내용은 전송되지 않으며, 이후 체크인한 경우에만 정정 메시지가 전송됩니다.',
 ];

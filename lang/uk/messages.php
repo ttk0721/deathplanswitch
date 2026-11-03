@@ -110,4 +110,11 @@ return [
     'False alarm: {owner} is all right' => 'Помилкова тривога: у {owner} усе гаразд',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name}: підтверджено, що у {owner} усе гаразд. Від вас більше нічого не потрібно. Дякуємо.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Одна з довірених осіб підтвердила, що у {owner} усе гаразд. Від вас більше нічого не потрібно. Дякуємо.',
+
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: твої групові канали та виправлення',
+    'Your switch had fired, so these group channels had received your message:' => 'Твій перемикач спрацював, тож ці групові канали отримали твоє повідомлення:',
+    '{name}: a correction was sent.' => '{name}: виправлення надіслано.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: без виправлення, бо цю опцію вимкнено для цього каналу.',
+    '{name}: the correction could not be sent.' => '{name}: не вдалося надіслати виправлення.',
+    '{name}: a correction will be sent shortly.' => '{name}: виправлення буде надіслано найближчим часом.',
 ];

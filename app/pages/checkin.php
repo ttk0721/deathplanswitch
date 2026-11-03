@@ -34,6 +34,10 @@ Web::$title = t('Check in: Death Plan Switch');
 <p><?= e($result['told']
     ? t('Your switch had fired. Everyone who was contacted has now been told it was a false alarm: {names}.', ['names' => implode(', ', $result['told'])])
     : t('Your switch had fired. Everyone who was contacted has now been told it was a false alarm.')) ?></p>
+<?php if (!empty($result['groups'])): ?>
+<p><?= e(t('Your switch had fired, so these group channels had received your message:')) ?></p>
+<ul class="group-corrections"><?php foreach ($result['groups'] as $group): ?><li><?= e(Messages::correctionLine($group)) ?></li><?php endforeach ?></ul>
+<?php endif ?>
 <p><?= t('Your contacts have read their messages, so any pointer in them has been seen. {link} to review what needs changing.', ['link' => '<a href="index.php">' . e(t('Sign in')) . '</a>']) ?></p>
 <?php elseif ($result['told']): ?>
 <p><?= e(count($result['told']) === 1

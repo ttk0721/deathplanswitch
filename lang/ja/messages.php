@@ -101,4 +101,10 @@ return [
     'False alarm: {owner} is all right' => '誤報でした: {owner} さんはご無事です',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} が、{owner} さんのご無事を確認しました。これ以上、していただくことはありません。ありがとうございました。',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{owner} さんが信頼する方のお一人が、{owner} さんのご無事を確認しました。これ以上、していただくことはありません。ありがとうございました。',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: グループチャンネルと訂正について',
+    'Your switch had fired, so these group channels had received your message:' => 'スイッチが作動したため、次のグループチャンネルに、あなたのメッセージが送られました。',
+    '{name}: a correction was sent.' => '{name}: 訂正を送信しました。',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: このチャンネルでは訂正をオフにしているため、送信していません。',
+    '{name}: the correction could not be sent.' => '{name}: 訂正を送信できませんでした。',
+    '{name}: a correction will be sent shortly.' => '{name}: まもなく訂正を送信します。',
 ];

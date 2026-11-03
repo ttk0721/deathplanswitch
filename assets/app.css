@@ -516,6 +516,7 @@ select { width: auto; max-width: 100%; }
 .tick input { width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--brand); }
 .tick label { margin: 0; font-size: 13px; color: var(--text); }
 .tick .help { grid-column: 2; }
+.tick input:disabled, .tick input:disabled + label { color: var(--text-2); cursor: not-allowed; }
 
 /* Three levels: filled, outlined, flat. */
 .button, button {

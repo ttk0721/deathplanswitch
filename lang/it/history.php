@@ -83,4 +83,18 @@ return [
     '{name} answered "Something\'s wrong". Nothing is sent early; the others are still asked in turn.' => '{name} ha risposto «Qualcosa non va». Non viene inviato nulla in anticipo e le altre persone continuano a essere interpellate una dopo l’altra.',
     '{name} answered "All fine". Nobody else will be asked.' => '{name} ha risposto «Va tutto bene». Non verrà chiesto a nessun altro.',
     'The settings for the trusted people were changed.' => 'Le impostazioni delle persone di fiducia sono state modificate.',
+
+    // group channels
+    'Could not send the message to the group channel {name}.' => 'Non è stato possibile inviare il messaggio al canale di gruppo {name}.',
+    'Could not send part {part} of {parts} to the group channel {name}.' => 'Non è stato possibile inviare la parte {part} di {parts} al canale di gruppo {name}.',
+    'No more attempts will be made.' => 'Non ci saranno altri tentativi.',
+    'It will be tried again on the next run.' => 'Verrà riprovato alla prossima esecuzione.',
+    'The message to the group channel {name} was sent by another node.' => 'Il messaggio al canale di gruppo {name} è stato inviato da un altro nodo.',
+    // plural forms: one, other
+    'The message was sent to the group channel {name} in {n} part.' => ['Il messaggio è stato inviato al canale di gruppo {name} in {n} parte.', 'Il messaggio è stato inviato al canale di gruppo {name} in {n} parti.'],
+    'The group channel {name} was added.' => 'Il canale di gruppo {name} è stato aggiunto.',
+    'The group channel {name} was deleted.' => 'Il canale di gruppo {name} è stato eliminato.',
+    'Another node stopped sending the message to the group channel {name}, so this node goes on with it.' => 'Un altro nodo ha smesso di inviare il messaggio al canale di gruppo {name}, quindi questo nodo prosegue l’invio.',
+    'The group channel {name} was sent the correction.' => 'La rettifica è stata inviata al canale di gruppo {name}.',
+    'Could not send the correction to the group channel {name}.' => 'Non è stato possibile inviare la rettifica al canale di gruppo {name}.',
 ];

@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => '将于 {when} 询问',
     'Asked {when}' => '询问时间：{when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => '信任的人第 {n} 位：在排在前面的人之后被询问你是否一切安好。如果没有人确认你安好，将收到属于他们的消息。',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => '如果你和你最亲近的人都没有确认你一切安好，将发送你为该群组写的消息。除此之外绝不会向那里发送任何内容；如果之后你报了平安，则会发送你的更正说明。',
 ];

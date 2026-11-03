@@ -39,9 +39,10 @@ if (Web::posted() && Web::post('action') === 'invite') {
 }
 
 // Names and ids only: the page never hands emails or phone numbers to the script.
+// A contact not to be told in advance cannot hold packages, so they are not offered.
 $people = array_map(
     static fn (array $c): array => ['id' => (string) $c['id'], 'name' => (string) $c['name']],
-    $engine->contacts()->all()
+    array_values(array_filter($engine->contacts()->all(), static fn (array $c): bool => !Contacts::isSilent($c)))
 );
 $flags = JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT;
 

@@ -9,5 +9,5 @@ data/**
 .env*
 .gitignore
 Dockerfile
-docker-compose.yml
+docker-compose*.yml
 config.local.php

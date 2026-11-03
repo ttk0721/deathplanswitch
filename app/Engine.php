@@ -69,6 +69,7 @@ final class Engine
             'after_fire_at' => null,
             'all_clear_queue' => [],
             'trusted_clear_queue' => [],
+            'group_corrections' => [],
         ];
     }
 
@@ -584,12 +585,15 @@ final class Engine
         $this->deliverFired($state, $config, $did);
     }
 
-    /** Send each confirmed contact their message, next of kin first. Retries anyone not yet reached. */
+    /**
+     * Send each confirmed contact, and each contact not told in advance, their message, next of kin first.
+     * Then the group channels. Retries anyone not yet reached.
+     */
     private function deliverFired(array &$state, array $config, array &$did): void
     {
         $all = $this->contacts->all();
         $vaultContacts = array_filter(array_column((new Vault($this->store))->read()['recipients'], 'contact_id'), 'is_string');
-        foreach ($this->contacts->confirmed() as $contact) {
+        foreach ($this->contacts->recipients() as $contact) {
             if (isset($state['cycle']['notified'][$contact['id']])) {
                 continue;
             }
@@ -636,6 +640,9 @@ final class Engine
             }
         }
 
+        // Group channels come after every contact: a slow or broken one never holds a person's message back.
+        $this->deliverGroups($state, $config, $did);
+
         // A node that only adopted deliveries leaves the owner notice to the node that sent them.
         $ownerNoticeMine = !$this->federated() || !empty($state['cycle']['own_notified']);
         if ($state['cycle']['owner_told_fired_at'] === null && $state['cycle']['notified'] !== [] && $ownerNoticeMine) {
@@ -646,6 +653,7 @@ final class Engine
                     $names[] = $contact['name'];
                 }
             }
+            array_push($names, ...self::groupsSent($state['cycle'], (new Groups($this->store))->all()));
             $state['cycle']['tokens'][] = $record;
             if ($this->outbox->send(
                 $this->ownerAddresses($config),
@@ -657,6 +665,336 @@ final class Engine
         }
     }
 
+    /** Seconds after this node's first attempt at a group channel before it stops trying. */
+    private const GROUP_GIVE_UP = 72 * 3600;
+    /** Seconds a delivery's lease holder may go without progress before another node takes over, on top of that node's rank delay. */
+    private const GROUP_LEASE_IDLE = 1800;
+
+    /**
+     * Send each group channel its message, part by part and in order. A part is sent once: the parts
+     * already delivered, here or by another node, are skipped, so a retry starts at the first part
+     * still missing. A failure is logged and tried again on the next run, for 72 hours after the first attempt.
+     *
+     * The text is filled in once, at the first attempt, and frozen with its SHA-256 in the cycle: every later
+     * run, and every node, sends that same text, so the parts always join up. A node that sees a peer's frozen
+     * text adopts it. In a cluster, one node holds the lease on a delivery and is the only one to send parts;
+     * another takes over only after the holder made no progress for GROUP_LEASE_IDLE plus its own rank delay.
+     */
+    private function deliverGroups(array &$state, array $config, array &$did): void
+    {
+        $groups = (new Groups($this->store))->all();
+        if ($groups === []) {
+            return;
+        }
+        $key = (int) ($state['cycle']['due_at'] ?? 0);
+        $firedAt = (int) ($state['cycle']['fired_at'] ?? Clock::now());
+        $fed = $this->federated();
+        $me = $fed ? $this->coordinator->nodeId() : '';
+        $rankDelay = $fed ? $this->coordinator->rankDelay() : 0;
+        $floor = $fed ? $this->deliverFloor($state['cycle']) : 0;
+        $vars = null;
+
+        foreach ($groups as $group) {
+            $id = (string) ($group['id'] ?? '');
+            $row = (array) ($state['cycle']['groups'][$id] ?? []);
+            if ($id === '' || !empty($row['gave_up']) || !empty($row['done_at'])) {
+                continue;
+            }
+            $now = Clock::now();
+            $sent = self::sentParts($row);
+            $peer = $fed ? $this->coordinator->peerGroup($key, $id) : null;
+            // A peer's frozen text is adopted rather than one rendered here, unless this node already sent part of its own.
+            if ($peer !== null && ($row['hash'] ?? null) !== $peer['hash'] && $sent === []
+                && (!isset($row['hash']) || $peer['lease'] !== null || [$peer['frozen_at'], $peer['hash']] < [(int) ($row['frozen_at'] ?? 0), (string) $row['hash']])) {
+                $row = ['hash' => $peer['hash'], 'text' => $peer['text'], 'limit' => $peer['limit'], 'utf16' => $peer['utf16'], 'frozen_at' => $peer['frozen_at']]
+                    + array_intersect_key($row, ['first_at' => 0, 'attempts' => 0]);
+            }
+            if (!isset($row['hash'])) {
+                if ($fed && $now < $firedAt + $rankDelay) {
+                    continue; // a node ranked before this one starts the delivery
+                }
+                // Frozen at the first attempt: worked out as of the firing, and never again.
+                $vars ??= $this->groupVars($config, $state, $firedAt);
+                $text = Groups::message($group, $vars);
+                $channel = (array) ($group['channel'] ?? []);
+                $row = ['hash' => hash('sha256', $text), 'text' => $text, 'limit' => Groups::limit($channel), 'utf16' => Groups::utf16($channel), 'frozen_at' => $now];
+            }
+            $prefix = 'group:' . $id . ':' . substr((string) $row['hash'], 0, 8) . ':';
+            $parts = Groups::split((string) $row['text'], (int) $row['limit'], (bool) $row['utf16']);
+            $total = count($parts);
+            if ($fed) {
+                foreach (range(1, $total) as $n) {
+                    $t = isset($sent[$n]) ? null : $this->coordinator->peerDid($key, $prefix . $n, $floor);
+                    if ($t !== null) {
+                        $sent[$n] = $t;
+                        $state['cycle']['steps'][$prefix . $n] = $t;
+                    }
+                }
+            }
+            $row = ['parts' => $total, 'sent' => $sent] + $row;
+
+            // The lease: only its holder sends; another node takes over once the holder has stalled.
+            if ($fed && array_diff(range(1, $total), array_keys($sent)) !== []) {
+                $lease = self::groupLease($row, $peer);
+                if ($lease === null && $now < $firedAt + $rankDelay) {
+                    $state['cycle']['groups'][$id] = $row;
+                    continue;
+                }
+                if ($lease !== null && $lease['node'] !== $me) {
+                    $progress = max([$lease['at'], ...array_values($sent)]);
+                    if ($now < $progress + self::GROUP_LEASE_IDLE + $rankDelay) {
+                        $state['cycle']['groups'][$id] = $row;
+                        continue;
+                    }
+                    $this->store->log('group.takeover', t('Another node stopped sending the message to the group channel {name}, so this node goes on with it.', ['name' => (string) $group['name']]));
+                }
+                if ($lease === null || $lease['node'] !== $me) {
+                    $row['lease'] = $me;
+                    $row['lease_at'] = $now;
+                    $state['cycle']['steps'][$prefix . 'lease'] = $now;
+                }
+            }
+            $state['cycle']['groups'][$id] = $row;
+            $this->saveState($state);
+
+            $channel = ['label' => (string) $group['name']] + (array) ($group['channel'] ?? []);
+            $sentNow = 0;
+            $error = '';
+            foreach ($parts as $i => $text) {
+                $n = $i + 1;
+                if (isset($sent[$n])) {
+                    continue;
+                }
+                if (!$this->outbox->hasChannelBudget()) {
+                    break; // this run's time for channels is used up: the rest goes on the next run
+                }
+                $row['first_at'] ??= Clock::now();
+                $error = $this->outbox->sendPart($channel, $text, $sentNow > 0);
+                if ($error !== '') {
+                    break;
+                }
+                $sent[$n] = Clock::now();
+                $state['cycle']['steps'][$prefix . $n] = $sent[$n];
+                $sentNow++;
+                // Saved after every part, so a crash never sends a part twice.
+                $state['cycle']['groups'][$id] = ['sent' => $sent] + $row;
+                $this->saveState($state);
+            }
+
+            $row = ['sent' => $sent] + $row;
+            $name = (string) $group['name'];
+            $left = array_diff(range(1, $total), array_keys($sent));
+            if ($error !== '') {
+                $row['attempts'] = (int) ($row['attempts'] ?? 0) + 1;
+                $row['error'] = mb_substr($error, 0, 300);
+                $part = (int) min($left);
+                $row['gave_up'] = Clock::now() - (int) $row['first_at'] >= self::GROUP_GIVE_UP;
+                $this->store->log('group.failed', ($total === 1
+                    ? t('Could not send the message to the group channel {name}.', ['name' => $name])
+                    : t('Could not send part {part} of {parts} to the group channel {name}.', ['part' => $part, 'parts' => $total, 'name' => $name]))
+                    . ' ' . mb_substr($error, 0, 300) . ' '
+                    . ($row['gave_up'] ? t('No more attempts will be made.') : t('It will be tried again on the next run.')));
+                $did[] = "Could not send part {$part} of {$total} to the group channel {$name}.";
+            } elseif ($left === []) {
+                $row['done_at'] = Clock::now();
+                $this->store->log('group.sent', $sentNow === 0
+                    ? t('The message to the group channel {name} was sent by another node.', ['name' => $name])
+                    : tn('The message was sent to the group channel {name} in {n} part.', 'The message was sent to the group channel {name} in {n} parts.', $total, ['name' => $name]));
+                $did[] = "Sent the group channel {$name} its message in {$total} part(s).";
+            }
+            $state['cycle']['groups'][$id] = $row;
+            $this->saveState($state);
+        }
+    }
+
+    /** @return array<int, int> the parts of a group's message already delivered, by number */
+    private static function sentParts(array $row): array
+    {
+        $sent = [];
+        foreach ((array) ($row['sent'] ?? []) as $n => $at) {
+            $sent[(int) $n] = (int) $at;
+        }
+        return $sent;
+    }
+
+    /**
+     * Who holds the lease on a group delivery: the latest lease on the same frozen text, here or on a peer.
+     *
+     * @return array{node: string, at: int}|null
+     */
+    private static function groupLease(array $row, ?array $peer): ?array
+    {
+        $best = null;
+        if (is_string($row['lease'] ?? null) && is_int($row['lease_at'] ?? null)) {
+            $best = ['node' => $row['lease'], 'at' => $row['lease_at']];
+        }
+        if ($peer !== null && $peer['hash'] === ($row['hash'] ?? null) && $peer['lease'] !== null
+            && ($best === null || [$peer['lease_at'], $peer['lease']] > [$best['at'], $best['node']])) {
+            $best = ['node' => $peer['lease'], 'at' => (int) $peer['lease_at']];
+        }
+        return $best;
+    }
+
+    /** The placeholder values for a group text, as of the firing. */
+    private function groupVars(array $config, array $state, int $firedAt): array
+    {
+        $vars = Messages::vars($config, $state, $this->contacts->all(), null);
+        $last = $state['last_checkin_at'] ?? null;
+        if ($last) {
+            $vars['{days}'] = (string) max(0, intdiv($firedAt - (int) $last, Schedule::DAY));
+        }
+        return $vars;
+    }
+
+    /**
+     * Queue a correction for each group channel that received at least one part of the message
+     * in a fired cycle that is now closing. Each is keyed by its step, group:<id>:<hash8>:correction.
+     */
+    private function queueCorrections(array &$state, array $cycle): void
+    {
+        $key = (int) ($cycle['due_at'] ?? 0);
+        $fed = $this->federated();
+        $peerSteps = $fed ? (array) ($this->coordinator->peerCycle($key)['steps'] ?? []) : [];
+        foreach ((new Groups($this->store))->all() as $group) {
+            $id = (string) ($group['id'] ?? '');
+            $row = (array) ($cycle['groups'][$id] ?? []);
+            $hash = $row['hash'] ?? ($fed ? ($this->coordinator->peerGroup($key, $id)['hash'] ?? null) : null);
+            if ($id === '' || !is_string($hash)) {
+                continue;
+            }
+            $prefix = 'group:' . $id . ':' . substr($hash, 0, 8) . ':';
+            $received = self::sentParts($row) !== [];
+            foreach ($peerSteps as $step => $t) {
+                if (!$received && str_starts_with((string) $step, $prefix) && ctype_digit(substr((string) $step, strlen($prefix)))) {
+                    $received = true;
+                }
+            }
+            if (!$received || isset($state['group_corrections'][$prefix . 'correction'])) {
+                continue;
+            }
+            $state['group_corrections'][$prefix . 'correction'] = [
+                'id' => $id,
+                'name' => (string) $group['name'],
+                'at' => Clock::now(),
+                'off' => ($group['correction'] ?? true) === false,
+                'sent_at' => null,
+                'by_peer' => false,
+                'first_at' => null,
+                'gave_up' => false,
+                'owner_told' => false,
+            ];
+        }
+    }
+
+    /**
+     * Send the queued corrections, each once: a correction another node reports sent is not sent again, and
+     * a node ranked after the first waits its rank delay for it. When none is left waiting, the owner is
+     * emailed the list, by the node that sent them.
+     *
+     * @return list<array{name: string, status: string}> every correction not yet reported to the owner, with how it stands
+     */
+    private function sendCorrections(array &$state, array $config): array
+    {
+        $queue = (array) ($state['group_corrections'] ?? []);
+        if ($queue === []) {
+            return [];
+        }
+        $fed = $this->federated();
+        $rankDelay = $fed ? $this->coordinator->rankDelay() : 0;
+        $book = new Groups($this->store);
+        $vars = null;
+        foreach ($queue as $step => $e) {
+            if ($e['off'] || $e['sent_at'] !== null || $e['gave_up']) {
+                continue;
+            }
+            $group = $book->find((string) $e['id']);
+            if ($group === null) {
+                $queue[$step]['gave_up'] = true; // deleted since: nothing is sent to it
+                continue;
+            }
+            $now = Clock::now();
+            if ($fed) {
+                $t = $this->coordinator->peerCorrection((string) $step);
+                if ($t !== null) {
+                    $queue[$step]['sent_at'] = $t;
+                    $queue[$step]['by_peer'] = true;
+                    continue;
+                }
+                if ($now < (int) $e['at'] + $rankDelay) {
+                    continue;
+                }
+            }
+            if (!$this->outbox->hasChannelBudget()) {
+                continue;
+            }
+            $vars ??= Messages::vars($config, $state, $this->contacts->all(), null);
+            $queue[$step]['first_at'] ??= $now;
+            $channel = ['label' => (string) $group['name']] + (array) ($group['channel'] ?? []);
+            $error = $this->outbox->sendPart($channel, Groups::correction($group, $vars), false);
+            $name = (string) $group['name'];
+            if ($error === '') {
+                $queue[$step]['sent_at'] = Clock::now();
+                $this->store->log('group.corrected', t('The group channel {name} was sent the correction.', ['name' => $name]));
+            } else {
+                $queue[$step]['gave_up'] = Clock::now() - (int) $queue[$step]['first_at'] >= self::GROUP_GIVE_UP;
+                $this->store->log('group.failed', t('Could not send the correction to the group channel {name}.', ['name' => $name])
+                    . ' ' . mb_substr($error, 0, 300) . ' '
+                    . ($queue[$step]['gave_up'] ? t('No more attempts will be made.') : t('It will be tried again on the next run.')));
+            }
+            // Saved after each one, so a crash never sends a correction twice.
+            $state['group_corrections'] = $queue;
+            $this->saveState($state);
+        }
+
+        $report = [];
+        $settled = true;
+        $mine = !$fed;
+        $peerSent = false;
+        foreach ($queue as $e) {
+            if ($e['owner_told']) {
+                continue;
+            }
+            $status = $e['off'] ? 'off' : ($e['sent_at'] !== null ? 'sent' : ($e['gave_up'] ? 'failed' : 'pending'));
+            $settled = $settled && $status !== 'pending';
+            $mine = $mine || ($status === 'sent' && !$e['by_peer']);
+            $peerSent = $peerSent || ($status === 'sent' && $e['by_peer']);
+            $report[] = ['name' => (string) $e['name'], 'status' => $status];
+        }
+        // When no node sent any, the first node tells the owner.
+        $mine = $mine || (!$peerSent && $rankDelay === 0);
+        if ($report !== [] && $settled) {
+            // Only the node that sent corrections tells the owner, so the owner gets one email.
+            if (!$mine || $this->outbox->send($this->ownerAddresses($config), Messages::ownerGroupsCorrected($report))) {
+                foreach ($queue as $step => $e) {
+                    $queue[$step]['owner_told'] = true;
+                }
+            }
+        }
+        // Kept a month, so a peer that was away still sees which corrections went.
+        $queue = array_filter($queue, static fn (array $e): bool => !$e['owner_told'] || (int) $e['at'] > Clock::now() - 30 * Schedule::DAY);
+        $state['group_corrections'] = $queue;
+        $this->saveState($state);
+        return $report;
+    }
+
+    /**
+     * The names of the group channels whose whole message has gone out in this cycle.
+     *
+     * @param array<int, array> $groups
+     * @return string[]
+     */
+    public static function groupsSent(?array $cycle, array $groups): array
+    {
+        $names = [];
+        foreach ($groups as $group) {
+            $row = (array) ($cycle['groups'][(string) ($group['id'] ?? '')] ?? []);
+            if (!empty($row['done_at'])) {
+                $names[] = (string) $group['name'];
+            }
+        }
+        return $names;
+    }
+
     /**
      * End the current cycle because the owner is evidently here.
      * Anyone already contacted is told it was a false alarm.
@@ -665,6 +1003,7 @@ final class Engine
      */
     private function closeCycle(array &$state, array $config): array
     {
+        $this->closedGroups = [];
         $cycle = $state['cycle'];
         if ($cycle === null) {
             return [];
@@ -682,6 +1021,8 @@ final class Engine
         $state['cycle'] = null;
         if ($cycle['stage'] === 'fired') {
             $state['after_fire_at'] = Clock::now();
+            // A group channel that received any part of the message is sent its correction.
+            $this->queueCorrections($state, $cycle);
         }
         $state['all_clear_queue'] = array_values(array_unique(array_merge(
             (array) $state['all_clear_queue'],
@@ -689,8 +1030,13 @@ final class Engine
         )));
         $this->saveState($state);
 
-        return $this->sendAllClears($state, $config);
+        $told = $this->sendAllClears($state, $config);
+        $this->closedGroups = $this->sendCorrections($state, $config);
+        return $told;
     }
+
+    /** @var list<array{name: string, status: string}> the group channels the last closed cycle had reached, and their corrections */
+    private array $closedGroups = [];
 
     /** @return string[] names told this time */
     private function sendAllClears(array &$state, array $config): array
@@ -739,6 +1085,10 @@ final class Engine
                 $did[] = 'Sent false-alarm notices to ' . implode(', ', $told) . '.';
             }
         }
+        // Corrections to group channels still to send, or still to report to the owner.
+        if ($state['group_corrections'] !== []) {
+            $this->sendCorrections($state, $config);
+        }
 
         // Re-test the data folder once a day.
         $probe = $state['probe'];
@@ -765,8 +1115,11 @@ final class Engine
             $this->saveState($state);
         }
 
-        // Yearly: ask each contact to reconfirm.
+        // Yearly: ask each contact to reconfirm. A contact not to be told in advance is never asked.
         foreach ($this->contacts->confirmed() as $contact) {
+            if (Contacts::isSilent($contact)) {
+                continue;
+            }
             $since = (int) ($contact['reconfirmed_at'] ?? $contact['confirmed_at'] ?? 0);
             if ($since === 0 || $now < $since + Schedule::YEAR) {
                 continue;
@@ -915,6 +1268,8 @@ final class Engine
             return [
                 'stage' => $stage,
                 'told' => $told,
+                // The group channels that had received the message, and where each correction stands.
+                'groups' => $this->closedGroups,
                 'next_due_at' => $state['next_due_at'],
                 'armed' => (bool) $state['armed'],
                 'paused_until' => $state['paused_until'],
@@ -949,6 +1304,7 @@ final class Engine
             return [
                 'stage' => $stage,
                 'told' => $told,
+                'groups' => $this->closedGroups,
                 'next_due_at' => $state['next_due_at'],
                 'armed' => (bool) $state['armed'],
                 'paused_until' => $state['paused_until'],
@@ -1173,7 +1529,8 @@ final class Engine
     {
         return $this->store->locked(function () use ($id, $purpose): bool {
             $contact = $this->contacts->find($id);
-            if ($contact === null) {
+            // A contact not to be told in advance is never sent an invitation.
+            if ($contact === null || Contacts::isSilent($contact)) {
                 return false;
             }
             $config = $this->config();
@@ -1318,24 +1675,26 @@ final class Engine
         $items[] = [
             'key' => 'technical',
             'label' => t('Technical helper (optional)'),
-            'ok' => $this->contacts->confirmedOfKind('technical') !== [],
+            'ok' => array_filter($this->contacts->recipients(), static fn (array $c): bool => $c['kind'] === 'technical') !== [],
             'blocking' => false,
             'hint' => $technical === [] ? t('Someone who can keep your servers, accounts or projects running.') : self::contactHint($technical[0]),
         ];
 
+        // Contacts not told in advance count without confirming. Their message must be finished like anyone's,
+        // but nothing is handed to them beforehand, so the "what they need" tick skips them.
         $unwritten = [];
         $unticked = [];
-        foreach ($this->contacts->confirmed() as $contact) {
+        foreach ($this->contacts->recipients() as $contact) {
             $text = ($contact['message']['subject'] ?? '') . ' ' . ($contact['message']['body'] ?? '')
                 . ' ' . ($contact['verify_message']['body'] ?? '');
             if (Messages::hasMarker($text)) {
                 $unwritten[] = $contact['name'];
             }
-            if (empty($contact['has_needs_at'])) {
+            if (empty($contact['has_needs_at']) && !Contacts::isSilent($contact)) {
                 $unticked[] = $contact['name'];
             }
         }
-        $any = $this->contacts->confirmed() !== [];
+        $any = $this->contacts->recipients() !== [];
         $items[] = [
             'key' => 'messages',
             'label' => t('Every message says where things are'),
@@ -1368,6 +1727,9 @@ final class Engine
 
     private static function contactHint(array $contact): string
     {
+        if (Contacts::isSilent($contact) && $contact['status'] !== 'declined') {
+            return '';
+        }
         return match ($contact['status']) {
             'declined' => t('{name} declined. Choose someone else.', ['name' => $contact['name']]),
             'confirmed' => '',
@@ -1442,6 +1804,11 @@ final class Engine
             $name = $contact['name'] ?: $contact['email'];
             if ($contact['status'] === 'declined') {
                 $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} declined and will not be contacted.', ['name' => $name])];
+            } elseif (Contacts::isSilent($contact)) {
+                // Not told in advance: nothing to confirm, but the message must still be finished.
+                if ($state['armed'] && Messages::hasMarker(($contact['message']['body'] ?? '') . ($contact['verify_message']['body'] ?? ''))) {
+                    $out[] = ['key' => 'contact', 'level' => 'bad', 'text' => t('The message for {name} still holds starter text in square brackets.', ['name' => $name])];
+                }
             } elseif ($contact['status'] === 'unconfirmed') {
                 $out[] = ['key' => 'contact', 'level' => 'warn', 'text' => t('{name} has not confirmed, so will not be contacted.', ['name' => $name])];
             } else {
@@ -1671,7 +2038,7 @@ final class Engine
     {
         $key = (int) ($state['cycle']['due_at'] ?? 0);
         $floor = $this->deliverFloor($state['cycle']);
-        foreach ($this->contacts->confirmed() as $contact) {
+        foreach ($this->contacts->recipients() as $contact) {
             $id = (string) $contact['id'];
             if (isset($state['cycle']['notified'][$id])) {
                 continue;
@@ -1796,6 +2163,27 @@ final class Engine
             if (isset($c['verify']['chain'])) {
                 $cycle['trust'] = self::trustOf((array) $c['verify']);
             }
+            // Each group channel's frozen text and who holds its delivery, so every node sends the same parts.
+            foreach ((array) ($c['groups'] ?? []) as $gid => $g) {
+                if (is_array($g) && is_string($g['hash'] ?? null) && is_string($g['text'] ?? null)) {
+                    $cycle['groups'][(string) $gid] = [
+                        'hash' => $g['hash'],
+                        'text' => $g['text'],
+                        'limit' => (int) ($g['limit'] ?? 4000),
+                        'utf16' => ($g['utf16'] ?? false) === true,
+                        'frozen_at' => (int) ($g['frozen_at'] ?? 0),
+                        'lease' => is_string($g['lease'] ?? null) ? $g['lease'] : null,
+                        'lease_at' => is_int($g['lease_at'] ?? null) ? $g['lease_at'] : null,
+                    ];
+                }
+            }
+        }
+        // The corrections sent to group channels, by step, so no other node sends one again.
+        $corrections = [];
+        foreach ((array) ($state['group_corrections'] ?? []) as $step => $e) {
+            if (is_array($e) && is_int($e['sent_at'] ?? null)) {
+                $corrections[(string) $step] = $e['sent_at'];
+            }
         }
         return [
             'node' => $nodeId,
@@ -1805,6 +2193,7 @@ final class Engine
             'armed' => (bool) $state['armed'],
             'released' => $this->released(),
             'cycle' => $cycle,
+            'corrections' => $corrections,
             // "All fine" ends a cycle, so a peer that missed it would fire. The answer stays visible until replaced.
             'vouched' => is_array($state['last_vouched'] ?? null)
                 ? ['key' => (int) $state['last_vouched']['key'], 'at' => (int) $state['last_vouched']['at'],

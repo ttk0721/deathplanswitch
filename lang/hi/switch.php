@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => 'इनसे पूछा जाएगा: {when}',
     'Asked {when}' => 'पूछा गया: {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'भरोसेमंद व्यक्ति {n}: अपने से पहले के लोगों के बाद इनसे पूछा जाता है कि क्या आप ठीक हैं। यदि कोई भी पुष्टि नहीं करता कि आप ठीक हैं, तो इन्हें इनका संदेश भेजा जाता है।',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'यदि न आप और न आपका निकटतम व्यक्ति यह पुष्टि करता है कि सब ठीक है, तो इसे समूह के लिए आपका संदेश भेजा जाता है। वहाँ इसके अलावा कुछ और कभी नहीं भेजा जाता, सिवाय आपके सुधार संदेश के, यदि आप बाद में उपस्थिति की पुष्टि कर दें।',
 ];

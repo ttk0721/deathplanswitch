@@ -93,4 +93,20 @@ return [
     // Engine: message previews
     'When you miss a check-in and its reminders' => 'Gdy pominiesz potwierdzenie i przypomnienia',
     'When the switch fires' => 'Gdy przełącznik się uruchomi',
+
+    // Contacts not told in advance, and group channels
+    '{name} is set not to be told in advance, and trusted people have to know. Turn that option off first.' => 'Osoba {name} ma ustawione „Nie powiadamiaj wcześniej”, a zaufane osoby muszą wiedzieć o przełączniku. Najpierw wyłącz tę opcję.',
+    'Your next of kin is asked first whether you are all right, so they have to know about the switch in advance.' => 'Najbliższa osoba jako pierwsza dostaje pytanie, czy wszystko u ciebie w porządku, więc musi wiedzieć o przełączniku wcześniej.',
+    'Trusted people are asked whether you are all right, so they have to know about the switch in advance. Remove them from trusted people first.' => 'Zaufane osoby dostają pytanie, czy wszystko u ciebie w porządku, więc muszą wiedzieć o przełączniku wcześniej. Najpierw usuń tę osobę z zaufanych osób.',
+    'They hold vault packages, and opening those needs a code given to them in advance. Remove them from the vault first.' => 'Ta osoba ma paczki w sejfie, a do ich otwarcia potrzebny jest kod przekazany wcześniej. Najpierw usuń ją z sejfu.',
+    '{name} is set not to be told in advance, so they cannot hold vault packages. Turn that option off on their contact page first.' => 'Osoba {name} ma ustawione „Nie powiadamiaj wcześniej”, więc nie może mieć paczek w sejfie. Najpierw wyłącz tę opcję na stronie tego kontaktu.',
+    'Enter a name for the group channel.' => 'Wpisz nazwę kanału grupowego.',
+    'The name can be at most {max} characters.' => 'Nazwa może mieć najwyżej {max} znaków.',
+    'Write the message the group channel is sent.' => 'Napisz wiadomość, którą dostanie kanał grupowy.',
+    'The message can be at most {max} characters.' => 'Wiadomość może mieć najwyżej {max} znaków.',
+    'A test was sent less than a minute ago. Try again in a minute.' => 'Test został wysłany niecałą minutę temu. Spróbuj ponownie za minutę.',
+    'This is a test message. Nothing has happened and nothing needs to be done.' => 'To jest wiadomość testowa. Nic się nie stało i nic nie trzeba robić.',
+    'You can have at most {max} group channels.' => 'Możesz mieć najwyżej {max} kanałów grupowych.',
+    'Please disregard the earlier message from {owner}: it was sent by mistake, and {owner} is fine.' => 'Prosimy nie brać pod uwagę wcześniejszej wiadomości od {owner}: została wysłana przez pomyłkę, a {owner} ma się dobrze.',
+    'A group channel message cannot use {refused}: everyone in the channel would see it. Only these fill themselves in here: {allowed}.' => 'Wiadomość do kanału grupowego nie może zawierać {refused}: zobaczyłby to każdy na kanale. Tutaj same uzupełniają się tylko: {allowed}.',
 ];

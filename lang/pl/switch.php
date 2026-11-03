@@ -137,4 +137,7 @@ return [
     'Will be asked {when}' => 'Dostanie pytanie: {when}',
     'Asked {when}' => 'Zapytano {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Zaufana osoba {n}: dostaje pytanie, czy u ciebie wszystko w porządku, po osobach przed nią. Dostaje swoją wiadomość, jeśli nikt nie potwierdzi, że jesteś cały i zdrowy.',
+
+    // group channels
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Dostaje twoją wiadomość dla grupy, jeśli ani ty, ani twoja najbliższa osoba nie potwierdzi, że jesteś cały i zdrowy. Nic innego nie jest tam nigdy wysyłane, poza twoim sprostowaniem, jeśli potem potwierdzisz obecność.',
 ];

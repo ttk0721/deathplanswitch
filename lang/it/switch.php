@@ -138,4 +138,7 @@ return [
     'Will be asked {when}' => 'Verrà interpellato: {when}',
     'Asked {when}' => 'Interpellato {when}',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => 'Persona di fiducia {n}: viene interpellata per sapere se stai bene, dopo le persone precedenti. Riceve il suo messaggio se nessuno conferma che stai bene.',
+
+    // group channels
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'Riceve il tuo messaggio per il gruppo se né tu né la tua persona più vicina confermate che stai bene. Lì non viene mai inviato altro, tranne la tua rettifica se confermi la presenza dopo.',
 ];

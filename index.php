@@ -25,5 +25,5 @@ if ($page === '' && !Web::signedIn()) {
     Web::page('public');
 }
 
-$pages = ['switch', 'login', 'contacts', 'contact', 'review', 'settings', 'history', 'vault', 'nodes', 'public'];
+$pages = ['switch', 'login', 'contacts', 'contact', 'group', 'review', 'settings', 'history', 'vault', 'nodes', 'public'];
 Web::page(in_array($page, $pages, true) ? $page : 'switch');

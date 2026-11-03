@@ -17,8 +17,12 @@ if (Web::posted()) {
     if ($book->find($id) !== null) {
         switch (Web::post('action')) {
             case 'trust':
-                $book->setTrusted($id, true);
-                Web::flash(t('Saved.'));
+                try {
+                    $book->setTrusted($id, true);
+                    Web::flash(t('Saved.'));
+                } catch (\InvalidArgumentException $e) {
+                    Web::flash($e->getMessage(), 'bad');
+                }
                 break;
             case 'untrust':
                 $book->setTrusted($id, false);
@@ -42,6 +46,7 @@ $state = $engine->state();
 $hasNok = $engine->contacts()->nok() !== null;
 $hasTechnical = array_filter($contacts, static fn (array $c): bool => $c['kind'] === 'technical') !== [];
 $reviewDue = $state['armed'] && $state['review_at'] !== null && Clock::now() >= $state['review_at'] + Schedule::YEAR;
+$groups = (new Groups(store()))->all();
 
 Web::$title = t('Contacts: Death Plan Switch');
 ?>
@@ -113,10 +118,12 @@ Web::$title = t('Contacts: Death Plan Switch');
 <?php if (in_array($contact['id'], $trustedIds, true)): ?>
       <span class="tag tag-ok"><?= e(t('Trusted person {n}', ['n' => array_search($contact['id'], $trustedIds, true) + 1])) ?></span>
 <?php endif ?>
-<?php if ($contact['status'] === 'confirmed'): ?>
-      <span class="tag tag-ok"><?= e(t('Confirmed')) ?></span>
-<?php elseif ($contact['status'] === 'declined'): ?>
+<?php if ($contact['status'] === 'declined'): ?>
       <span class="tag tag-bad"><?= e(t('Declined')) ?></span>
+<?php elseif (Contacts::isSilent($contact)): ?>
+      <span class="tag"><?= e(t('Not told in advance')) ?></span>
+<?php elseif ($contact['status'] === 'confirmed'): ?>
+      <span class="tag tag-ok"><?= e(t('Confirmed')) ?></span>
 <?php elseif (!empty($contact['confirm_sent_at'])): ?>
       <span class="tag tag-warn"><?= e(t('Asked {when}', ['when' => relative($contact['confirm_sent_at'])])) ?></span>
 <?php else: ?>
@@ -124,13 +131,15 @@ Web::$title = t('Contacts: Death Plan Switch');
 <?php endif ?>
 <?php if (Messages::hasMarker(($contact['message']['body'] ?? '') . ($contact['verify_message']['body'] ?? ''))): ?>
       <span class="tag tag-bad"><?= e(t('Message not finished')) ?></span>
+<?php elseif (Contacts::isSilent($contact)): ?>
+<?php /* nothing is handed over in advance, so there is nothing to tick */ ?>
 <?php elseif (empty($contact['has_needs_at'])): ?>
       <span class="tag tag-warn"><?= e(t('Not yet given what they need')) ?></span>
 <?php else: ?>
       <span class="tag"><?= e(t('Has what they need')) ?></span>
 <?php endif ?>
     </div>
-<?php if (!in_array($contact['id'], $trustedIds, true)): ?>
+<?php if (!in_array($contact['id'], $trustedIds, true) && !Contacts::isSilent($contact)): ?>
     <form method="post" action="index.php?p=contacts"><?= Web::csrfField() ?><input type="hidden" name="id" value="<?= e($contact['id']) ?>"><input type="hidden" name="action" value="trust"><button class="button-quiet" type="submit"><?= e(t('Add to trusted people')) ?></button></form>
 <?php endif ?>
   </article>
@@ -142,3 +151,22 @@ Web::$title = t('Contacts: Death Plan Switch');
   <p><?= e(t('Once a year you are asked to confirm each contact still has what they need. You can do it any time.')) ?> <a href="index.php?p=review"><?= e(t('Review now')) ?></a>.</p>
 </section>
 <?php endif ?>
+
+<section class="card" id="groups">
+  <h2><?= e(t('Group channels')) ?></h2>
+  <p><?= e(t('A shared place, such as a team channel or a friends\' server, sent one message of yours when the switch fires. It needs no confirmation, and it is sent nothing else: no reminders, no questions and no vault. If you check in after it went out, it is sent your correction.')) ?></p>
+<?php if ($groups !== []): ?>
+  <div class="rows">
+<?php foreach ($groups as $group): ?>
+    <div class="row">
+      <div>
+        <h3><a href="index.php?p=group&amp;id=<?= e($group['id']) ?>"><?= e($group['name']) ?></a></h3>
+        <p class="role"><code><?= e(Channels::masked((array) $group['channel'])) ?></code></p>
+      </div>
+      <div class="side"><span class="tag"><?= e(t('Group channel')) ?></span></div>
+    </div>
+<?php endforeach ?>
+  </div>
+<?php endif ?>
+  <div class="actions"><a class="button button-quiet" href="index.php?p=group"><?= e(t('Add a group channel')) ?></a></div>
+</section>

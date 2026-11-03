@@ -119,4 +119,5 @@ return [
     'Will be asked {when}' => '{when} にお尋ねします',
     'Asked {when}' => '{when} に確認を依頼',
     'Trusted person {n}: asked whether you are all right, after the people before them. Sent their message if nobody confirms you are well.' => '信頼できる方 {n}: 前の方々の次に、ご無事かどうかをお尋ねします。どなたからもご無事の確認が得られない場合、その方のメッセージが送られます。',
+    'Sent your message for the group if neither you nor your next of kin confirms you are well. Nothing else is ever sent there, except your correction if you check in afterwards.' => 'あなたも最も身近な方も、ご無事であることを確認できなかった場合に、グループ向けのメッセージが送られます。それ以外は何も送られません。ただし、その後チェックインした場合は、訂正が送られます。',
 ];

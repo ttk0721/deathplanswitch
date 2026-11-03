@@ -184,9 +184,10 @@ final class Sync
             throw new \RuntimeException('the bundle has no valid contacts');
         }
         foreach ($contacts as $c) {
-            // The chain of trusted people: a flag and an order number, or neither (older data).
+            // The chain of trusted people: a flag and an order number, or neither (older data). "Not told in advance" is a flag too.
             if (!is_array($c)
                 || (array_key_exists('trusted', $c) && !is_bool($c['trusted']))
+                || (array_key_exists('silent', $c) && !is_bool($c['silent']))
                 || (($c['trusted_order'] ?? null) !== null && (!is_int($c['trusted_order']) || $c['trusted_order'] < 1 || $c['trusted_order'] > 100000))) {
                 throw new \RuntimeException('the bundle has no valid contacts');
             }
@@ -194,9 +195,27 @@ final class Sync
         if (array_key_exists('trust', $config) && !self::validTrust($config['trust'])) {
             throw new \RuntimeException('the bundle has no valid trust settings');
         }
-        $vault = self::cleanVault($b['vault']);
+        // Group channels: a primary from before they existed sends none, and then the local list is left as it is.
+        $groups = null;
         $log = [];
-        $this->store->locked(function () use ($b, $config, $contacts, $vault, &$log): void {
+        if (array_key_exists('groups', $b)) {
+            $groups = self::cleanGroups($b['groups'], $log);
+            if ($groups === null) {
+                throw new \RuntimeException('the bundle has no valid group channels');
+            }
+        }
+        $vault = self::cleanVault($b['vault']);
+        // "Not told in advance" never goes with being asked or holding vault packages: such a contact keeps being told.
+        $vaultIds = array_filter(array_column((array) ($vault['recipients'] ?? []), 'contact_id'), 'is_string');
+        foreach ($contacts as $i => $c) {
+            if (($c['silent'] ?? false) === true
+                && (($c['kind'] ?? '') === 'nok' || ($c['trusted'] ?? false) === true || ($c['trusted_order'] ?? null) !== null
+                    || in_array($c['id'] ?? null, $vaultIds, true))) {
+                $contacts[$i]['silent'] = false;
+                $log[] = 'The primary sent contact ' . preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($c['id'] ?? '')) . ' as not told in advance, but they are asked or hold vault packages, so the flag was dropped.';
+            }
+        }
+        $this->store->locked(function () use ($b, $config, $contacts, $groups, $vault, &$log): void {
             $local = $this->store->read('config');
             foreach (self::LOCAL_CONFIG as $key) {
                 if (array_key_exists($key, $local)) {
@@ -207,6 +226,9 @@ final class Sync
             }
             $this->store->write('config', $config);
             $this->store->write('contacts', ['contacts' => $contacts]);
+            if ($groups !== null) {
+                $this->store->write('groups', ['groups' => $groups]);
+            }
             $this->store->write('vault', $vault);
             if (isset($vault['shares'])) {
                 // A secondary never holds the full release key.
@@ -234,6 +256,98 @@ final class Sync
             $log[] = 'Copied the settings, contacts and vault from the primary.';
         });
         return $log;
+    }
+
+    /**
+     * The group channels of a bundle, or null when the document itself is not a list of them. Each address
+     * passes the same checks as one the owner types in, so a bundle cannot bring in an address the form would
+     * refuse. A group that is not valid, repeats an id, or is past the limit of Groups::MAX is skipped, and
+     * $log says so; the others are kept.
+     *
+     * @param string[] $log
+     * @return list<array>|null
+     */
+    private static function cleanGroups(mixed $doc, array &$log): ?array
+    {
+        if ($doc === []) {
+            return [];
+        }
+        $list = is_array($doc) ? ($doc['groups'] ?? null) : null;
+        if (!is_array($list) || !array_is_list($list)) {
+            return null;
+        }
+        $out = [];
+        $seen = [];
+        foreach ($list as $i => $g) {
+            $why = self::groupProblem($g, $seen);
+            if ($why === null && count($out) >= Groups::MAX) {
+                $why = 'more than ' . Groups::MAX . ' group channels';
+            }
+            if ($why !== null) {
+                $log[] = 'Skipped group channel ' . ($i + 1) . ' from the primary: ' . $why . '.';
+                continue;
+            }
+            $ch = $g['channel'];
+            $name = Groups::cleanName($g['name']);
+            $seen[$g['id']] = true;
+            $out[] = [
+                'id' => $g['id'],
+                'name' => $name,
+                'channel' => [
+                    'id' => is_string($ch['id'] ?? null) && preg_match('/^ch_[0-9a-f]{10}$/', $ch['id']) === 1 ? $ch['id'] : (string) Channels::normalize(['type' => $ch['type'], 'url' => $ch['url']])['id'],
+                    'type' => $ch['type'],
+                    'url' => $ch['url'],
+                    'label' => mb_substr($name, 0, 60),
+                    'secret' => $ch['secret'] ?? null,
+                    'created_at' => (int) ($ch['created_at'] ?? 0),
+                ],
+                'text' => $g['text'],
+                'correction' => ($g['correction'] ?? true) !== false,
+                'correction_text' => is_string($g['correction_text'] ?? null) && mb_strlen($g['correction_text']) <= Groups::TEXT_MAX ? $g['correction_text'] : '',
+                'created_at' => (int) ($g['created_at'] ?? 0),
+                'updated_at' => (int) ($g['updated_at'] ?? 0),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * What is wrong with one group channel of a bundle, in a few words, or null if nothing is.
+     *
+     * @param array<string, true> $seen the ids already taken
+     */
+    private static function groupProblem(mixed $g, array $seen): ?string
+    {
+        if (!is_array($g) || !is_string($g['id'] ?? null) || preg_match('/^g_[0-9a-f]{10}$/D', $g['id']) !== 1) {
+            return 'no valid id';
+        }
+        if (isset($seen[$g['id']])) {
+            return 'the same id twice';
+        }
+        $name = is_string($g['name'] ?? null) ? Groups::cleanName($g['name']) : '';
+        if ($name === '' || mb_strlen($name) > Groups::NAME_MAX) {
+            return 'no valid name';
+        }
+        if (!is_string($g['text'] ?? null) || trim($g['text']) === '' || mb_strlen($g['text']) > Groups::TEXT_MAX) {
+            return 'no valid text';
+        }
+        $correction = is_string($g['correction_text'] ?? null) ? $g['correction_text'] : '';
+        if (Groups::refusedPlaceholders($g['text'] . ' ' . $correction) !== []) {
+            return 'a placeholder with the contacts\' details';
+        }
+        $ch = $g['channel'] ?? null;
+        if (!is_array($ch) || !is_string($ch['url'] ?? null) || !is_string($ch['type'] ?? null)) {
+            return 'no valid address';
+        }
+        $check = Channels::normalize(['type' => $ch['type'], 'url' => $ch['url'], 'label' => $name]);
+        if ($check === null || $check['url'] !== $ch['url']) {
+            return 'an address the form would refuse';
+        }
+        $secret = $ch['secret'] ?? null;
+        if ($ch['type'] === 'webhook' ? (!is_string($secret) || preg_match('/^[0-9a-f]{32}$/D', $secret) !== 1) : $secret !== null) {
+            return 'no valid signing secret';
+        }
+        return null;
     }
 
     /** The chain settings of a bundle: a known mode, an interval of "auto" or 15 to 1440 minutes, a window of 6 to 72 hours. */
@@ -350,7 +464,7 @@ final class Sync
     }
 
     /**
-     * The primary's bundle for a secondary. The version is a checksum of the four documents,
+     * The primary's bundle for a secondary. The version is a checksum of the five documents,
      * so it changes whenever any of them does. Only the primary may build one.
      */
     public static function bundle(Store $store, int $since): array
@@ -362,6 +476,7 @@ final class Sync
         $docs = [
             'config' => $store->read('config'),
             'contacts' => $store->read('contacts'),
+            'groups' => $store->read('groups'),
             'vault' => $store->read('vault'),
             'cluster' => Cluster::read($store),
         ];

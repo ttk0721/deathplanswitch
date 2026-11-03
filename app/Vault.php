@@ -46,15 +46,22 @@ final class Vault
 
     public function saveRecipient(array $r): void
     {
-        $clean = [
-            'id' => $this->id($r['id'] ?? null, 'r'),
-            'contact_id' => $this->contactId($r['contact_id'] ?? null),
-            'label' => $this->label($r['label'] ?? null),
-            'code' => $this->box($r['code'] ?? null, false, 'code'),
-            'password' => ($r['password'] ?? null) === null ? null : $this->box($r['password'], true, 'password'),
-            'owner_wrapped' => $this->sealed($r['owner_wrapped'] ?? null, 'owner_wrapped'),
-        ];
-        $this->store->locked(function () use ($clean): void {
+        $this->store->locked(function () use ($r): void {
+            // Opening a package needs a code handed over in advance, so a contact who is not to be told cannot hold one.
+            // Checked under the lock, so a contact made silent a moment ago is seen.
+            $contactId = $this->contactId($r['contact_id'] ?? null);
+            $contact = $contactId === null ? null : (new Contacts($this->store))->find($contactId);
+            if ($contact !== null && Contacts::isSilent($contact)) {
+                throw new \InvalidArgumentException(t('{name} is set not to be told in advance, so they cannot hold vault packages. Turn that option off on their contact page first.', ['name' => (string) $contact['name']]));
+            }
+            $clean = [
+                'id' => $this->id($r['id'] ?? null, 'r'),
+                'contact_id' => $contactId,
+                'label' => $this->label($r['label'] ?? null),
+                'code' => $this->box($r['code'] ?? null, false, 'code'),
+                'password' => ($r['password'] ?? null) === null ? null : $this->box($r['password'], true, 'password'),
+                'owner_wrapped' => $this->sealed($r['owner_wrapped'] ?? null, 'owner_wrapped'),
+            ];
             $v = $this->read();
             $found = false;
             foreach ($v['recipients'] as $i => $existing) {

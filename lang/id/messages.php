@@ -109,4 +109,10 @@ return [
     'False alarm: {owner} is all right' => 'Alarm palsu: {owner} baik-baik saja',
     '{name} has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => '{name} telah memastikan bahwa {owner} baik-baik saja. Anda tidak perlu melakukan apa pun lagi. Terima kasih.',
     'Someone {owner} trusts has confirmed that {owner} is all right. Nothing more is needed from you. Thank you.' => 'Seseorang yang dipercaya {owner} telah memastikan bahwa {owner} baik-baik saja. Anda tidak perlu melakukan apa pun lagi. Terima kasih.',
+    'Death Plan Switch: your group channels and their corrections' => 'Death Plan Switch: kanal grup Anda dan koreksinya',
+    'Your switch had fired, so these group channels had received your message:' => 'Sakelar Anda sempat dijalankan, sehingga kanal grup berikut telah menerima pesan Anda:',
+    '{name}: a correction was sent.' => '{name}: koreksi telah dikirim.',
+    '{name}: no correction, as you turned it off for this channel.' => '{name}: tanpa koreksi, karena Anda menonaktifkannya untuk kanal ini.',
+    '{name}: the correction could not be sent.' => '{name}: koreksi tidak dapat dikirim.',
+    '{name}: a correction will be sent shortly.' => '{name}: koreksi akan segera dikirim.',
 ];
